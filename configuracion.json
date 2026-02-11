@@ -1,0 +1,453 @@
+[
+{
+  "model": "clinica.terapeuta",
+  "pk": 1,
+  "fields": {
+    "nombre": "Alejandra Durán",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 2,
+  "fields": {
+    "nombre": "Ana Juarez",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 3,
+  "fields": {
+    "nombre": "Benjamin Villagomez",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 4,
+  "fields": {
+    "nombre": "Carolina Gonzalez",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 5,
+  "fields": {
+    "nombre": "Daniel Salazar",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 6,
+  "fields": {
+    "nombre": "Daniela Sarmiento",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 7,
+  "fields": {
+    "nombre": "David Bermejo",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 8,
+  "fields": {
+    "nombre": "Enrique Arteaga",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 9,
+  "fields": {
+    "nombre": "Enrique Luna",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 10,
+  "fields": {
+    "nombre": "Esmeralda Colunga",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 11,
+  "fields": {
+    "nombre": "Fabiola Fragoso",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 12,
+  "fields": {
+    "nombre": "Gloria Sarmiento",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 13,
+  "fields": {
+    "nombre": "Javier Martínez",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 14,
+  "fields": {
+    "nombre": "Jennifer Torres",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 15,
+  "fields": {
+    "nombre": "José Arcadio",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 16,
+  "fields": {
+    "nombre": "Lucía Sánchez",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 17,
+  "fields": {
+    "nombre": "Magda Charles",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 18,
+  "fields": {
+    "nombre": "María Amancio - Ind",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 19,
+  "fields": {
+    "nombre": "María Amancio - Par",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 20,
+  "fields": {
+    "nombre": "Maria de la Luz",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 21,
+  "fields": {
+    "nombre": "Maricela Sena",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 22,
+  "fields": {
+    "nombre": "Perla Realme",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 23,
+  "fields": {
+    "nombre": "Rosy Macías",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 24,
+  "fields": {
+    "nombre": "Rafael Gonzalez",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 25,
+  "fields": {
+    "nombre": "Dante Zertuche",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 26,
+  "fields": {
+    "nombre": "Mariana Siller",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 27,
+  "fields": {
+    "nombre": "Yessica Leija",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 28,
+  "fields": {
+    "nombre": "Carlos Mendiola",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 29,
+  "fields": {
+    "nombre": "Alondra Escalon",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 30,
+  "fields": {
+    "nombre": "Blanca Araceli Zamora",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.terapeuta",
+  "pk": 31,
+  "fields": {
+    "nombre": "Dante Zertuche Ev",
+    "activo": true
+  }
+},
+{
+  "model": "clinica.consultorio",
+  "pk": 1,
+  "fields": {
+    "nombre": "Morelos"
+  }
+},
+{
+  "model": "clinica.consultorio",
+  "pk": 2,
+  "fields": {
+    "nombre": "Guanajuato"
+  }
+},
+{
+  "model": "clinica.consultorio",
+  "pk": 3,
+  "fields": {
+    "nombre": "Praderas"
+  }
+},
+{
+  "model": "clinica.consultorio",
+  "pk": 4,
+  "fields": {
+    "nombre": "Colinas"
+  }
+},
+{
+  "model": "clinica.consultorio",
+  "pk": 5,
+  "fields": {
+    "nombre": "Zoom"
+  }
+},
+{
+  "model": "clinica.consultorio",
+  "pk": 6,
+  "fields": {
+    "nombre": "Externo"
+  }
+},
+{
+  "model": "clinica.consultorio",
+  "pk": 7,
+  "fields": {
+    "nombre": "Trabajo Social"
+  }
+},
+{
+  "model": "clinica.division",
+  "pk": 1,
+  "fields": {
+    "nombre": "Particular"
+  }
+},
+{
+  "model": "clinica.division",
+  "pk": 2,
+  "fields": {
+    "nombre": "NEAPCO"
+  }
+},
+{
+  "model": "clinica.division",
+  "pk": 3,
+  "fields": {
+    "nombre": "GIASA"
+  }
+},
+{
+  "model": "clinica.division",
+  "pk": 4,
+  "fields": {
+    "nombre": "INSUNTE"
+  }
+},
+{
+  "model": "clinica.division",
+  "pk": 5,
+  "fields": {
+    "nombre": "DOROTHEA"
+  }
+},
+{
+  "model": "clinica.division",
+  "pk": 6,
+  "fields": {
+    "nombre": "UNIVAS"
+  }
+},
+{
+  "model": "clinica.division",
+  "pk": 7,
+  "fields": {
+    "nombre": "iFOOD"
+  }
+},
+{
+  "model": "clinica.division",
+  "pk": 8,
+  "fields": {
+    "nombre": "UTS"
+  }
+},
+{
+  "model": "clinica.division",
+  "pk": 9,
+  "fields": {
+    "nombre": "Cáritas de Saltillo"
+  }
+},
+{
+  "model": "clinica.division",
+  "pk": 10,
+  "fields": {
+    "nombre": "Escuela"
+  }
+},
+{
+  "model": "clinica.division",
+  "pk": 11,
+  "fields": {
+    "nombre": "Otro"
+  }
+},
+{
+  "model": "clinica.servicio",
+  "pk": 1,
+  "fields": {
+    "nombre": "Terapia individual"
+  }
+},
+{
+  "model": "clinica.servicio",
+  "pk": 2,
+  "fields": {
+    "nombre": "Terapia infantil"
+  }
+},
+{
+  "model": "clinica.servicio",
+  "pk": 3,
+  "fields": {
+    "nombre": "Terapia de parejas"
+  }
+},
+{
+  "model": "clinica.servicio",
+  "pk": 4,
+  "fields": {
+    "nombre": "Terapia Familiar"
+  }
+},
+{
+  "model": "clinica.servicio",
+  "pk": 5,
+  "fields": {
+    "nombre": "Evaluación neuropsicológica"
+  }
+},
+{
+  "model": "clinica.servicio",
+  "pk": 6,
+  "fields": {
+    "nombre": "Médica psiquiátrica"
+  }
+},
+{
+  "model": "clinica.servicio",
+  "pk": 7,
+  "fields": {
+    "nombre": "Medica en salud mental"
+  }
+},
+{
+  "model": "clinica.servicio",
+  "pk": 8,
+  "fields": {
+    "nombre": "Consulta nutricional"
+  }
+},
+{
+  "model": "clinica.servicio",
+  "pk": 9,
+  "fields": {
+    "nombre": "Hipnosis"
+  }
+},
+{
+  "model": "clinica.servicio",
+  "pk": 10,
+  "fields": {
+    "nombre": "Psicotanatología"
+  }
+},
+{
+  "model": "clinica.servicio",
+  "pk": 11,
+  "fields": {
+    "nombre": "Medica"
+  }
+}
+]

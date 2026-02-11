@@ -1,0 +1,162 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Nuevo Paciente - INTRA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<style>
+    /* Ajuste para que la caja tenga la altura correcta de Bootstrap */
+    .select2-container .select2-selection--multiple {
+        min-height: 38px;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+    }
+    
+    /* El color de las "burbujitas" seleccionadas (Tu color turquesa) */
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: #26C6DA; 
+        border: none;
+        color: white;
+        border-radius: 20px; /* Bordes redonditos */
+        padding: 2px 10px;
+        font-size: 0.85rem;
+        margin-top: 6px;
+    }
+
+    /* La "X" para borrar la etiqueta */
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+        color: white;
+        margin-right: 5px;
+        border-right: 1px solid rgba(255,255,255,0.3);
+    }
+    
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+        background-color: #00ACC1;
+        color: white;
+    }
+</style>
+    <style>
+        :root {
+            --intra-primary: #26C6DA;
+            --intra-secondary: #EF5350;
+            --intra-dark: #37474F;
+            --intra-light: #F0F4F8;
+            --intra-white: #FFFFFF;
+        }
+        body { background-color: var(--intra-light); font-family: 'Inter', sans-serif; color: var(--intra-dark); }
+        h2, h4 { font-family: 'Poppins', sans-serif; }
+        
+        .navbar { background-color: var(--intra-white); box-shadow: 0 2px 15px rgba(0,0,0,0.03); }
+        
+        .form-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            border: none;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .btn-primary {
+            background-color: var(--intra-primary);
+            border: none;
+            border-radius: 50px;
+            padding: 10px 30px;
+            font-weight: 600;
+        }
+        
+        .btn-primary:hover { background-color: #00ACC1; }
+        
+        label { font-weight: 500; font-size: 0.9rem; margin-bottom: 5px; color: #546E7A; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg mb-5">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+                <img src="{% static 'clinica/images/logo.png' %}" alt="Logo" style="height: 35px;" class="me-2">
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-card p-5">
+            <div class="text-center mb-4">
+                <h2 class="fw-bold mb-1">Nuevo Expediente</h2>
+                <p class="text-muted">Ingresa los datos del paciente</p>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label>Nombre Completo</label>
+                    {{ form.nombre }}
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label>Fecha de Nacimiento</label>
+                        {{ form.fecha_nacimiento }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+    <label>Servicio Inicial</label>
+    {{ form.servicio_inicial }}
+</div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label>Teléfono (WhatsApp)</label>
+                        {{ form.telefono }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label>¿De quién es el número?</label>
+                        {{ form.identidad_contacto }}
+                    </div>
+                </div>
+<div class="mb-3">
+    <label>Familiares / Pacientes Relacionados</label>
+    
+    {{ form.pacientes_relacionados }}
+</div>
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg shadow-sm">
+                        Guardar Paciente
+                    </button>
+                    <a href="{% url 'lista_pacientes' %}" class="btn btn-link text-muted text-decoration-none">
+                        Cancelar
+                    </a>
+                    
+                </div>
+            </form>
+        </div>
+    </div>
+    
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        // Buscamos el campo que tiene la clase 'select2-multiple' (que pusimos en forms.py)
+        $('.select2-multiple').select2({
+            placeholder: "🔍 Busca y selecciona familiares...",
+            allowClear: true,
+            width: '100%', // Para que ocupe todo el ancho
+            language: {
+                noResults: function() {
+                    return "No se encontraron pacientes";
+                }
+            }
+        });
+    });
+</script>
+</body>
+</html>
