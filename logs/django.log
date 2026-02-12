@@ -1,0 +1,238 @@
+[INFO] 2026-02-11 18:56:15,107 autoreload Watching for file changes with StatReloader
+[WARNING] 2026-02-11 18:56:18,149 base Session data corrupted
+[INFO] 2026-02-11 18:56:18,149 basehttp "GET / HTTP/1.1" 302 0
+[INFO] 2026-02-11 18:56:18,191 basehttp "GET /accounts/login/?next=/ HTTP/1.1" 200 2261
+[WARNING] 2026-02-11 18:56:19,936 base Session data corrupted
+[INFO] 2026-02-11 18:56:19,957 basehttp "POST /accounts/login/?next=/ HTTP/1.1" 302 0
+[ERROR] 2026-02-11 18:56:20,250 log Internal Server Error: /
+Traceback (most recent call last):
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: clinica_paciente.activo
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py", line 34, in home
+    'pacientes_totales': Paciente.objects.filter(activo=True).count(),
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\models\query.py", line 606, in count
+    return self.query.get_count(using=self.db)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\models\sql\query.py", line 644, in get_count
+    return obj.get_aggregation(using, {"__count": Count("*")})["__count"]
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\models\sql\query.py", line 626, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: clinica_paciente.activo
+[ERROR] 2026-02-11 18:56:20,252 basehttp "GET / HTTP/1.1" 500 138997
+[ERROR] 2026-02-12 10:12:29,364 log Internal Server Error: /
+Traceback (most recent call last):
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: clinica_paciente.activo
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py", line 34, in home
+    'pacientes_totales': Paciente.objects.filter(activo=True).count(),
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\models\query.py", line 606, in count
+    return self.query.get_count(using=self.db)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\models\sql\query.py", line 644, in get_count
+    return obj.get_aggregation(using, {"__count": Count("*")})["__count"]
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\models\sql\query.py", line 626, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: clinica_paciente.activo
+[ERROR] 2026-02-12 10:12:29,365 basehttp "GET / HTTP/1.1" 500 138824
+[INFO] 2026-02-12 10:12:34,116 basehttp "GET /calendario/ HTTP/1.1" 200 7439
+[INFO] 2026-02-12 10:12:39,164 basehttp "GET /calendario/ HTTP/1.1" 200 7439
+[INFO] 2026-02-12 10:12:39,852 basehttp "GET /calendario/ HTTP/1.1" 200 7439
+[ERROR] 2026-02-12 10:12:41,059 log Internal Server Error: /pacientes/
+Traceback (most recent call last):
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: clinica_paciente.activo
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py", line 59, in lista_pacientes
+    pacientes_paginados = paginator.page(page)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\paginator.py", line 89, in page
+    number = self.validate_number(number)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\paginator.py", line 70, in validate_number
+    if number > self.num_pages:
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\paginator.py", line 116, in num_pages
+    if self.count == 0 and not self.allow_empty_first_page:
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\paginator.py", line 110, in count
+    return c()
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\models\query.py", line 606, in count
+    return self.query.get_count(using=self.db)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\models\sql\query.py", line 644, in get_count
+    return obj.get_aggregation(using, {"__count": Count("*")})["__count"]
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\models\sql\query.py", line 626, in get_aggregation
+    result = compiler.execute_sql(SINGLE)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: clinica_paciente.activo
+[ERROR] 2026-02-12 10:12:41,062 basehttp "GET /pacientes/ HTTP/1.1" 500 166323
+[INFO] 2026-02-12 10:14:52,004 autoreload Watching for file changes with StatReloader
+[INFO] 2026-02-12 10:14:55,584 basehttp "GET /pacientes/ HTTP/1.1" 200 17470
+[INFO] 2026-02-12 10:15:01,596 basehttp "GET / HTTP/1.1" 200 7439
+[INFO] 2026-02-12 10:15:07,812 basehttp "GET /calendario/ HTTP/1.1" 200 7439
+[INFO] 2026-02-12 10:15:08,685 basehttp "GET /calendario/ HTTP/1.1" 200 7439
+[INFO] 2026-02-12 10:15:09,154 basehttp "GET /calendario/ HTTP/1.1" 200 7439
+[INFO] 2026-02-12 10:15:09,714 basehttp "GET /calendario/ HTTP/1.1" 200 7439
+[INFO] 2026-02-12 10:15:10,341 basehttp "GET /calendario/ HTTP/1.1" 200 7439
+[INFO] 2026-02-12 10:15:10,725 basehttp "GET /calendario/ HTTP/1.1" 200 7439
+[INFO] 2026-02-12 10:15:12,532 basehttp "GET /calendario/ HTTP/1.1" 200 7439
+[INFO] 2026-02-12 10:15:14,015 basehttp "GET /calendario/ HTTP/1.1" 200 7439
+[INFO] 2026-02-12 10:15:23,396 basehttp "GET /pacientes/ HTTP/1.1" 200 17470
+[INFO] 2026-02-12 10:15:31,638 basehttp "GET /pacientes/?q=angel HTTP/1.1" 200 17670
+[INFO] 2026-02-12 10:15:34,782 basehttp "GET /pacientes/?q=angel HTTP/1.1" 200 17670
+[INFO] 2026-02-12 10:15:39,048 basehttp "GET /pacientes/?q=angel HTTP/1.1" 200 17670
+[INFO] 2026-02-12 10:15:42,692 basehttp "GET /pacientes/?q=olivia HTTP/1.1" 200 17671
+[INFO] 2026-02-12 10:15:46,518 basehttp "GET /pacientes/ HTTP/1.1" 200 17470
+[INFO] 2026-02-12 10:15:50,666 basehttp "GET /pacientes/nuevo/ HTTP/1.1" 200 5983
+[ERROR] 2026-02-12 10:16:01,016 log Internal Server Error: /pacientes/3/
+Traceback (most recent call last):
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py", line 187, in detalle_paciente
+    return render(request, 'clinica/detalle_paciente.html', context)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\backends\django.py", line 107, in render
+    return self.template.render(context)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\base.py", line 172, in render
+    return self._render(context)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\base.py", line 164, in _render
+    return self.nodelist.render(context)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\base.py", line 1018, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\base.py", line 1018, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\base.py", line 979, in render_annotated
+    return self.render(context)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\defaulttags.py", line 480, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\urls\base.py", line 98, in reverse
+    resolved_url = resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\urls\resolvers.py", line 831, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'agendar_cita' with arguments '(3,)' not found. 1 pattern(s) tried: ['citas/nueva/\\Z']
+[ERROR] 2026-02-12 10:16:01,021 basehttp "GET /pacientes/3/ HTTP/1.1" 500 138324
+[ERROR] 2026-02-12 10:17:39,201 log Internal Server Error: /pacientes/3/
+Traceback (most recent call last):
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py", line 187, in detalle_paciente
+    return render(request, 'clinica/detalle_paciente.html', context)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\loader.py", line 62, in render_to_string
+    return template.render(context, request)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\backends\django.py", line 107, in render
+    return self.template.render(context)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\base.py", line 172, in render
+    return self._render(context)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\base.py", line 164, in _render
+    return self.nodelist.render(context)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\base.py", line 1018, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\base.py", line 1018, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\base.py", line 979, in render_annotated
+    return self.render(context)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\template\defaulttags.py", line 480, in render
+    url = reverse(view_name, args=args, kwargs=kwargs, current_app=current_app)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\urls\base.py", line 98, in reverse
+    resolved_url = resolver._reverse_with_prefix(view, prefix, *args, **kwargs)
+  File "C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\venv\lib\site-packages\django\urls\resolvers.py", line 831, in _reverse_with_prefix
+    raise NoReverseMatch(msg)
+django.urls.exceptions.NoReverseMatch: Reverse for 'agendar_cita' with arguments '(3,)' not found. 1 pattern(s) tried: ['citas/nueva/\\Z']
+[ERROR] 2026-02-12 10:17:39,201 basehttp "GET /pacientes/3/ HTTP/1.1" 500 138325
+[INFO] 2026-02-12 10:18:19,131 basehttp "GET /pacientes/?q=olivia HTTP/1.1" 200 17671
+[INFO] 2026-02-12 10:18:19,760 basehttp "GET /pacientes/?q=olivia HTTP/1.1" 200 17671
