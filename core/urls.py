@@ -21,6 +21,7 @@ urlpatterns = [
     path('calendario/', clinica_views.vista_calendario, name='vista_calendario'),
     path('api/citas/', clinica_views.calendario_citas, name='calendario_citas'),
     path('api/verificar-disponibilidad/', clinica_views.verificar_disponibilidad, name='verificar_disponibilidad'),
+    path('citas/<int:cita_id>/editar/', clinica_views.editar_cita, name='editar_cita'),
 ]
 
 if settings.DEBUG:

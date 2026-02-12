@@ -10,6 +10,7 @@ from .forms import CitaForm
 from django.contrib import messages 
 from django.http import JsonResponse
 from datetime import datetime
+from django.shortcuts import render, redirect, get_object_or_404
 def quitar_tildes(texto):
     if not texto:
         return ""
@@ -217,7 +218,8 @@ def verificar_disponibilidad(request):
     fecha = request.GET.get('fecha')
     hora = request.GET.get('hora')
     consultorio_id = request.GET.get('consultorio')
-    
+    terapeuta_id = request.GET.get('terapeuta')
+    exclude_id = request.GET.get('exclude_id')
     if not (fecha and hora and consultorio_id):
         return JsonResponse({'status': 'error', 'msg': 'Faltan datos'})
 
@@ -246,5 +248,59 @@ def verificar_disponibilidad(request):
             'available': False, 
             'msg': 'Consultorio ocupado a esta hora.'
         })
+        return JsonResponse({'available': True, 'msg': 'Disponible'})
+    query_consultorio = Cita.objects.filter(
+        consultorio_id=consultorio_id,
+        fecha=fecha_obj,
+        hora=hora_obj,
+        estatus='programada'
+    )
+    if exclude_id: # Si nos pasaron un ID, lo excluimos
+        query_consultorio = query_consultorio.exclude(id=exclude_id)
+        
+    if query_consultorio.exists():
+         return JsonResponse({'available': False, 'msg': '⛔ El consultorio está ocupado.'})
+
+    # AL VALIDAR EL TERAPEUTA:
+    query_terapeuta = Cita.objects.filter(
+        terapeuta_id=terapeuta_id,
+        fecha=fecha_obj,
+        hora=hora_obj,
+        estatus='programada'
+    )
+    if exclude_id:
+        query_terapeuta = query_terapeuta.exclude(id=exclude_id)
+
+    if query_terapeuta.exists():
+        return JsonResponse({'available': False, 'msg': '⚠️ El terapeuta ya tiene otra cita.'})
+
+    return JsonResponse({'available': True, 'msg': '✅ Disponible'})
+
+@login_required
+def editar_cita(request, cita_id):
+    # 1. Buscamos la cita o damos error 404 si no existe
+    cita = get_object_or_404(Cita, id=cita_id)
     
-    return JsonResponse({'available': True, 'msg': 'Disponible'})
+    if request.method == 'POST':
+        # 2. Cargamos el formulario con los datos nuevos (POST) y la instancia vieja (cita)
+        form = CitaForm(request.POST, instance=cita)
+        if form.is_valid():
+            form.save()
+            messages.success(request, '¡Cita actualizada correctamente! 🔄')
+            
+            # Inteligencia: ¿A dónde regresamos?
+            # Si venimos del expediente del paciente, regresamos ahí. Si no, al home.
+            origen = request.GET.get('next', 'home')
+            if origen == 'paciente':
+                return redirect('detalle_paciente', paciente_id=cita.paciente.id)
+            return redirect('home')
+        else:
+             messages.error(request, '⚠️ Corrige los errores en el formulario.')
+    else:
+        # 3. Si es GET, mostramos el formulario lleno con los datos actuales
+        form = CitaForm(instance=cita)
+
+    return render(request, 'clinica/editar_cita.html', {
+        'form': form, 
+        'cita': cita
+    })

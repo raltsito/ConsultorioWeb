@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import Paciente, Cita, Terapeuta, Consultorio, Division, Servicio
-
+from .models import Horario
 
 admin.site.register(Terapeuta)
 admin.site.register(Consultorio)
@@ -17,3 +17,8 @@ class CitaAdmin(admin.ModelAdmin):
 
 admin.site.register(Paciente, PacienteAdmin)
 admin.site.register(Cita, CitaAdmin)
+
+@admin.register(Horario)
+class HorarioAdmin(admin.ModelAdmin):
+    list_display = ('terapeuta', 'dia', 'hora_inicio', 'hora_fin')
+    list_filter = ('terapeuta', 'dia')

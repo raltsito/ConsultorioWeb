@@ -80,18 +80,23 @@
                         <tbody>
     {% for cita in proximas_citas %}
     <tr>
-        <td class="ps-4 fw-bold text-primary">{{ cita.hora|time:"H:i" }}</td>
+        <td class="ps-4">
+            <div class="d-flex flex-column">
+                <span class="fw-bold text-primary">{{ cita.hora|time:"H:i" }}</span>
+                <span class="small text-muted">{{ cita.fecha|date:"D d M" }}</span>
+            </div>
+        </td>
         
         <td>
             <div class="d-flex align-items-center">
                 <div class="avatar-initial rounded-circle bg-secondary-subtle text-secondary me-2 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; font-size: 0.8rem;">
                     {{ cita.paciente.nombre|slice:":2"|upper }}
                 </div>
-                <span>{{ cita.paciente.nombre }}</span>
+                <span>{{ cita.paciente.nombre }} {{ cita.paciente.apellido }}</span>
             </div>
         </td>
         <td>
-            <span class="badge rounded-pill text-bg-light border">
+            <span class="badge rounded-pill text-bg-light border text-truncate" style="max-width: 150px;">
                 {{ cita.consultorio }}
             </span>
         </td>
@@ -103,7 +108,18 @@
             {% endif %}
         </td>
         <td>
-            <a href="#" class="btn btn-sm btn-light text-muted"><i class="bi bi-eye"></i></a>
+            <button class="btn btn-sm btn-light text-muted btn-ver-detalle"
+                data-bs-toggle="modal" 
+                data-bs-target="#modalDetalleCita"
+                data-paciente="{{ cita.paciente.nombre }} {{ cita.paciente.apellido }}"
+                data-servicio="{{ cita.servicio }}"
+                data-fecha="{{ cita.fecha|date:'l d F' }} a las {{ cita.hora|time:'H:i' }}"
+                data-consultorio="{{ cita.consultorio }}"
+                data-terapeuta="{{ cita.terapeuta }}"
+                data-notas="{{ cita.notas|default:'Sin notas' }}"
+                data-id="{{ cita.id }}">
+                <i class="bi bi-eye"></i>
+            </button>
         </td>
     </tr>
     {% empty %}
@@ -178,4 +194,89 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="modalDetalleCita" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-info-circle me-2"></i>Detalle de la Cita</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <div class="avatar-initial rounded-circle bg-light text-primary mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                        <span id="detalle-avatar">XX</span>
+                    </div>
+                    <h4 id="detalle-paciente" class="fw-bold mb-0">Nombre Paciente</h4>
+                    <span id="detalle-servicio" class="badge bg-secondary mt-1">Servicio</span>
+                </div>
+                
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted"> Fecha y Hora:</span>
+                        <span class="fw-bold" id="detalle-fecha">--/--/-- --:--</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted"> Consultorio:</span>
+                        <span class="fw-bold" id="detalle-consultorio">---</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted"> Terapeuta:</span>
+                        <span class="fw-bold" id="detalle-terapeuta">---</span>
+                    </li>
+                    <li class="list-group-item">
+                        <span class="text-muted d-block mb-1"> Notas:</span>
+                        <p id="detalle-notas" class="small bg-light p-2 rounded text-muted fst-italic">Sin notas adicionales.</p>
+                    </li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <a href="#" id="btn-editar-cita" class="btn btn-warning">
+                    <i class="bi bi-pencil-square"></i> Editar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Usamos delegación de eventos por si la tabla se actualiza sola
+            const tabla = document.querySelector('table'); // O el body si prefieres
+            
+            // Escuchar clics en botones con clase .btn-ver-detalle
+            document.body.addEventListener('click', function(e) {
+                // Buscamos si el clic fue dentro de un botón .btn-ver-detalle
+                const btn = e.target.closest('.btn-ver-detalle');
+                
+                if (btn) {
+                    console.log("¡Botón clickeado! Datos encontrados:", btn.dataset); // Chivato para la consola
+                    
+                    // 1. Obtener datos del botón (dataset usa camelCase: data-paciente -> dataset.paciente)
+                    const paciente = btn.dataset.paciente;
+                    const servicio = btn.dataset.servicio;
+                    const fecha = btn.dataset.fecha;
+                    const consultorio = btn.dataset.consultorio;
+                    const terapeuta = btn.dataset.terapeuta;
+                    const notas = btn.dataset.notas;
+                    const id = btn.dataset.id;
+    
+                    // 2. Llenar el modal (Vanilla JS para evitar líos con jQuery si no carga)
+                    document.getElementById('detalle-paciente').textContent = paciente;
+                    document.getElementById('detalle-avatar').textContent = paciente ? paciente.substring(0, 2).toUpperCase() : 'XX';
+                    document.getElementById('detalle-servicio').textContent = servicio;
+                    document.getElementById('detalle-fecha').textContent = fecha;
+                    document.getElementById('detalle-consultorio').textContent = consultorio;
+                    document.getElementById('detalle-terapeuta').textContent = terapeuta;
+                    document.getElementById('detalle-notas').textContent = notas;
+                    
+                    // Opcional: Si tienes botón de editar
+                    const btnEditar = document.getElementById('btn-editar-cita');
+                    if(btnEditar) btnEditar.href = `/citas/${id}/editar/`;
+                }
+            });
+        });
+    </script>
+
+
 {% endblock %}

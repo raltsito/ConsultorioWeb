@@ -136,3 +136,27 @@ class Cita(models.Model):
         verbose_name = "Cita"
         verbose_name_plural = "Citas"
         ordering = ['-fecha', '-hora']
+
+    # En clinica/models.py
+
+class Horario(models.Model):
+    DIAS_SEMANA = [
+        (0, 'Lunes'),
+        (1, 'Martes'),
+        (2, 'Miércoles'),
+        (3, 'Jueves'),
+        (4, 'Viernes'),
+        (5, 'Sábado'),
+        (6, 'Domingo'),
+    ]
+
+    terapeuta = models.ForeignKey('Terapeuta', on_delete=models.CASCADE)
+    dia = models.IntegerField(choices=DIAS_SEMANA)
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+    
+    # Opcional: Si un terapeuta solo trabaja en cierta sede en ese horario
+    # consultorio = models.ForeignKey('Consultorio', on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.terapeuta} - {self.get_dia_display()} ({self.hora_inicio} - {self.hora_fin})"

@@ -1,0 +1,122 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-warning text-dark fw-bold">
+                    <i class="bi bi-pencil-square me-2"></i> Editar Cita
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-light border mb-4">
+                        <small class="text-muted text-uppercase fw-bold">Editando cita para:</small>
+                        <h4 class="text-primary mb-0">{{ cita.paciente.nombre }} {{ cita.paciente.apellido }}</h4>
+                    </div>
+
+                    <form method="post" id="form-editar">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha</label>
+                                {{ form.fecha }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Hora</label>
+                                {{ form.hora }}
+                                <div id="availability-status" class="form-text fw-bold mt-1"></div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Consultorio</label>
+                                {{ form.consultorio }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Terapeuta</label>
+                                {{ form.terapeuta }}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">División</label>
+                                {{ form.division }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Servicio</label>
+                                {{ form.servicio }}
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Notas</label>
+                                {{ form.notas }}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label">Estatus</label>
+                                {{ form.estatus }}
+                            </div>
+                            
+                            <div class="d-none">
+                                {{ form.paciente }}
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="javascript:history.back()" class="btn btn-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-primary fw-bold px-4">
+                                <i class="bi bi-save me-2"></i> Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const $fecha = $('#id_fecha');
+        const $hora = $('#id_hora');
+        const $consultorio = $('#id_consultorio');
+        const $terapeuta = $('#id_terapeuta');
+        const $status = $('#availability-status');
+        
+        // ID de la cita actual para excluirla de la validación
+        const currentCitaId = "{{ cita.id }}";
+
+        function checkAvailability() {
+            const fecha = $fecha.val();
+            const hora = $hora.val();
+            const consultorio = $consultorio.val();
+            const terapeuta = $terapeuta.val();
+
+            if (fecha && hora && consultorio && terapeuta) {
+                $status.html('<span class="text-muted">Verificando... <div class="spinner-border spinner-border-sm"></div></span>');
+                
+                // Agregamos el ID a la petición para que la API ignore esta misma cita
+                $.get('/api/verificar-disponibilidad/', {
+                    'fecha': fecha,
+                    'hora': hora,
+                    'consultorio': consultorio,
+                    'terapeuta': terapeuta,
+                    'exclude_id': currentCitaId // <--- CLAVE PARA EDITAR
+                }, function(data) {
+                    if (data.available) {
+                        $status.html('<span class="text-success">' + data.msg + '</span>');
+                        $('button[type="submit"]').prop('disabled', false);
+                    } else {
+                        $status.html('<span class="text-danger">' + data.msg + '</span>');
+                        $('button[type="submit"]').prop('disabled', true);
+                    }
+                });
+            }
+        }
+
+        $fecha.on('change', checkAvailability);
+        $hora.on('change', checkAvailability);
+        $consultorio.on('change', checkAvailability);
+        $terapeuta.on('change', checkAvailability);
+    });
+</script>
+{% endblock %}
