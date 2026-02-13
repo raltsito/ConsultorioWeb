@@ -277,7 +277,34 @@
                     if(btnEditar) btnEditar.href = `/citas/${id}/editar/`;
                 }
             });
-        });
+        // 1. INYECTAR LA CAJITA EN EL MODAL DE CITA RÁPIDA
+        // Como usamos form.as_p, creamos el div con JS y lo ponemos justo después del selector de paciente
+        $('#modalCita #id_paciente').after('<div id="caja-terapeutas-modal" class="mt-2 d-none p-3 bg-light border rounded-3 border-info border-start border-4 shadow-sm"></div>');
+
+        // 2. LÓGICA DE CONSULTA A LA API (Igual que en la otra pantalla)
+        $('#modalCita #id_paciente').on('change', function() {
+            const pacienteId = $(this).val();
+            const $cajaTerapeutas = $('#caja-terapeutas-modal');
+            
+            if (pacienteId) {
+                $.get('/api/terapeutas-paciente/', { 'paciente_id': pacienteId }, function(data) {
+                    if (data.terapeutas && data.terapeutas.length > 0) {
+                        let badges = data.terapeutas.map(t => `<span class="badge bg-info text-dark me-1 border">${t}</span>`).join('');
+                        
+                        $cajaTerapeutas.html(`
+                            <small class="text-muted d-block fw-bold mb-2">Atendido previamente por:</small>
+                            ${badges}
+                        `).removeClass('d-none');
+                    } else {
+                        $cajaTerapeutas.html(`
+                            <small class="text-muted fst-italic">Paciente de primera vez (sin historial).</small>
+                        `).removeClass('d-none');
+                    }
+                });
+            } else {
+                $cajaTerapeutas.addClass('d-none').html('');
+            }
+        });});
     </script>
 
 

@@ -22,6 +22,8 @@ urlpatterns = [
     path('api/citas/', clinica_views.calendario_citas, name='calendario_citas'),
     path('api/verificar-disponibilidad/', clinica_views.verificar_disponibilidad, name='verificar_disponibilidad'),
     path('citas/<int:cita_id>/editar/', clinica_views.editar_cita, name='editar_cita'),
+    path('api/citas-calendario/', clinica_views.api_citas_calendario, name='api_citas_calendario'),
+    path('api/terapeutas-paciente/', clinica_views.api_terapeutas_paciente, name='api_terapeutas_paciente'),
 ]
 
 if settings.DEBUG:

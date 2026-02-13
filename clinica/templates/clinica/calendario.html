@@ -1,39 +1,153 @@
 {% extends 'clinica/base.html' %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="fw-bold"><i class="bi bi-calendar-week text-primary"></i> Agenda General</h2>
-        <p class="text-muted">Vista completa de citas.</p>
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="fw-bold text-primary">Agenda General</h2>
+            <p class="text-muted">Vista interactiva de todas las citas programadas.</p>
+        </div>
     </div>
-    <a href="{% url 'home' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Volver al Inicio
-    </a>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <div id="calendar"></div>
+        </div>
+    </div>
 </div>
 
-<div class="card shadow border-0 p-3 bg-white">
-    <div id='calendar'></div>
-</div>
+<style>
+    /* Suavizar bordes y colores del calendario */
+    .fc-theme-standard td, .fc-theme-standard th {
+        border-color: #E2E8F0;
+    }
+    .fc-header-toolbar {
+        margin-bottom: 1.5rem !important;
+        font-family: 'Poppins', sans-serif;
+    }
+    .fc-button-primary {
+        background-color: #26C6DA !important;
+        border-color: #26C6DA !important;
+        text-transform: capitalize;
+    }
+    .fc-button-primary:hover {
+        background-color: #1e9cb0 !important;
+    }
+    .fc-button-active {
+        background-color: #37474F !important;
+        border-color: #37474F !important;
+    }
+    .fc-event {
+        cursor: pointer;
+        border-radius: 4px;
+        padding: 2px 4px;
+        font-size: 0.85em;
+        font-weight: 500;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    .fc-event:hover {
+        transform: scale(1.02);
+    }
+</style>
+{% endblock %}
 
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    var calendarEl = document.getElementById('calendar');
-    var calendar = new FullCalendar.Calendar(calendarEl, {
-      initialView: 'timeGridWeek',
-      locale: 'es',
-      slotMinTime: '08:00:00',
-      slotMaxTime: '21:00:00',
-      allDaySlot: false,
-      headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay'
-      },
-      events: '/api/citas/',
-      height: 750, // Altura fija para que se vea bien
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek', // Abre en vista semanal por defecto
+            locale: 'es', // Idioma español
+            slotMinTime: '08:00:00', // Hora de apertura de la clinica
+            slotMaxTime: '21:00:00', // Hora de cierre
+            allDaySlot: false, // Ocultar la fila de "todo el dia"
+            
+            // Botones de la parte superior
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            
+            // Textos de los botones en español
+            buttonText: {
+                today: 'Hoy',
+                month: 'Mes',
+                week: 'Semana',
+                day: 'Dia'
+            },
+
+            // Conectar con la API que creamos en views.py
+            events: '/api/citas-calendario/',
+
+            // Que pasa cuando le das clic a una cita
+            eventClick: function(info) {
+                var citaId = info.event.id;
+                // Redirigimos a la vista de edicion limpia que armamos antes
+                window.location.href = '/citas/' + citaId + '/editar/?next=calendario';
+            }
+        });
+        
+        calendar.render();
     });
-    calendar.render();
-  });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            locale: 'es',
+            slotMinTime: '08:00:00',
+            slotMaxTime: '21:00:00',
+            allDaySlot: false,
+            
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            
+            buttonText: {
+                today: 'Hoy',
+                month: 'Mes',
+                week: 'Semana',
+                day: 'Dia'
+            },
+
+            events: '/api/citas-calendario/',
+
+            eventClick: function(info) {
+                var citaId = info.event.id;
+                window.location.href = '/citas/' + citaId + '/editar/?next=calendario';
+            },
+
+            // NUEVAS CONFIGURACIONES PARA AGENDAR EN ESPACIOS VACIOS:
+            selectable: true, // Permite hacer clic y arrastrar en espacios vacios
+            selectMirror: true, // Muestra un bloque temporal mientras seleccionas
+            
+            select: function(info) {
+                let dateObj = info.start;
+                
+                let year = dateObj.getFullYear();
+                let month = ("0" + (dateObj.getMonth() + 1)).slice(-2);
+                let day = ("0" + dateObj.getDate()).slice(-2);
+                let fecha = `${year}-${month}-${day}`;
+                
+                let hours = ("0" + dateObj.getHours()).slice(-2);
+                let minutes = ("0" + dateObj.getMinutes()).slice(-2);
+                let hora = `${hours}:${minutes}`;
+
+                // AQUI ESTA EL CAMBIO: Apuntamos a /crear-cita/
+                window.location.href = `/crear-cita/?fecha=${fecha}&hora=${hora}`;
+            }
+        });
+        
+        calendar.render();
+    });
 </script>
 {% endblock %}

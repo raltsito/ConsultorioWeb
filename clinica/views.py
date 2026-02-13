@@ -12,6 +12,7 @@ from django.http import JsonResponse
 from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Cita, Horario
+from datetime import datetime, timedelta
 
 
 
@@ -91,16 +92,19 @@ def registrar_paciente(request):
     return render(request, 'clinica/registro_paciente.html', {'form': form})
 # En clinica/views.py
 
+# En clinica/views.py (dentro de detalle_paciente)
+
 def detalle_paciente(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)
-    
-    # 👇 AQUÍ ESTÁ LA CLAVE: Traer TODAS las citas de este paciente, 
-    # ordenadas de la más reciente (o futura) a la más antigua.
     historial = Cita.objects.filter(paciente=paciente).order_by('-fecha', '-hora')
+    
+    # Extraemos los terapeutas unicos que han atendido a este paciente
+    terapeutas_previos = set(cita.terapeuta for cita in historial if cita.terapeuta)
 
     context = {
         'paciente': paciente,
-        'historial': historial, # <--- Pasamos la lista completa al HTML
+        'historial': historial,
+        'terapeutas_previos': terapeutas_previos, # Pasamos la lista al HTML
     }
     return render(request, 'clinica/detalle_paciente.html', context)
 @login_required
@@ -207,19 +211,38 @@ def crear_cita(request):
         form = CitaForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, '¡Cita agendada correctamente! ')
+            messages.success(request, 'Cita agendada correctamente.')
             return redirect('home')
         else:
-            # 👇 AGREGAMOS ESTO PARA VERIFICAR EN CONSOLA
+            # Tu logica de rastreo de errores intacta
             print("ERRORES DETECTADOS:", form.errors) 
-            
-            # Recorremos los errores y los mandamos a la pantalla
             for field, errors in form.errors.items():
                 for error in errors:
-                    # Mensaje limpio para el usuario
-                    messages.error(request, f" {error}")
-    
-    return redirect('home')
+                    messages.error(request, f"{error}")
+            
+            # ATENCION: Aqui NO hacemos redirect. Dejamos que el flujo continue 
+            # hacia abajo para que vuelva a mostrar el formulario, pero ahora 
+            # marcado con los errores y conservando lo que el usuario escribio.
+    else:
+        # Peticion GET: El usuario apenas va a abrir la pagina
+        datos_iniciales = {}
+        
+        # Atrapamos los parametros que manda el calendario o el expediente
+        if 'fecha' in request.GET:
+            datos_iniciales['fecha'] = request.GET.get('fecha')
+        if 'hora' in request.GET:
+            datos_iniciales['hora'] = request.GET.get('hora')
+            
+        # NUEVO: Atrapamos el ID del paciente si viene desde el expediente
+        if 'paciente' in request.GET:
+            datos_iniciales['paciente'] = request.GET.get('paciente')
+            
+        # Creamos el formulario vacio, inyectando los datos que hayamos atrapado
+        form = CitaForm(initial=datos_iniciales)
+
+    # ESTO ES VITAL: Renderizamos la plantilla HTML en lugar de redirigir.
+    # Asi el usuario puede ver el formulario para llenarlo o corregirlo.
+    return render(request, 'clinica/crear_cita.html', {'form': form})
 
 # En clinica/views.py
 
@@ -321,4 +344,52 @@ def editar_cita(request, cita_id):
     return render(request, 'clinica/editar_cita.html', {
         'form': form, 
         'cita': cita
-    })
+    }
+    )
+def api_citas_calendario(request):
+    citas = Cita.objects.all()
+    eventos = []
+    
+    for cita in citas:
+        # FullCalendar necesita fecha y hora juntas en formato ISO
+        start_datetime = datetime.combine(cita.fecha, cita.hora)
+        # Asumimos que la cita dura 1 hora por defecto para pintar el bloque
+        end_datetime = start_datetime + timedelta(hours=1)
+        
+        # Logica de colores segun el estatus para que se vea bien en el front
+        color = '#37474F' # Gris oscuro por defecto
+        if cita.estatus == 'programada':
+            color = '#26C6DA' # Intra Primary (Tu azulito)
+        elif cita.estatus == 'realizada':
+            color = '#198754' # Verde Bootstrap
+        elif cita.estatus == 'cancelada':
+            color = '#dc3545' # Rojo Bootstrap
+
+        eventos.append({
+            'id': cita.id,
+            'title': f'{cita.paciente.nombre} - {cita.terapeuta}',
+            'start': start_datetime.isoformat(),
+            'end': end_datetime.isoformat(),
+            'backgroundColor': color,
+            'borderColor': color,
+            'textColor': '#ffffff',
+        })
+        
+    return JsonResponse(eventos, safe=False)
+# En clinica/views.py (al final del archivo)
+from django.http import JsonResponse
+
+def api_terapeutas_paciente(request):
+    paciente_id = request.GET.get('paciente_id')
+    if not paciente_id:
+        return JsonResponse({'terapeutas': []})
+    
+    # Buscamos todas las citas del paciente y sacamos los terapeutas
+    citas = Cita.objects.filter(paciente_id=paciente_id).select_related('terapeuta')
+    
+    terapeutas_unicos = set()
+    for cita in citas:
+        if cita.terapeuta:
+            terapeutas_unicos.add(str(cita.terapeuta))
+            
+    return JsonResponse({'terapeutas': list(terapeutas_unicos)})
