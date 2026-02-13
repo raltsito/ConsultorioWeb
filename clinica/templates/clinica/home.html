@@ -92,7 +92,9 @@
                 <div class="avatar-initial rounded-circle bg-secondary-subtle text-secondary me-2 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; font-size: 0.8rem;">
                     {{ cita.paciente.nombre|slice:":2"|upper }}
                 </div>
-                <span>{{ cita.paciente.nombre }} {{ cita.paciente.apellido }}</span>
+                <a href="{% url 'detalle_paciente' cita.paciente.id %}" class="text-decoration-none fw-semibold text-primary">
+                    {{ cita.paciente.nombre }} {{ cita.paciente.apellido }}
+                </a>
             </div>
         </td>
         <td>

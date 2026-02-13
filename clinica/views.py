@@ -11,6 +11,10 @@ from django.contrib import messages
 from django.http import JsonResponse
 from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
+from .models import Cita, Horario
+
+
+
 def quitar_tildes(texto):
     if not texto:
         return ""
@@ -85,14 +89,20 @@ def registrar_paciente(request):
     else:
         form = PacienteForm()
     return render(request, 'clinica/registro_paciente.html', {'form': form})
-@login_required
+# En clinica/views.py
+
 def detalle_paciente(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)
-    citas = paciente.citas.all()
-    return render(request, 'clinica/detalle_paciente.html', {
+    
+    # 👇 AQUÍ ESTÁ LA CLAVE: Traer TODAS las citas de este paciente, 
+    # ordenadas de la más reciente (o futura) a la más antigua.
+    historial = Cita.objects.filter(paciente=paciente).order_by('-fecha', '-hora')
+
+    context = {
         'paciente': paciente,
-        'citas': citas
-    })
+        'historial': historial, # <--- Pasamos la lista completa al HTML
+    }
+    return render(request, 'clinica/detalle_paciente.html', context)
 @login_required
 def agendar_cita(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)
@@ -197,7 +207,7 @@ def crear_cita(request):
         form = CitaForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, '¡Cita agendada correctamente! ✅')
+            messages.success(request, '¡Cita agendada correctamente! ')
             return redirect('home')
         else:
             # 👇 AGREGAMOS ESTO PARA VERIFICAR EN CONSOLA
@@ -211,93 +221,101 @@ def crear_cita(request):
     
     return redirect('home')
 
+# En clinica/views.py
+
 def verificar_disponibilidad(request):
-    """
-    API ultra-rápida para consultar disponibilidad en tiempo real via AJAX.
-    """
-    fecha = request.GET.get('fecha')
-    hora = request.GET.get('hora')
+    fecha_str = request.GET.get('fecha')
+    hora_str = request.GET.get('hora')
     consultorio_id = request.GET.get('consultorio')
     terapeuta_id = request.GET.get('terapeuta')
-    exclude_id = request.GET.get('exclude_id')
-    if not (fecha and hora and consultorio_id):
-        return JsonResponse({'status': 'error', 'msg': 'Faltan datos'})
+    exclude_id = request.GET.get('exclude_id') # <--- CLAVE PARA EDITAR
 
-    # 1. Validar Horario Laboral (Ejemplo: Lunes a Sábado, 8am a 8pm)
-    # Convertimos la hora string a objeto time
-    hora_obj = datetime.strptime(hora, '%H:%M').time()
-    hora_apertura = datetime.strptime('08:00', '%H:%M').time()
-    hora_cierre = datetime.strptime('20:00', '%H:%M').time()
+    # 1. Validación básica de datos
+    if not (fecha_str and hora_str and consultorio_id and terapeuta_id):
+        # Si falta algún dato, no validamos nada todavía, devolvemos success silencioso
+        # o un mensaje neutro para no mostrar errores rojos prematuros.
+        return JsonResponse({'available': False, 'msg': ''})
+
+    try:
+        # 2. Limpieza de formatos (Aquí arreglamos el error de la imagen)
+        # Si la hora trae segundos (Ej: "14:30:00"), nos quedamos solo con los primeros 5 caracteres
+        if len(hora_str) > 5:
+            hora_str = hora_str[:5]
+
+        fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        hora_obj = datetime.strptime(hora_str, '%H:%M').time()
+        dia_semana = fecha_obj.weekday()
+
+        # 3. Validar Horario Laboral del Terapeuta
+        trabaja = Horario.objects.filter(
+            terapeuta_id=terapeuta_id,
+            dia=dia_semana,
+            hora_inicio__lte=hora_obj,
+            hora_fin__gt=hora_obj
+        ).exists()
+
+        if not trabaja:
+            return JsonResponse({'available': False, 'msg': ' El terapeuta no trabaja en este horario.'})
+
+        # 4. Validar Choque de Consultorio
+        query_consultorio = Cita.objects.filter(
+            consultorio_id=consultorio_id,
+            fecha=fecha_obj,
+            hora=hora_obj,
+            estatus='programada'
+        )
+        # ¡MAGIA! Si estamos editando, excluimos esta cita del conteo
+        if exclude_id and exclude_id != 'None' and exclude_id != '':
+            query_consultorio = query_consultorio.exclude(id=int(exclude_id))
+
+        if query_consultorio.exists():
+             return JsonResponse({'available': False, 'msg': ' El consultorio está ocupado.'})
+
+        # 5. Validar Choque de Terapeuta (misma lógica de exclusión)
+        query_terapeuta = Cita.objects.filter(
+            terapeuta_id=terapeuta_id,
+            fecha=fecha_obj,
+            hora=hora_obj,
+            estatus='programada'
+        )
+        if exclude_id and exclude_id != 'None' and exclude_id != '':
+            query_terapeuta = query_terapeuta.exclude(id=int(exclude_id))
+
+        if query_terapeuta.exists():
+            return JsonResponse({'available': False, 'msg': ' El terapeuta ya tiene otra cita.'})
+
+        return JsonResponse({'available': True, 'msg': ' Disponible'})
+
+    except ValueError as e:
+        # Esto captura errores de formato raros y nos dice cuál es en la consola
+        print(f"Error de formato: {e}") 
+        return JsonResponse({'available': False, 'msg': 'Error en formato de fecha/hora'})
     
-    if not (hora_apertura <= hora_obj <= hora_cierre):
-        return JsonResponse({
-            'available': False, 
-            'msg': ' Fuera de horario laboral (8:00 AM - 8:00 PM)'
-        })
-
-    # 2. Validar Choque de Consultorio
-    ocupado = Cita.objects.filter(
-        consultorio_id=consultorio_id,
-        fecha=fecha,
-        hora=hora,
-        estatus='programada'
-    ).exists()
-
-    if ocupado:
-        return JsonResponse({
-            'available': False, 
-            'msg': 'Consultorio ocupado a esta hora.'
-        })
-        return JsonResponse({'available': True, 'msg': 'Disponible'})
-    query_consultorio = Cita.objects.filter(
-        consultorio_id=consultorio_id,
-        fecha=fecha_obj,
-        hora=hora_obj,
-        estatus='programada'
-    )
-    if exclude_id: # Si nos pasaron un ID, lo excluimos
-        query_consultorio = query_consultorio.exclude(id=exclude_id)
-        
-    if query_consultorio.exists():
-         return JsonResponse({'available': False, 'msg': '⛔ El consultorio está ocupado.'})
-
-    # AL VALIDAR EL TERAPEUTA:
-    query_terapeuta = Cita.objects.filter(
-        terapeuta_id=terapeuta_id,
-        fecha=fecha_obj,
-        hora=hora_obj,
-        estatus='programada'
-    )
-    if exclude_id:
-        query_terapeuta = query_terapeuta.exclude(id=exclude_id)
-
-    if query_terapeuta.exists():
-        return JsonResponse({'available': False, 'msg': '⚠️ El terapeuta ya tiene otra cita.'})
-
-    return JsonResponse({'available': True, 'msg': '✅ Disponible'})
+# En clinica/views.py
 
 @login_required
 def editar_cita(request, cita_id):
-    # 1. Buscamos la cita o damos error 404 si no existe
     cita = get_object_or_404(Cita, id=cita_id)
     
     if request.method == 'POST':
-        # 2. Cargamos el formulario con los datos nuevos (POST) y la instancia vieja (cita)
         form = CitaForm(request.POST, instance=cita)
         if form.is_valid():
             form.save()
-            messages.success(request, '¡Cita actualizada correctamente! 🔄')
+            messages.success(request, '¡Cita actualizada correctamente! ')
             
-            # Inteligencia: ¿A dónde regresamos?
-            # Si venimos del expediente del paciente, regresamos ahí. Si no, al home.
             origen = request.GET.get('next', 'home')
             if origen == 'paciente':
                 return redirect('detalle_paciente', paciente_id=cita.paciente.id)
             return redirect('home')
         else:
-             messages.error(request, '⚠️ Corrige los errores en el formulario.')
+            # 👇 AQUÍ ESTÁ LA MAGIA: Mostramos el error exacto
+            for field, errors in form.errors.items():
+                for error in errors:
+                    if field == '__all__':
+                        messages.error(request, f" {error}")
+                    else:
+                        messages.error(request, f"Error en {field}: {error}")
     else:
-        # 3. Si es GET, mostramos el formulario lleno con los datos actuales
         form = CitaForm(instance=cita)
 
     return render(request, 'clinica/editar_cita.html', {

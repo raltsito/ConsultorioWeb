@@ -122,8 +122,8 @@ class Cita(models.Model):
     servicio = models.ForeignKey(Servicio, on_delete=models.SET_NULL, null=True)
     terapeuta = models.ForeignKey(Terapeuta, on_delete=models.SET_NULL, null=True)
     
-    costo = models.DecimalField(max_digits=10, decimal_places=2, default=500.00)
-    metodo_pago = models.CharField(max_length=20, choices=PAGO_CHOICES, default='Pendiente')
+    costo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    metodo_pago = models.CharField(max_length=50, null=True, blank=True)
     estatus = models.CharField(max_length=20, choices=ESTATUS_CHOICES, default='programada')
     
     folio_fiscal = models.CharField(max_length=100, blank=True, null=True)

@@ -85,33 +85,56 @@
         // ID de la cita actual para excluirla de la validación
         const currentCitaId = "{{ cita.id }}";
 
+        // 🧹 NUEVO: Función para limpiar errores visuales (marcos rojos y textos viejos)
+        function limpiarErroresVisuales(elemento) {
+            elemento.removeClass('is-invalid'); // Quita el marco rojo
+            // Oculta los textos de error que haya dejado Django alrededor
+            elemento.siblings('.errorlist, .text-danger, .invalid-feedback').fadeOut('fast');
+        }
+
         function checkAvailability() {
             const fecha = $fecha.val();
             const hora = $hora.val();
             const consultorio = $consultorio.val();
             const terapeuta = $terapeuta.val();
 
+            // Si están los 4 datos completos, verificamos:
             if (fecha && hora && consultorio && terapeuta) {
                 $status.html('<span class="text-muted">Verificando... <div class="spinner-border spinner-border-sm"></div></span>');
                 
-                // Agregamos el ID a la petición para que la API ignore esta misma cita
                 $.get('/api/verificar-disponibilidad/', {
                     'fecha': fecha,
                     'hora': hora,
                     'consultorio': consultorio,
                     'terapeuta': terapeuta,
-                    'exclude_id': currentCitaId // <--- CLAVE PARA EDITAR
+                    'exclude_id': currentCitaId
                 }, function(data) {
                     if (data.available) {
-                        $status.html('<span class="text-success">' + data.msg + '</span>');
+                        $status.html('<span class="text-success fw-bold">' + data.msg + '</span>');
                         $('button[type="submit"]').prop('disabled', false);
+                        
+                        // Opción Nuclear contra fantasmas rojos
+                        $('.is-invalid').removeClass('is-invalid');
+                        $('.errorlist').fadeOut('fast');
+                        $('.alert-danger').fadeOut('fast');
+                        $('.messages .alert-danger').fadeOut('fast');
+                        
                     } else {
-                        $status.html('<span class="text-danger">' + data.msg + '</span>');
+                        $status.html('<span class="text-danger fw-bold">' + data.msg + '</span>');
                         $('button[type="submit"]').prop('disabled', true);
                     }
                 });
+            } else {
+                // 🤫 AQUÍ ESTÁ EL CAMBIO: Si faltan datos, borramos el mensaje y apagamos el botón en silencio
+                $status.html(''); 
+                $('button[type="submit"]').prop('disabled', true);
             }
         }
+
+        // Cada vez que cambies algo, limpiamos la basura visual y verificamos
+        $('input, select').on('change', function() {
+            limpiarErroresVisuales($(this));
+        });
 
         $fecha.on('change', checkAvailability);
         $hora.on('change', checkAvailability);
