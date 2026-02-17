@@ -1,20 +1,19 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from .models import Paciente, Cita
-from .forms import PacienteForm , CitaForm
-from django.utils import timezone  
-from django.db.models import Q    
-from .utils import sincronizar_google_sheet 
-from django.contrib.auth.decorators import login_required
+#Librerias estandar de Python
 import unicodedata
-from .forms import CitaForm
-from django.contrib import messages 
-from django.http import JsonResponse
-from datetime import datetime
+from datetime import date, datetime, timedelta
+
+#Herramientas base de Django
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Cita, Horario
-from datetime import datetime, timedelta
+from django.utils import timezone
+from django.db.models import Q
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
 
-
+#Modelos, Formularios y Utilidades de nuestra App
+from .models import Paciente, Cita, Horario
+from .forms import PacienteForm, CitaForm
+#from .utils import sincronizar_google_sheet
 
 def quitar_tildes(texto):
     if not texto:
@@ -24,6 +23,8 @@ def quitar_tildes(texto):
 
 @login_required
 def home(request):
+    if hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('portal_terapeuta')
     from django.utils import timezone
     hoy = timezone.now().date()
     mes_actual = timezone.now().month
@@ -227,17 +228,20 @@ def crear_cita(request):
         # Peticion GET: El usuario apenas va a abrir la pagina
         datos_iniciales = {}
         
-        # Atrapamos los parametros que manda el calendario o el expediente
         if 'fecha' in request.GET:
             datos_iniciales['fecha'] = request.GET.get('fecha')
         if 'hora' in request.GET:
             datos_iniciales['hora'] = request.GET.get('hora')
-            
-        # NUEVO: Atrapamos el ID del paciente si viene desde el expediente
         if 'paciente' in request.GET:
             datos_iniciales['paciente'] = request.GET.get('paciente')
             
-        # Creamos el formulario vacio, inyectando los datos que hayamos atrapado
+        # TRUCO: Lo convertimos a entero para que el campo Choice de Django lo acepte sin quejarse
+        if 'terapeuta' in request.GET:
+            try:
+                datos_iniciales['terapeuta'] = int(request.GET.get('terapeuta'))
+            except ValueError:
+                pass
+            
         form = CitaForm(initial=datos_iniciales)
 
     # ESTO ES VITAL: Renderizamos la plantilla HTML en lugar de redirigir.
@@ -393,3 +397,34 @@ def api_terapeutas_paciente(request):
             terapeutas_unicos.add(str(cita.terapeuta))
             
     return JsonResponse({'terapeutas': list(terapeutas_unicos)})
+
+@login_required
+def portal_terapeuta(request):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home') 
+    
+    mi_perfil = request.user.perfil_terapeuta
+    hoy = date.today()
+    
+    # --- TRUCO PARA LA FECHA PERFECTA EN ESPAÑOL ---
+    meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+    fecha_bonita = f"{hoy.day} de {meses[hoy.month - 1]} del {hoy.year}"
+    
+    citas_hoy = Cita.objects.filter(
+        terapeuta=mi_perfil, 
+        fecha=hoy
+    ).order_by('hora')
+    
+    citas_proximas = Cita.objects.filter(
+        terapeuta=mi_perfil, 
+        fecha__gt=hoy
+    ).order_by('fecha', 'hora')[:10] 
+    
+    context = {
+        'terapeuta': mi_perfil,
+        'citas_hoy': citas_hoy,
+        'citas_proximas': citas_proximas,
+        'fecha_bonita': fecha_bonita, # <--- Pasamos la fecha arreglada
+    }
+    
+    return render(request, 'clinica/portal_terapeuta.html', context)

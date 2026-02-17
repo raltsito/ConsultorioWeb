@@ -1,5 +1,6 @@
 import unicodedata
 from django.db import models
+from django.contrib.auth.models import User
 
 def quitar_tildes(texto):
     if not texto:
@@ -9,6 +10,9 @@ def quitar_tildes(texto):
                    if unicodedata.category(c) != 'Mn').lower()
 
 class Terapeuta(models.Model):
+    # El puente hacia el sistema de login de Django
+    usuario = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='perfil_terapeuta')
+    
     nombre = models.CharField(max_length=100)
     activo = models.BooleanField(default=True) 
 
