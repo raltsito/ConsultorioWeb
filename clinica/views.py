@@ -12,6 +12,7 @@ from django.http import JsonResponse
 
 #Modelos, Formularios y Utilidades de nuestra App
 from .models import Paciente, Cita, Horario
+from .models import SolicitudCita, Terapeuta # Asegurate de importar SolicitudCita
 from .forms import PacienteForm, CitaForm
 #from .utils import sincronizar_google_sheet
 
@@ -23,22 +24,30 @@ def quitar_tildes(texto):
 
 @login_required
 def home(request):
+    # --- EL SEMAFORO INTELIGENTE ---
     if hasattr(request.user, 'perfil_terapeuta'):
         return redirect('portal_terapeuta')
+    
+    if hasattr(request.user, 'perfil_paciente'):
+        return redirect('portal_paciente')
+    
     from django.utils import timezone
+    from .forms import CitaForm 
+    from .models import SolicitudCita # <-- Importamos la sala de espera por si acaso
+    
     hoy = timezone.now().date()
     mes_actual = timezone.now().month
     
-    # IMPORTANTE: Asegúrate de importar CitaForm si vas a usar el modal
-    from .forms import CitaForm 
-
+    # --- NUEVO: Traemos la bandeja de entrada de solicitudes pendientes ---
+    solicitudes_pendientes = SolicitudCita.objects.filter(estado='pendiente').order_by('fecha_creacion')
+    
     # 1. ESTADÍSTICAS
     citas_hoy_count = Cita.objects.filter(fecha=hoy).count()
     
     # CORRECCIÓN 1: Usamos 'estatus' en lugar de 'estado'
     pendientes_count = Cita.objects.filter(
         fecha__lte=hoy, 
-        estatus='programada' # <--- AQUÍ CAMBIÓ
+        estatus='programada' 
     ).count()
     
     pacientes_nuevos = Paciente.objects.filter(
@@ -49,8 +58,8 @@ def home(request):
     # CORRECCIÓN 2: Usamos 'estatus' y ordenamos por 'hora' (no hora_inicio)
     proximas_citas = Cita.objects.filter(
         fecha__gte=hoy,
-        estatus='programada' # <--- AQUÍ CAMBIÓ
-    ).order_by('fecha', 'hora')[:5] # <--- AQUÍ CAMBIÓ (era hora_inicio)
+        estatus='programada' 
+    ).order_by('fecha', 'hora')[:5] 
 
     return render(request, 'clinica/home.html', {
         'citas_hoy': citas_hoy_count,
@@ -58,7 +67,8 @@ def home(request):
         'pacientes_nuevos': pacientes_nuevos,
         'proximas_citas': proximas_citas,
         'hoy': hoy,
-        'form': CitaForm()
+        'form': CitaForm(),
+        'solicitudes_pendientes': solicitudes_pendientes, # <--- AQUI YA ESTA INCLUIDO EN EL PAQUETE
     })
 # Asegúrate de tener esto arriba: from django.db.models import Q
 
@@ -154,7 +164,7 @@ def agendar_cita(request, paciente_id):
                 sincronizar_google_sheet(cita)
                 print("✅ Sincronización exitosa")
             except Exception as e:
-                print(f"⚠️ Error al sincronizar con Google: {e}")
+                print(f" Error al sincronizar con Google: {e}")
             
 
             return redirect('detalle_paciente', paciente_id=paciente.id)
@@ -428,3 +438,66 @@ def portal_terapeuta(request):
     }
     
     return render(request, 'clinica/portal_terapeuta.html', context)
+
+@login_required
+def portal_paciente(request):
+    # 1. Verificamos si el usuario actual tiene un perfil de paciente
+    if not hasattr(request.user, 'perfil_paciente'):
+        return redirect('home') 
+    
+    # 2. Identificamos al paciente exacto
+    mi_perfil = request.user.perfil_paciente
+    hoy = date.today()
+    
+    # 3. Filtramos sus citas futuras y pasadas
+    citas_proximas = Cita.objects.filter(
+        paciente=mi_perfil, 
+        fecha__gte=hoy
+    ).order_by('fecha', 'hora')
+    
+    historial = Cita.objects.filter(
+        paciente=mi_perfil, 
+        fecha__lt=hoy
+    ).order_by('-fecha', '-hora')
+    
+    context = {
+        'paciente': mi_perfil,
+        'citas_proximas': citas_proximas,
+        'historial': historial,
+    }
+    
+    return render(request, 'clinica/portal_paciente.html', context)
+
+@login_required
+def solicitar_cita_paciente(request):
+    # Verificamos que sea un paciente
+    if not hasattr(request.user, 'perfil_paciente'):
+        return redirect('home')
+        
+    mi_perfil = request.user.perfil_paciente
+    
+    if request.method == 'POST':
+        # Atrapamos lo que el paciente lleno en el formulario HTML
+        fecha = request.POST.get('fecha_deseada')
+        hora = request.POST.get('hora_deseada')
+        terapeuta_id = request.POST.get('terapeuta')
+        notas = request.POST.get('notas_paciente')
+        
+        # Creamos el ticket en nuestra "Sala de Espera" (SolicitudCita)
+        SolicitudCita.objects.create(
+            paciente_nombre=mi_perfil.nombre,
+            telefono=mi_perfil.telefono, # Asumiendo que tu modelo Paciente tiene campo telefono
+            fecha_deseada=fecha,
+            hora_deseada=hora if hora else None,
+            terapeuta_id=terapeuta_id if terapeuta_id else None,
+            notas_paciente=notas,
+            estado='pendiente'
+        )
+        
+        # Le avisamos que todo salio bien y lo regresamos a su portal
+        messages.success(request, '¡Tu solicitud ha sido enviada! Recepción la revisará y te confirmará pronto.')
+        return redirect('portal_paciente')
+        
+    # Si apenas va a abrir la pagina (GET), le mandamos la lista de terapeutas activos
+    terapeutas = Terapeuta.objects.filter(activo=True)
+    return render(request, 'clinica/solicitar_cita.html', {'terapeutas': terapeutas})

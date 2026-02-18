@@ -1,0 +1,113 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card text-white shadow-sm border-0 rounded-4" style="background-color: #20c997;">
+                <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    
+                    <div class="d-flex align-items-center">
+                        <div class="me-4 d-none d-md-block">
+                            <i class="bi bi-person-heart" style="font-size: 3rem;"></i>
+                        </div>
+                        <div>
+                            <h2 class="fw-bold mb-1">Hola, {{ paciente.nombre }}</h2>
+                            <p class="mb-0 fs-5 text-white-50">Portal del Paciente | Tu salud es nuestra prioridad</p>
+                        </div>
+                    </div>
+
+                    <div>
+                     <a href="{% url 'solicitar_cita_paciente' %}" class="btn btn-light btn-lg text-success fw-bold shadow-sm d-flex align-items-center">
+                            <i class="bi bi-calendar-plus fs-4 me-2"></i> 
+                            Solicitar Nueva Cita
+                        </a>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 rounded-4 h-100">
+                <div class="card-header bg-white border-bottom p-4">
+                    <h4 class="fw-bold text-dark mb-0">Mis Próximas Citas</h4>
+                </div>
+                <div class="card-body p-0">
+                    {% if citas_proximas %}
+                        <div class="list-group list-group-flush">
+                            {% for cita in citas_proximas %}
+                                <div class="list-group-item p-4 border-bottom hover-bg-light">
+                                    <div class="row align-items-center">
+                                        <div class="col-auto text-center pe-3" style="min-width: 120px;">
+                                            <h5 class="fw-bold text-success mb-0">{{ cita.fecha|date:"d M" }}</h5>
+                                            <h3 class="fw-bold text-dark mb-0">{{ cita.hora|time:"H:i" }}</h3>
+                                        </div>
+                                        
+                                        <div class="col border-start ps-4">
+                                            <h4 class="fw-bold mb-1">Terapeuta: {{ cita.terapeuta|default:"Por asignar" }}</h4>
+                                            <p class="text-muted mb-0 fs-5">
+                                                <i class="bi bi-door-open me-1"></i> {{ cita.consultorio }} | 
+                                                <i class="bi bi-tag me-1"></i> {{ cita.servicio }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="p-5 text-center">
+                            <div class="text-muted mb-3">
+                                <i class="bi bi-calendar2-check" style="font-size: 4rem;"></i>
+                            </div>
+                            <h4 class="text-muted">No tienes citas próximas agendadas.</h4>
+                            <p class="text-secondary fs-5">Si necesitas atención, puedes solicitar una cita nueva.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-white border-bottom p-4">
+                    <h5 class="fw-bold text-secondary mb-0">Mi Historial</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if historial %}
+                        <div class="list-group list-group-flush">
+                            {% for cita in historial %}
+                                <div class="list-group-item p-4">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong class="text-dark d-block fs-5">{{ cita.fecha|date:"d M, Y" }}</strong>
+                                            <span class="text-muted fs-6">Atendido por: {{ cita.terapeuta|default:"No especificado" }}</span>
+                                        </div>
+                                        <span class="badge bg-light text-dark border px-3 py-2 fs-6">{{ cita.servicio }}</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="p-5 text-center text-muted">
+                            <p class="fs-5 mb-0">No hay registros de citas pasadas.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-bg-light:hover {
+        background-color: #f8f9fa;
+        transition: background-color 0.2s ease;
+    }
+    .rounded-4 {
+        border-radius: 1rem !important;
+    }
+</style>
+{% endblock %}

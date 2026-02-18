@@ -54,6 +54,7 @@ class Paciente(models.Model):
     ]
 
     # Datos Generales
+    usuario = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='perfil_paciente')
     nombre = models.CharField(max_length=200, verbose_name="Nombre Completo")
     fecha_nacimiento = models.DateField(verbose_name="Fecha de Nacimiento")
     
@@ -164,3 +165,26 @@ class Horario(models.Model):
 
     def __str__(self):
         return f"{self.terapeuta} - {self.get_dia_display()} ({self.hora_inicio} - {self.hora_fin})"
+    
+
+class SolicitudCita(models.Model):
+    ESTADOS = [
+        ('pendiente', 'Pendiente'),
+        ('aceptada', 'Aceptada'),
+        ('rechazada', 'Rechazada'),
+    ]
+    
+    paciente_nombre = models.CharField(max_length=150)
+    telefono = models.CharField(max_length=20)
+    
+    fecha_deseada = models.DateField()
+    hora_deseada = models.TimeField(null=True, blank=True)
+    terapeuta = models.ForeignKey('Terapeuta', on_delete=models.SET_NULL, null=True, blank=True)
+    notas_paciente = models.TextField(blank=True, null=True, help_text="Mensaje original del paciente")
+    
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
+    motivo_rechazo = models.TextField(blank=True, null=True, help_text="Razón enviada al paciente si se rechaza")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.paciente_nombre} - {self.fecha_deseada} ({self.get_estado_display()})"

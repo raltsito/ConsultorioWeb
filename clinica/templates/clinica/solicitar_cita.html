@@ -1,0 +1,67 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm border-0 rounded-4">
+                
+                <div class="card-header text-white p-4" style="background-color: #20c997; border-top-left-radius: 1rem; border-top-right-radius: 1rem;">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-calendar-plus fs-2 me-3"></i>
+                        <div>
+                            <h4 class="fw-bold mb-0">Solicitar Cita</h4>
+                            <small class="text-white-50">Envíanos tu disponibilidad</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body p-4 bg-white" style="border-bottom-left-radius: 1rem; border-bottom-right-radius: 1rem;">
+                    
+                    <div class="alert alert-info border-0 bg-light text-secondary mb-4 small rounded-3">
+                        <i class="bi bi-info-circle-fill me-1 text-info"></i>
+                        Al enviar esta solicitud, nuestra recepción buscará el espacio ideal para ti y te confirmará a la brevedad.
+                    </div>
+
+                    <form method="post" action="{% url 'solicitar_cita_paciente' %}">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="fecha_deseada" class="form-label text-muted fw-semibold">Fecha deseada <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control form-control-lg bg-light" id="fecha_deseada" name="fecha_deseada" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="hora_deseada" class="form-label text-muted fw-semibold">Hora de preferencia (Opcional)</label>
+                            <input type="time" class="form-control form-control-lg bg-light" id="hora_deseada" name="hora_deseada">
+                            <div class="form-text">Si tienes un horario estricto, indícalo aquí.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="terapeuta" class="form-label text-muted fw-semibold">Especialista (Opcional)</label>
+                            <select class="form-select form-select-lg bg-light" id="terapeuta" name="terapeuta">
+                                <option value="">Sin preferencia (El más disponible)</option>
+                                {% for t in terapeutas %}
+                                    <option value="{{ t.id }}">{{ t.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="notas_paciente" class="form-label text-muted fw-semibold">Motivo de consulta o comentario</label>
+                            <textarea class="form-control bg-light" id="notas_paciente" name="notas_paciente" rows="3" placeholder="Ej. Cita de seguimiento, etc."></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4 pt-3 border-top">
+                            <button type="submit" class="btn btn-lg text-white fw-bold shadow-sm" style="background-color: #20c997;">
+                                Enviar Solicitud
+                            </button>
+                            <a href="{% url 'portal_paciente' %}" class="btn btn-light btn-lg text-muted">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

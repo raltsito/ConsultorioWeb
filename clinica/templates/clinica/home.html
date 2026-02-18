@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block content %}
+
 <div class="row mb-4 animate__animated animate__fadeIn">
     <div class="col-12">
         <h2 class="fw-bold text-secondary-emphasis">
@@ -306,6 +307,60 @@
             }
         });});
     </script>
+
+
+    {% if solicitudes_pendientes %}
+    <div class="row mt-4 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 border-start border-warning border-5 rounded-3">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-inbox-fill text-warning me-2"></i> Solicitudes Pendientes
+                        <span class="badge bg-warning text-dark ms-2 rounded-pill">{{ solicitudes_pendientes.count }}</span>
+                    </h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for solicitud in solicitudes_pendientes %}
+                    <div class="list-group-item p-4 hover-bg-light">
+                        <div class="row align-items-center">
+                            
+                            <div class="col-md-4 mb-2 mb-md-0">
+                                <h5 class="fw-bold text-primary mb-1">{{ solicitud.paciente_nombre }}</h5>
+                                <p class="text-muted mb-0 small"><i class="bi bi-telephone me-1"></i> {{ solicitud.telefono }}</p>
+                            </div>
+                            
+                            <div class="col-md-5 mb-3 mb-md-0 border-start px-md-4">
+                                <p class="mb-1 text-dark fw-semibold">
+                                    <i class="bi bi-calendar-event me-1"></i> Para el {{ solicitud.fecha_deseada|date:"d M, Y" }}
+                                    {% if solicitud.hora_deseada %}<span class="text-primary"> a las {{ solicitud.hora_deseada|time:"H:i" }}</span>{% endif %}
+                                </p>
+                                <p class="mb-1 text-muted small">
+                                    <i class="bi bi-person-badge me-1"></i> Terapeuta: <span class="text-dark">{{ solicitud.terapeuta|default:"Sin preferencia" }}</span>
+                                </p>
+                                {% if solicitud.notas_paciente %}
+                                <div class="bg-light p-2 rounded mt-2 border">
+                                    <small class="text-secondary fst-italic">"{{ solicitud.notas_paciente }}"</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 text-md-end text-center mt-3 mt-md-0">
+                                <a href="#" class="btn btn-success fw-bold px-3 mb-2 w-100 shadow-sm">
+                                    <i class="bi bi-check-circle me-1"></i> Aceptar y Agendar
+                                </a>
+                                <a href="#" class="btn btn-outline-danger fw-bold px-3 w-100">
+                                    <i class="bi bi-x-circle me-1"></i> Rechazar
+                                </a>
+                            </div>
+                            
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
 
 {% endblock %}
