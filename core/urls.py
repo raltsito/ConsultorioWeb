@@ -27,6 +27,9 @@ urlpatterns = [
     path('portal-medico/', clinica_views.portal_terapeuta, name='portal_terapeuta'),
     path('mi-portal/', clinica_views.portal_paciente, name='portal_paciente'),
     path('mi-portal/solicitar/', clinica_views.solicitar_cita_paciente, name='solicitar_cita_paciente'),
+    path('solicitud/rechazar/<int:solicitud_id>/', clinica_views.rechazar_solicitud, name='rechazar_solicitud'),
+    path('mi-portal-doc/solicitar/', clinica_views.solicitar_cita_terapeuta, name='solicitar_cita_terapeuta'),
+    
 ]
 
 if settings.DEBUG:

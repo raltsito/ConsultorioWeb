@@ -1,0 +1,61 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm border-0 rounded-4">
+                
+                <div class="card-header text-white p-4" style="background-color: #0d6efd; border-top-left-radius: 1rem; border-top-right-radius: 1rem;">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-calendar2-plus fs-2 me-3"></i>
+                        <div>
+                            <h4 class="fw-bold mb-0">Solicitar Espacio</h4>
+                            <small class="text-white-50">Envía la petición a Recepción</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body p-4 bg-white" style="border-bottom-left-radius: 1rem; border-bottom-right-radius: 1rem;">
+                    <form method="post" action="{% url 'solicitar_cita_terapeuta' %}">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="paciente_nombre" class="form-label text-muted fw-semibold">Nombre del Paciente <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control bg-light" id="paciente_nombre" name="paciente_nombre" required placeholder="Ej. Juan Pérez">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="telefono" class="form-label text-muted fw-semibold">Teléfono del Paciente (Opcional)</label>
+                            <input type="text" class="form-control bg-light" id="telefono" name="telefono">
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label for="fecha_deseada" class="form-label text-muted fw-semibold">Fecha <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control bg-light" id="fecha_deseada" name="fecha_deseada" required>
+                            </div>
+                            <div class="col-6">
+                                <label for="hora_deseada" class="form-label text-muted fw-semibold">Hora <span class="text-danger">*</span></label>
+                                <input type="time" class="form-control bg-light" id="hora_deseada" name="hora_deseada" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="notas_terapeuta" class="form-label text-muted fw-semibold">Comentarios para Recepción</label>
+                            <textarea class="form-control bg-light" id="notas_terapeuta" name="notas_terapeuta" rows="2" placeholder="Ej. Necesito el consultorio 1 porque tiene proyector."></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4 pt-3 border-top">
+                            <button type="submit" class="btn btn-primary btn-lg fw-bold shadow-sm">
+                                Enviar a Recepción
+                            </button>
+                            <a href="{% url 'portal_terapeuta' %}" class="btn btn-light btn-lg text-muted">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

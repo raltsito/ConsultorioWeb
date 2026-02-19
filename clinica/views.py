@@ -13,6 +13,7 @@ from django.http import JsonResponse
 #Modelos, Formularios y Utilidades de nuestra App
 from .models import Paciente, Cita, Horario
 from .models import SolicitudCita, Terapeuta # Asegurate de importar SolicitudCita
+from .models import Paciente, Terapeuta, Cita, Horario, SolicitudCita
 from .forms import PacienteForm, CitaForm
 #from .utils import sincronizar_google_sheet
 
@@ -221,7 +222,24 @@ def crear_cita(request):
     if request.method == 'POST':
         form = CitaForm(request.POST)
         if form.is_valid():
+            # Guardamos la cita en la base de datos
             form.save()
+            
+            # --- NUEVA MAGIA: Limpieza de la bandeja de entrada ---
+            # Atrapamos el ID de la solicitud que sigue en la URL
+            solicitud_id = request.GET.get('solicitud')
+            if solicitud_id:
+                try:
+                  
+                    # Buscamos el ticket en la sala de espera
+                    solicitud = SolicitudCita.objects.get(id=solicitud_id)
+                    # Lo marcamos como aceptado para que desaparezca del Dashboard
+                    solicitud.estado = 'aceptada'
+                    solicitud.save()
+                except SolicitudCita.DoesNotExist:
+                    pass
+            # ------------------------------------------------------
+            
             messages.success(request, 'Cita agendada correctamente.')
             return redirect('home')
         else:
@@ -234,6 +252,7 @@ def crear_cita(request):
             # ATENCION: Aqui NO hacemos redirect. Dejamos que el flujo continue 
             # hacia abajo para que vuelva a mostrar el formulario, pero ahora 
             # marcado con los errores y conservando lo que el usuario escribio.
+            
     else:
         # Peticion GET: El usuario apenas va a abrir la pagina
         datos_iniciales = {}
@@ -252,6 +271,27 @@ def crear_cita(request):
             except ValueError:
                 pass
             
+        solicitud_id = request.GET.get('solicitud')
+        if solicitud_id:
+            try:
+                solicitud = SolicitudCita.objects.get(id=solicitud_id)
+                # Llenamos el formulario con lo que pidió el paciente
+                datos_iniciales['fecha'] = solicitud.fecha_deseada
+                
+                if solicitud.hora_deseada:
+                    datos_iniciales['hora'] = solicitud.hora_deseada
+                    
+                if solicitud.terapeuta:
+                    datos_iniciales['terapeuta'] = solicitud.terapeuta.id
+                    
+                    from .models import Paciente 
+                
+                # Buscamos si hay algún paciente en la BD que se llame igual
+                paciente_match = Paciente.objects.filter(nombre__icontains=solicitud.paciente_nombre).first()
+                if paciente_match:
+                    datos_iniciales['paciente'] = paciente_match.id
+            except SolicitudCita.DoesNotExist:
+                pass
         form = CitaForm(initial=datos_iniciales)
 
     # ESTO ES VITAL: Renderizamos la plantilla HTML en lugar de redirigir.
@@ -430,11 +470,15 @@ def portal_terapeuta(request):
         fecha__gt=hoy
     ).order_by('fecha', 'hora')[:10] 
     
+    mis_solicitudes = SolicitudCita.objects.filter(
+        terapeuta=mi_perfil
+    ).order_by('-fecha_creacion')[:5]
     context = {
         'terapeuta': mi_perfil,
         'citas_hoy': citas_hoy,
         'citas_proximas': citas_proximas,
         'fecha_bonita': fecha_bonita, # <--- Pasamos la fecha arreglada
+        'mis_solicitudes': mis_solicitudes, 
     }
     
     return render(request, 'clinica/portal_terapeuta.html', context)
@@ -460,10 +504,16 @@ def portal_paciente(request):
         fecha__lt=hoy
     ).order_by('-fecha', '-hora')
     
+  
+    mis_solicitudes = SolicitudCita.objects.filter(
+        paciente_nombre=mi_perfil.nombre
+    ).order_by('-fecha_creacion')[:5] 
+    
     context = {
         'paciente': mi_perfil,
         'citas_proximas': citas_proximas,
         'historial': historial,
+        'mis_solicitudes': mis_solicitudes, # <--- Lo agregamos al paquete
     }
     
     return render(request, 'clinica/portal_paciente.html', context)
@@ -501,3 +551,53 @@ def solicitar_cita_paciente(request):
     # Si apenas va a abrir la pagina (GET), le mandamos la lista de terapeutas activos
     terapeutas = Terapeuta.objects.filter(activo=True)
     return render(request, 'clinica/solicitar_cita.html', {'terapeutas': terapeutas})
+
+@login_required
+def rechazar_solicitud(request, solicitud_id):
+    if request.method == 'POST':
+        try:
+            from .models import SolicitudCita # Aseguramos que este import global funcione
+            solicitud = SolicitudCita.objects.get(id=solicitud_id)
+            
+            # Atrapamos lo que escribio la recepcionista
+            motivo = request.POST.get('motivo_rechazo', '')
+            
+            solicitud.estado = 'rechazada'
+            solicitud.motivo_rechazo = motivo
+            solicitud.save()
+            
+            messages.warning(request, f'La solicitud de {solicitud.paciente_nombre} fue rechazada correctamente.')
+        except SolicitudCita.DoesNotExist:
+            pass
+            
+    return redirect('home')
+
+@login_required
+def solicitar_cita_terapeuta(request):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+        
+    mi_perfil = request.user.perfil_terapeuta
+    
+    if request.method == 'POST':
+        paciente = request.POST.get('paciente_nombre')
+        telefono = request.POST.get('telefono', '')
+        fecha = request.POST.get('fecha_deseada')
+        hora = request.POST.get('hora_deseada')
+        notas = request.POST.get('notas_terapeuta', '')
+        
+        # Guardamos en la misma Sala de Espera
+        SolicitudCita.objects.create(
+            paciente_nombre=paciente,
+            telefono=telefono,
+            fecha_deseada=fecha,
+            hora_deseada=hora if hora else None,
+            terapeuta=mi_perfil, # Se asigna a si mismo automaticamente
+            notas_paciente=f"SOLICITADO POR TERAPEUTA: {notas}", 
+            estado='pendiente'
+        )
+        
+        messages.success(request, 'Solicitud enviada a Recepción. Espera su confirmación.')
+        return redirect('portal_terapeuta')
+        
+    return render(request, 'clinica/solicitar_cita_terapeuta.html')

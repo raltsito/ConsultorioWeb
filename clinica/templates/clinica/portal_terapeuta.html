@@ -14,6 +14,12 @@
                             <h2 class="fw-bold mb-1">Bienvenido, {{ terapeuta.nombre }}</h2>
                             <p class="mb-0 fs-5 text-white-50">Portal Médico | Tu agenda para hoy: {{ fecha_bonita }}</p>
                         </div>
+                        <div>
+                        <a href="{% url 'solicitar_cita_terapeuta' %}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm d-flex align-items-center">
+                            <i class="bi bi-calendar-plus fs-8 me-1"></i> 
+                            Solicitar Cita a Recepción
+                        </a>
+                    </div>
                     </div>
 
                    <div>

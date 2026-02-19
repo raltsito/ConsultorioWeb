@@ -30,7 +30,48 @@
     </div>
 
     <div class="row g-4">
-        <div class="col-lg-7">
+        
+            <div class="col-lg-7">
+            
+            {% if mis_solicitudes %}
+            <div class="card shadow-sm border-0 rounded-4 mb-4 border-start border-info border-5">
+                <div class="card-header bg-white border-bottom p-3">
+                    <h5 class="fw-bold text-dark mb-0">Estatus de mis solicitudes</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for solicitud in mis_solicitudes %}
+                            <div class="list-group-item p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong class="text-dark">Para el {{ solicitud.fecha_deseada|date:"d M, Y" }}</strong>
+                                    
+                                    {% if solicitud.estado == 'pendiente' %}
+                                        <span class="badge bg-warning text-dark border px-2 py-1">En Revisión</span>
+                                    {% elif solicitud.estado == 'aceptada' %}
+                                        <span class="badge bg-success border px-2 py-1">Aceptada y Agendada</span>
+                                    {% elif solicitud.estado == 'rechazada' %}
+                                        <span class="badge bg-danger border px-2 py-1">Rechazada</span>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if solicitud.estado == 'rechazada' and solicitud.motivo_rechazo %}
+                                    <div class="bg-light p-2 rounded border border-danger border-opacity-25 mt-2">
+                                        <small class="text-danger fw-bold d-block">Mensaje de Recepción:</small>
+                                        <small class="text-secondary">"{{ solicitud.motivo_rechazo }}"</small>
+                                    </div>
+                                {% endif %}
+                                
+                                {% if solicitud.estado == 'pendiente' %}
+                                    <small class="text-muted d-block mt-1">Nuestra recepción está buscando el mejor espacio para ti.</small>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+           
             <div class="card shadow-sm border-0 rounded-4 h-100">
                 <div class="card-header bg-white border-bottom p-4">
                     <h4 class="fw-bold text-dark mb-0">Mis Próximas Citas</h4>

@@ -345,12 +345,46 @@
                             </div>
                             
                             <div class="col-md-3 text-md-end text-center mt-3 mt-md-0">
-                                <a href="#" class="btn btn-success fw-bold px-3 mb-2 w-100 shadow-sm">
+                              <a href="{% url 'crear_cita' %}?solicitud={{ solicitud.id }}" class="btn btn-success fw-bold px-3 mb-2 w-100 shadow-sm">
                                     <i class="bi bi-check-circle me-1"></i> Aceptar y Agendar
                                 </a>
-                                <a href="#" class="btn btn-outline-danger fw-bold px-3 w-100">
+                               <button type="button" class="btn btn-outline-danger fw-bold px-3 w-100" data-bs-toggle="modal" data-bs-target="#modalRechazar{{ solicitud.id }}">
                                     <i class="bi bi-x-circle me-1"></i> Rechazar
-                                </a>
+                                </button>
+                                <div class="modal fade" id="modalRechazar{{ solicitud.id }}" tabindex="-1" aria-labelledby="modalRechazarLabel{{ solicitud.id }}" aria-hidden="true">
+                                  <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-0 shadow">
+                                      
+                                      <div class="modal-header bg-danger text-white border-0">
+                                        <h5 class="modal-title fw-bold" id="modalRechazarLabel{{ solicitud.id }}">
+                                            <i class="bi bi-exclamation-triangle-fill me-2"></i> Rechazar Solicitud
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                      </div>
+                                      
+                                      <form method="POST" action="{% url 'rechazar_solicitud' solicitud.id %}">
+                                        {% csrf_token %}
+                                        <div class="modal-body text-start p-4">
+                                          <p class="mb-4 text-secondary">
+                                            Estás a punto de rechazar la solicitud de <strong>{{ solicitud.paciente_nombre }}</strong> para el {{ solicitud.fecha_deseada|date:"d M" }}.
+                                          </p>
+                                          
+                                          <div class="mb-3">
+                                            <label for="motivo_rechazo" class="form-label text-dark fw-bold">Motivo del rechazo o sugerencia de nuevo horario <span class="text-danger">*</span></label>
+                                            <textarea class="form-control bg-light" id="motivo_rechazo" name="motivo_rechazo" rows="3" required placeholder="Ej. El doctor no tiene espacio a esa hora. Te sugerimos el martes a las 10:00 am."></textarea>
+                                          </div>
+                                        </div>
+                                        
+                                        <div class="modal-footer bg-light border-0">
+                                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                          <button type="submit" class="btn btn-danger fw-bold">Confirmar Rechazo</button>
+                                        </div>
+                                      </form>
+                                      
+                                    </div>
+                                  </div>
+                                </div>
+                                
                             </div>
                             
                         </div>
