@@ -28,9 +28,14 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-tu-clave-local-aqui')
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 # Permitimos que Railway conecte el dominio que nos asigne
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*'] 
 
-
+# --- NUEVO: LISTA VIP PARA FORMULARIOS ---
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.up.railway.app',
+    'https://*.railway.app'
+]
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # Application definition
 
 INSTALLED_APPS = [
