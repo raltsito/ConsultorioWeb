@@ -579,20 +579,23 @@ def solicitar_cita_terapeuta(request):
         
     mi_perfil = request.user.perfil_terapeuta
     
+    # Importamos los modelos necesarios
+    from .models import SolicitudCita, Paciente
+    
     if request.method == 'POST':
-        paciente = request.POST.get('paciente_nombre')
+        # Ahora este dato vendra del menu desplegable (exactamente como esta escrito en la BD)
+        paciente = request.POST.get('paciente_nombre') 
         telefono = request.POST.get('telefono', '')
         fecha = request.POST.get('fecha_deseada')
         hora = request.POST.get('hora_deseada')
         notas = request.POST.get('notas_terapeuta', '')
         
-        # Guardamos en la misma Sala de Espera
         SolicitudCita.objects.create(
             paciente_nombre=paciente,
             telefono=telefono,
             fecha_deseada=fecha,
             hora_deseada=hora if hora else None,
-            terapeuta=mi_perfil, # Se asigna a si mismo automaticamente
+            terapeuta=mi_perfil, 
             notas_paciente=f"SOLICITADO POR TERAPEUTA: {notas}", 
             estado='pendiente'
         )
@@ -600,4 +603,10 @@ def solicitar_cita_terapeuta(request):
         messages.success(request, 'Solicitud enviada a Recepción. Espera su confirmación.')
         return redirect('portal_terapeuta')
         
-    return render(request, 'clinica/solicitar_cita_terapeuta.html')
+    # --- NUEVO: Traemos la lista de pacientes ordenados alfabeticamente ---
+    pacientes = Paciente.objects.all().order_by('nombre')
+    
+    # Pasamos los pacientes al contexto del HTML
+    return render(request, 'clinica/solicitar_cita_terapeuta.html', {
+        'pacientes': pacientes
+    })

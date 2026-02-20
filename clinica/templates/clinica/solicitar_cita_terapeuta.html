@@ -20,9 +20,14 @@
                     <form method="post" action="{% url 'solicitar_cita_terapeuta' %}">
                         {% csrf_token %}
                         
-                        <div class="mb-3">
-                            <label for="paciente_nombre" class="form-label text-muted fw-semibold">Nombre del Paciente <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control bg-light" id="paciente_nombre" name="paciente_nombre" required placeholder="Ej. Juan Pérez">
+                       <div class="mb-3">
+                            <label for="paciente_nombre" class="form-label text-muted fw-semibold">Paciente <span class="text-danger">*</span></label>
+                            <select class="form-select bg-light" id="paciente_nombre" name="paciente_nombre" required>
+                                <option value="" disabled selected>Selecciona un paciente registrado...</option>
+                                {% for paciente in pacientes %}
+                                    <option value="{{ paciente.nombre }}">{{ paciente.nombre }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
 
                         <div class="mb-3">
@@ -58,4 +63,22 @@
         </div>
     </div>
 </div>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#paciente_nombre').select2({
+            placeholder: "Escribe para buscar paciente...",
+            allowClear: true,
+            width: '100%', // Para que no se encoja y respete el grid de Bootstrap
+            language: {
+                noResults: function() {
+                    return "No se encontró ningún paciente con ese nombre";
+                }
+            }
+        });
+    });
+</script>
 {% endblock %}
