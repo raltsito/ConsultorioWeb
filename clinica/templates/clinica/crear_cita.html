@@ -50,6 +50,10 @@
                         <div class="mb-3">
                             <label class="form-label text-muted mb-1">Terapeuta:</label>
                             {{ form.terapeuta }}
+                            <div id="radar-disponibilidad" class="mt-2 d-none p-3 bg-light border border-primary rounded-3">
+    <small class="text-primary fw-bold mb-2 d-block">Horarios Libres del Terapeuta:</small>
+    <div id="lista-horarios" class="d-flex flex-wrap gap-2"></div>
+</div>
                         </div>
 
                         <div class="mb-3">
@@ -79,7 +83,7 @@
 
                         <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
                             <a href="javascript:history.back()" class="btn btn-secondary px-4">Cerrar</a>
-                            <button type="submit" class="btn btn-success px-4" id="btn-guardar" disabled>Agendar</button>
+                            <button type="submit" class="btn btn-success px-4" id="btn-agendar-forzado">Agendar Cita</button>
                         </div>
                     </form>
                 </div>
@@ -107,85 +111,101 @@ $('#id_paciente').select2({
             }
         });
         // Función de validación silenciosa
-        function checkAvailability() {
+        const $radar = $('#radar-disponibilidad');
+        const $listaHorarios = $('#lista-horarios');
+
+        function actualizarRadar() {
             const fecha = $fecha.val();
-            const hora = $hora.val();
-            const consultorio = $consultorio.val();
             const terapeuta = $terapeuta.val();
 
-            if (fecha && hora && consultorio && terapeuta) {
-                $status.html('<span class="text-muted small">Verificando disponibilidad...</span>');
+            if (fecha && terapeuta) {
+                $listaHorarios.html('<span class="text-muted small">Consultando agenda...</span>');
+                $radar.removeClass('d-none');
                 
-                $.get('/api/verificar-disponibilidad/', {
+                $.get('/api/disponibilidad-terapeuta/', {
                     'fecha': fecha,
-                    'hora': hora,
-                    'consultorio': consultorio,
                     'terapeuta': terapeuta
                 }, function(data) {
-                    if (data.available) {
-                        $status.html('<span class="text-success fw-bold small">' + data.msg + '</span>');
-                        $btnGuardar.prop('disabled', false);
-                        
-                        // Limpieza de errores de validación previos
-                        $('.is-invalid').removeClass('is-invalid');
-                        $('.errorlist').fadeOut('fast');
-                    } else {
-                        $status.html('<span class="text-danger fw-bold small">' + data.msg + '</span>');
-                        $btnGuardar.prop('disabled', true);
+                    if (data.mensaje) {
+                        $listaHorarios.html(`<span class="text-danger small fw-bold">${data.mensaje}</span>`);
+                        return;
                     }
+
+                    if (data.horarios && data.horarios.length > 0) {
+                        let botonesHtml = data.horarios.map(h => 
+                            `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary p-2">${h}</span>`
+                        ).join('');
+                        $listaHorarios.html(botonesHtml);
+                    } else {
+                        $listaHorarios.html('<span class="text-danger small fw-bold">Agenda llena para este día.</span>');
+                    }
+                }).fail(function() {
+                    $listaHorarios.html('<span class="text-muted small">Error al conectar con la base de datos.</span>');
                 });
             } else {
-                $status.html(''); 
-                $btnGuardar.prop('disabled', true);
+                $radar.addClass('d-none');
             }
         }
 
-        // Limpiar estilos de error al modificar un campo
-        $('input, select').on('change', function() {
-            $(this).removeClass('is-invalid');
-            $(this).siblings('.errorlist').fadeOut('fast');
-        });
+        // El boton siempre esta habilitado - se puede agendar sin restricciones
+        $btnGuardar.prop('disabled', false);
 
-        // Escuchar cambios en los campos clave
-        $fecha.on('change', checkAvailability);
-        $hora.on('change', checkAvailability);
-        $consultorio.on('change', checkAvailability);
-        $terapeuta.on('change', checkAvailability);
+        // Radar solo muestra información, no bloquea
+        $fecha.on('change', actualizarRadar);
+        $terapeuta.on('change', actualizarRadar);
         
-        // Ejecutar validación al cargar la página si el calendario ya llenó los datos
-        setTimeout(checkAvailability, 300);
-        $('#id_paciente').on('change', function() {
-            const pacienteId = $(this).val();
-            const $cajaTerapeutas = $('#caja-terapeutas');
-            
-            if (pacienteId) {
-                // Si hay paciente, preguntamos a la API
-                $.get('/api/terapeutas-paciente/', { 'paciente_id': pacienteId }, function(data) {
-                    if (data.terapeutas && data.terapeutas.length > 0) {
-                        // Construimos las etiquetas (badges) para cada terapeuta
-                        let badges = data.terapeutas.map(t => `<span class="badge bg-info text-dark me-1 border">${t}</span>`).join('');
-                        
-                        $cajaTerapeutas.html(`
-                            <small class="text-muted d-block fw-bold mb-1">Atendido previamente por:</small>
-                            ${badges}
-                        `).removeClass('d-none');
-                    } else {
-                        // Es paciente nuevo
-                        $cajaTerapeutas.html(`
-                            <small class="text-muted fst-italic">Paciente de primera vez (sin historial de terapeutas).</small>
-                        `).removeClass('d-none');
-                    }
-                });
-            } else {
-                // Si borran el campo, escondemos la cajita
-                $cajaTerapeutas.addClass('d-none').html('');
-            }
-        });
-
-        // IMPORTANTE: Disparar el evento de inmediato si el paciente ya viene seleccionado (ej. desde el expediente)
-        if ($('#id_paciente').val()) {
-            $('#id_paciente').trigger('change');
+        setTimeout(actualizarRadar, 300);
+{% endblock %}
+<script>
+    $(document).ready(function() {
+        // Script defensivo contra cualquier validación HTML5
+        const form = document.querySelector('#form-crear');
+        const submitBtn = $('#btn-agendar-forzado');
+        
+        // Desactivar noValidate
+        if (form) {
+            form.noValidate = true;
+            form.setAttribute('novalidate', 'novalidate');
         }
+        
+        // Remover atributos 'required' de TODOS los inputs
+        document.querySelectorAll('input, select, textarea').forEach(field => {
+            field.removeAttribute('required');
+            field.classList.remove('is-invalid', 'is-valid');
+        });
+        
+        // Botón siempre habilitado
+        submitBtn.prop('disabled', false).removeClass('disabled');
+        submitBtn.removeAttr('disabled');
+        
+        // Limpiar errores visuales
+        $('.errorlist, .invalid-feedback, .text-danger, .alert-danger').fadeOut('fast');
+        
+        // Al cambiar campos, limpiar validación
+        $('input, select, textarea').on('change blur', function() {
+            $(this).removeClass('is-invalid is-valid');
+            $(this).removeAttribute('required');
+        });
+        
+        // No validar en submit
+        form.addEventListener('submit', function(e) {
+            // Permitir envío sin validación
+            const inputs = this.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.removeAttribute('required');
+                input.classList.remove('is-invalid');
+            });
+            submitBtn.prop('disabled', false);
+        });
+        
+        // Cada 200ms asegurar que no hay requeridos
+        setInterval(function() {
+            document.querySelectorAll('input, select, textarea').forEach(field => {
+                if (field.hasAttribute('required')) {
+                    field.removeAttribute('required');
+                }
+            });
+            submitBtn.prop('disabled', false).removeClass('disabled');
+        }, 200);
     });
 </script>
-{% endblock %}

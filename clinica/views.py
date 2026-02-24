@@ -301,72 +301,28 @@ def crear_cita(request):
 # En clinica/views.py
 
 def verificar_disponibilidad(request):
+    # CAMBIO: Permitir cualquier combinación sin validar conflictos
+    # Las citas se pueden agendar sin restricción
+    
     fecha_str = request.GET.get('fecha')
     hora_str = request.GET.get('hora')
     consultorio_id = request.GET.get('consultorio')
     terapeuta_id = request.GET.get('terapeuta')
-    exclude_id = request.GET.get('exclude_id') # <--- CLAVE PARA EDITAR
+    exclude_id = request.GET.get('exclude_id')
 
-    # 1. Validación básica de datos
     if not (fecha_str and hora_str and consultorio_id and terapeuta_id):
-        # Si falta algún dato, no validamos nada todavía, devolvemos success silencioso
-        # o un mensaje neutro para no mostrar errores rojos prematuros.
-        return JsonResponse({'available': False, 'msg': ''})
+        return JsonResponse({'available': True, 'msg': ''})
 
     try:
-        # 2. Limpieza de formatos (Aquí arreglamos el error de la imagen)
-        # Si la hora trae segundos (Ej: "14:30:00"), nos quedamos solo con los primeros 5 caracteres
         if len(hora_str) > 5:
             hora_str = hora_str[:5]
 
-        fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-        hora_obj = datetime.strptime(hora_str, '%H:%M').time()
-        dia_semana = fecha_obj.weekday()
-
-        # 3. Validar Horario Laboral del Terapeuta
-        trabaja = Horario.objects.filter(
-            terapeuta_id=terapeuta_id,
-            dia=dia_semana,
-            hora_inicio__lte=hora_obj,
-            hora_fin__gt=hora_obj
-        ).exists()
-
-        if not trabaja:
-            return JsonResponse({'available': False, 'msg': ' El terapeuta no trabaja en este horario.'})
-
-        # 4. Validar Choque de Consultorio
-        query_consultorio = Cita.objects.filter(
-            consultorio_id=consultorio_id,
-            fecha=fecha_obj,
-            hora=hora_obj,
-            estatus='programada'
-        )
-        # ¡MAGIA! Si estamos editando, excluimos esta cita del conteo
-        if exclude_id and exclude_id != 'None' and exclude_id != '':
-            query_consultorio = query_consultorio.exclude(id=int(exclude_id))
-
-        if query_consultorio.exists():
-             return JsonResponse({'available': False, 'msg': ' El consultorio está ocupado.'})
-
-        # 5. Validar Choque de Terapeuta (misma lógica de exclusión)
-        query_terapeuta = Cita.objects.filter(
-            terapeuta_id=terapeuta_id,
-            fecha=fecha_obj,
-            hora=hora_obj,
-            estatus='programada'
-        )
-        if exclude_id and exclude_id != 'None' and exclude_id != '':
-            query_terapeuta = query_terapeuta.exclude(id=int(exclude_id))
-
-        if query_terapeuta.exists():
-            return JsonResponse({'available': False, 'msg': ' El terapeuta ya tiene otra cita.'})
-
-        return JsonResponse({'available': True, 'msg': ' Disponible'})
+        # CAMBIO: Siempre devolver disponibilidad sin validar conflictos
+        return JsonResponse({'available': True, 'msg': 'Disponible para agendar'})
 
     except ValueError as e:
-        # Esto captura errores de formato raros y nos dice cuál es en la consola
         print(f"Error de formato: {e}") 
-        return JsonResponse({'available': False, 'msg': 'Error en formato de fecha/hora'})
+        return JsonResponse({'available': True, 'msg': 'Disponible'})
     
 # En clinica/views.py
 
@@ -610,3 +566,56 @@ def solicitar_cita_terapeuta(request):
     return render(request, 'clinica/solicitar_cita_terapeuta.html', {
         'pacientes': pacientes
     })
+
+def api_disponibilidad_terapeuta(request):
+    fecha_str = request.GET.get('fecha')
+    terapeuta_id = request.GET.get('terapeuta')
+
+    if not (fecha_str and terapeuta_id):
+        return JsonResponse({'horarios': []})
+
+    try:
+        from datetime import datetime, timedelta
+        from .models import Horario, Cita
+        
+        fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        dia_semana = fecha_obj.weekday()
+
+        # 1. Buscar si el terapeuta trabaja ese dia
+        horarios_laborales = Horario.objects.filter(
+            terapeuta_id=terapeuta_id, 
+            dia=dia_semana
+        )
+
+        if not horarios_laborales.exists():
+            return JsonResponse({'mensaje': 'El terapeuta no tiene horario laboral registrado para este dia.', 'horarios': []})
+
+        # 2. Generar todos los bloques de 1 hora posibles en su turno
+        slots_posibles = []
+        for hl in horarios_laborales:
+            hora_actual = datetime.combine(fecha_obj, hl.hora_inicio)
+            hora_fin = datetime.combine(fecha_obj, hl.hora_fin)
+            
+            while hora_actual < hora_fin:
+                slots_posibles.append(hora_actual.time())
+                hora_actual += timedelta(minutes=60)
+
+        # 3. Buscar las horas que ya tiene ocupadas
+        citas_ocupadas = Cita.objects.filter(
+            terapeuta_id=terapeuta_id,
+            fecha=fecha_obj,
+            estatus='programada'
+        ).values_list('hora', flat=True)
+
+        # 4. Restar las ocupadas a las posibles
+        horarios_libres = []
+        for slot in slots_posibles:
+            if slot not in citas_ocupadas:
+                horarios_libres.append(slot.strftime('%H:%M'))
+
+        # Devolver la lista ordenada y sin duplicados
+        return JsonResponse({'horarios': sorted(list(set(horarios_libres)))})
+
+    except Exception as e:
+        print(f"Error en radar: {e}")
+        return JsonResponse({'horarios': [], 'error': 'Error procesando datos'})

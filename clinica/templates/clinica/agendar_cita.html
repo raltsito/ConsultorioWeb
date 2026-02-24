@@ -94,5 +94,69 @@
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Script defensivo - remover TODA validación
+            const form = document.querySelector('form');
+            const submitBtn = document.querySelector('button[type="submit"]');
+            
+            // Desactivar validación HTML5 nativa
+            if (form) {
+                form.noValidate = true;
+                form.setAttribute('novalidate', 'novalidate');
+            }
+            
+            // Remover atributo 'required' de todos los inputs
+            document.querySelectorAll('input, select, textarea').forEach(field => {
+                field.removeAttribute('required');
+                field.classList.remove('is-invalid', 'is-valid');
+            });
+            
+            // Botón SIEMPRE habilitado
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('disabled');
+            
+            // Limpiar mensajes de error
+            document.querySelectorAll('.errorlist, .invalid-feedback, .text-danger, .alert-danger').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Al cambiar campos, limpiar estilos
+            document.querySelectorAll('input, select, textarea').forEach(field => {
+                field.addEventListener('change', function() {
+                    this.classList.remove('is-invalid', 'is-valid');
+                    this.removeAttribute('required');
+                });
+                
+                field.addEventListener('blur', function() {
+                    this.classList.remove('is-invalid');
+                });
+            });
+            
+            // Al enviar formulario
+            form.addEventListener('submit', function(e) {
+                // Permitir envío sin validación
+                document.querySelectorAll('input, select, textarea').forEach(field => {
+                    field.removeAttribute('required');
+                    field.classList.remove('is-invalid');
+                });
+                submitBtn.disabled = false;
+            });
+            
+            // Cada 200ms garantizar que todo está limpio
+            setInterval(function() {
+                document.querySelectorAll('input, select, textarea').forEach(field => {
+                    if (field.hasAttribute('required')) {
+                        field.removeAttribute('required');
+                    }
+                    field.classList.remove('is-invalid');
+                });
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('disabled');
+            }, 200);
+        });
+    </script>
+
 </body>
 </html>

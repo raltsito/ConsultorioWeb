@@ -181,17 +181,14 @@ $(document).ready(function() {
     $hora.after('<div id="availability-status" class="form-text fw-bold mt-1"></div>');
     const $status = $('#availability-status');
 
-    // Función que pregunta al servidor
+    // Función que pregunta al servidor (solo muestra información)
     function checkAvailability() {
+        // CAMBIO: Ya no bloquea el botón, solo muestra disponibilidad
         const fecha = $fecha.val();
         const hora = $hora.val();
         const consultorio = $consultorio.val();
 
-        // Solo preguntamos si tenemos los 3 datos
         if (fecha && hora && consultorio) {
-            $status.html('<span class="text-muted">Verificando... <div class="spinner-border spinner-border-sm"></div></span>');
-            
-            // Llamada AJAX a nuestra nueva API
             $.get('/api/verificar-disponibilidad/', {
                 'fecha': fecha,
                 'hora': hora,
@@ -199,23 +196,72 @@ $(document).ready(function() {
             }, function(data) {
                 if (data.available) {
                     $status.html('<span class="text-success">' + data.msg + '</span>');
-                    $hora.removeClass('is-invalid').addClass('is-valid');
-                    // Habilitar botón de guardar
-                    $('button[type="submit"]').prop('disabled', false);
                 } else {
-                    $status.html('<span class="text-danger">' + data.msg + '</span>');
-                    $hora.addClass('is-invalid');
-                    // Deshabilitar botón de guardar para que no pierdan el tiempo
-                    $('button[type="submit"]').prop('disabled', true);
+                    $status.html('<span class="text-muted">' + data.msg + '</span>');
                 }
             });
         }
+        
+        // Botón SIEMPRE habilitado
+        $('button[type="submit"]').prop('disabled', false).removeClass('disabled');
+        // Limpiar estilos de error
+        $('input, select').removeClass('is-invalid is-valid');
     }
 
     // Ejecutar la función cuando cambie cualquiera de los 3 campos
     $fecha.on('change', checkAvailability);
     $hora.on('change', checkAvailability);
     $consultorio.on('change', checkAvailability);
+});
+
+// Script global: Desactivar validación HTML5 en TODOS los formularios
+document.addEventListener('DOMContentLoaded', function() {
+    // Desactivar validación HTML5 nativa
+    document.querySelectorAll('form').forEach(form => {
+        form.noValidate = true;
+        form.setAttribute('novalidate', 'novalidate');
+        
+        // Permitir envío sin validación
+        form.addEventListener('submit', function(e) {
+            this.querySelectorAll('button[type="submit"]').forEach(btn => {
+                btn.disabled = false;
+                btn.removeAttribute('disabled');
+            });
+        });
+    });
+    
+    // Remover required de todos los inputs
+    document.querySelectorAll('input, select, textarea').forEach(field => {
+        field.removeAttribute('required');
+        field.classList.remove('is-invalid', 'is-valid');
+    });
+    
+    // Botones siempre habilitados
+    document.querySelectorAll('button[type="submit"]').forEach(btn => {
+        btn.disabled = false;
+        btn.removeAttribute('disabled');
+        btn.classList.remove('disabled');
+    });
+    
+    // Limpiar estilos de error
+    document.querySelectorAll('.errorlist, .invalid-feedback, .is-invalid').forEach(el => {
+        el.classList.remove('is-invalid');
+        el.style.display = 'none';
+    });
+    
+    // Monitoreo cada 150ms para asegurar limpieza
+    setInterval(function() {
+        document.querySelectorAll('input, select, textarea').forEach(field => {
+            if (field.hasAttribute('required')) {
+                field.removeAttribute('required');
+            }
+            field.classList.remove('is-invalid');
+        });
+        document.querySelectorAll('button[type="submit"]').forEach(btn => {
+            btn.disabled = false;
+            btn.removeAttribute('disabled');
+        });
+    }, 150);
 });
 
 </script>

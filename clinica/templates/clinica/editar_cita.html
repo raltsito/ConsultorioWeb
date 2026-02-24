@@ -76,70 +76,64 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const $fecha = $('#id_fecha');
-        const $hora = $('#id_hora');
-        const $consultorio = $('#id_consultorio');
-        const $terapeuta = $('#id_terapeuta');
-        const $status = $('#availability-status');
+        const form = document.querySelector('#form-editar');
+        const submitBtn = document.querySelector('button[type="submit"]');
         
-        // ID de la cita actual para excluirla de la validación
-        const currentCitaId = "{{ cita.id }}";
-
-        // 🧹 NUEVO: Función para limpiar errores visuales (marcos rojos y textos viejos)
-        function limpiarErroresVisuales(elemento) {
-            elemento.removeClass('is-invalid'); // Quita el marco rojo
-            // Oculta los textos de error que haya dejado Django alrededor
-            elemento.siblings('.errorlist, .text-danger, .invalid-feedback').fadeOut('fast');
+        // Desactivar validación HTML5
+        if (form) {
+            form.noValidate = true;
+            form.setAttribute('novalidate', 'novalidate');
         }
-
-        function checkAvailability() {
-            const fecha = $fecha.val();
-            const hora = $hora.val();
-            const consultorio = $consultorio.val();
-            const terapeuta = $terapeuta.val();
-
-            // Si están los 4 datos completos, verificamos:
-            if (fecha && hora && consultorio && terapeuta) {
-                $status.html('<span class="text-muted">Verificando... <div class="spinner-border spinner-border-sm"></div></span>');
-                
-                $.get('/api/verificar-disponibilidad/', {
-                    'fecha': fecha,
-                    'hora': hora,
-                    'consultorio': consultorio,
-                    'terapeuta': terapeuta,
-                    'exclude_id': currentCitaId
-                }, function(data) {
-                    if (data.available) {
-                        $status.html('<span class="text-success fw-bold">' + data.msg + '</span>');
-                        $('button[type="submit"]').prop('disabled', false);
-                        
-                        // Opción Nuclear contra fantasmas rojos
-                        $('.is-invalid').removeClass('is-invalid');
-                        $('.errorlist').fadeOut('fast');
-                        $('.alert-danger').fadeOut('fast');
-                        $('.messages .alert-danger').fadeOut('fast');
-                        
-                    } else {
-                        $status.html('<span class="text-danger fw-bold">' + data.msg + '</span>');
-                        $('button[type="submit"]').prop('disabled', true);
-                    }
-                });
-            } else {
-                // 🤫 AQUÍ ESTÁ EL CAMBIO: Si faltan datos, borramos el mensaje y apagamos el botón en silencio
-                $status.html(''); 
-                $('button[type="submit"]').prop('disabled', true);
-            }
-        }
-
-        // Cada vez que cambies algo, limpiamos la basura visual y verificamos
-        $('input, select').on('change', function() {
-            limpiarErroresVisuales($(this));
+        
+        // Remover required de TODOS los inputs
+        document.querySelectorAll('input, select, textarea').forEach(field => {
+            field.removeAttribute('required');
+            field.classList.remove('is-invalid', 'is-valid');
         });
-
-        $fecha.on('change', checkAvailability);
-        $hora.on('change', checkAvailability);
-        $consultorio.on('change', checkAvailability);
-        $terapeuta.on('change', checkAvailability);
+        
+        // Botón siempre habilitado
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('disabled');
+        
+        // Limpiar errores visuales
+        document.querySelectorAll('.errorlist, .invalid-feedback, .text-danger, .alert-danger, .is-invalid').forEach(el => {
+            el.classList.remove('is-invalid');
+            el.style.display = 'none';
+        });
+        
+        // Al cambiar campos, limpiar
+        document.querySelectorAll('input, select, textarea').forEach(field => {
+            field.addEventListener('change', function() {
+                this.removeAttribute('required');
+                this.classList.remove('is-invalid', 'is-valid');
+            });
+            
+            field.addEventListener('blur', function() {
+                this.classList.remove('is-invalid');
+            });
+        });
+        
+        // No validar en submit
+        form.addEventListener('submit', function(e) {
+            document.querySelectorAll('input, select, textarea').forEach(field => {
+                field.removeAttribute('required');
+                field.classList.remove('is-invalid');
+            });
+            submitBtn.disabled = false;
+            submitBtn.removeAttribute('disabled');
+        });
+        
+        // Monitoreo cada 200ms para limpiar
+        setInterval(function() {
+            document.querySelectorAll('input, select, textarea').forEach(field => {
+                if (field.hasAttribute('required')) {
+                    field.removeAttribute('required');
+                }
+                field.classList.remove('is-invalid');
+            });
+            submitBtn.disabled = false;
+            submitBtn.removeAttribute('disabled');
+        }, 200);
     });
 </script>
 {% endblock %}
