@@ -115,7 +115,9 @@ def registrar_paciente(request):
 
 def detalle_paciente(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)
-    historial = Cita.objects.filter(paciente=paciente).order_by('-fecha', '-hora')
+    historial = Cita.objects.filter(
+        Q(paciente=paciente) | Q(pacientes_adicionales=paciente)
+    ).distinct().order_by('-fecha', '-hora')
     
     # Extraemos los terapeutas unicos que han atendido a este paciente
     terapeutas_previos = set(cita.terapeuta for cita in historial if cita.terapeuta)
@@ -214,7 +216,7 @@ def calendario_citas(request):
             color = '#26C6DA' # Tu color INTRA Primary
 
         eventos.append({
-            'title': f"{cita.paciente.nombre} ({cita.terapeuta})",
+            'title': f"{cita.pacientes_display()} ({cita.terapeuta})",
             'start': start.isoformat(),
             'end': end.isoformat(),
             'color': color,
@@ -231,29 +233,16 @@ def crear_cita(request):
         if form.is_valid():
             cita = form.save()
 
-            # Para servicios grupales, creamos citas hermanas para pacientes relacionados.
+            # Para servicios grupales guardamos pacientes adicionales en la misma cita.
             servicio_nombre = quitar_tildes(cita.servicio.nombre if cita.servicio else '')
             if servicio_nombre in SERVICIOS_GRUPALES:
                 pacientes_extra = form.cleaned_data.get('pacientes_extra')
                 if pacientes_extra:
-                    paciente_principal_id = cita.paciente_id
-                    for paciente_rel in pacientes_extra:
-                        if paciente_rel.id == paciente_principal_id:
-                            continue
-                        Cita.objects.create(
-                            paciente=paciente_rel,
-                            fecha=cita.fecha,
-                            hora=cita.hora,
-                            division=cita.division,
-                            consultorio=cita.consultorio,
-                            servicio=cita.servicio,
-                            terapeuta=cita.terapeuta,
-                            costo=cita.costo,
-                            metodo_pago=cita.metodo_pago,
-                            estatus=cita.estatus,
-                            folio_fiscal=cita.folio_fiscal,
-                            notas=cita.notas,
-                        )
+                    cita.pacientes_adicionales.set(
+                        pacientes_extra.exclude(pk=cita.paciente_id)
+                    )
+            else:
+                cita.pacientes_adicionales.clear()
             
             # --- NUEVA MAGIA: Limpieza de la bandeja de entrada ---
             # Atrapamos el ID de la solicitud que sigue en la URL
@@ -378,7 +367,15 @@ def editar_cita(request, cita_id):
     if request.method == 'POST':
         form = CitaForm(request.POST, instance=cita)
         if form.is_valid():
-            form.save()
+            cita = form.save()
+            servicio_nombre = quitar_tildes(cita.servicio.nombre if cita.servicio else '')
+            if servicio_nombre in SERVICIOS_GRUPALES:
+                pacientes_extra = form.cleaned_data.get('pacientes_extra')
+                cita.pacientes_adicionales.set(
+                    (pacientes_extra or Paciente.objects.none()).exclude(pk=cita.paciente_id)
+                )
+            else:
+                cita.pacientes_adicionales.clear()
             messages.success(request, '¡Cita actualizada correctamente! ')
             
             origen = request.GET.get('next', 'home')
@@ -422,7 +419,7 @@ def api_citas_calendario(request):
 
         eventos.append({
             'id': cita.id,
-            'title': f'{cita.paciente.nombre} - {cita.terapeuta}',
+            'title': f'{cita.pacientes_display()} - {cita.terapeuta}',
             'start': start_datetime.isoformat(),
             'end': end_datetime.isoformat(),
             'backgroundColor': color,
@@ -440,7 +437,9 @@ def api_terapeutas_paciente(request):
         return JsonResponse({'terapeutas': []})
     
     # Buscamos todas las citas del paciente y sacamos los terapeutas
-    citas = Cita.objects.filter(paciente_id=paciente_id).select_related('terapeuta')
+    citas = Cita.objects.filter(
+        Q(paciente_id=paciente_id) | Q(pacientes_adicionales__id=paciente_id)
+    ).select_related('terapeuta').distinct()
     
     terapeutas_unicos = set()
     for cita in citas:
@@ -496,14 +495,14 @@ def portal_paciente(request):
     
     # 3. Filtramos sus citas futuras y pasadas
     citas_proximas = Cita.objects.filter(
-        paciente=mi_perfil, 
+        Q(paciente=mi_perfil) | Q(pacientes_adicionales=mi_perfil),
         fecha__gte=hoy
-    ).order_by('fecha', 'hora')
+    ).distinct().order_by('fecha', 'hora')
     
     historial = Cita.objects.filter(
-        paciente=mi_perfil, 
+        Q(paciente=mi_perfil) | Q(pacientes_adicionales=mi_perfil),
         fecha__lt=hoy
-    ).order_by('-fecha', '-hora')
+    ).distinct().order_by('-fecha', '-hora')
     
   
     mis_solicitudes = SolicitudCita.objects.filter(

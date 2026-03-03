@@ -62,6 +62,8 @@ class CitaForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['pacientes_extra'].queryset = Paciente.objects.order_by('nombre')
+        if self.instance and self.instance.pk:
+            self.fields['pacientes_extra'].initial = self.instance.pacientes_adicionales.all()
 
         # Bucle para estilos Bootstrap
         for field_name, field in self.fields.items():
@@ -74,6 +76,13 @@ class CitaForm(forms.ModelForm):
             # Remover atributos required del HTML
             if 'required' in field.widget.attrs:
                 del field.widget.attrs['required']
+
+    def clean_pacientes_extra(self):
+        pacientes_extra = self.cleaned_data.get('pacientes_extra')
+        paciente_principal = self.cleaned_data.get('paciente')
+        if paciente_principal and pacientes_extra:
+            pacientes_extra = pacientes_extra.exclude(pk=paciente_principal.pk)
+        return pacientes_extra
 
     ##def clean(self):
         ##cleaned_data = super().clean()

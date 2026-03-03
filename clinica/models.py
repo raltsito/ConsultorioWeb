@@ -118,6 +118,11 @@ class Cita(models.Model):
     ]
 
     paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='citas')
+    pacientes_adicionales = models.ManyToManyField(
+        Paciente,
+        blank=True,
+        related_name='citas_como_adicional',
+    )
     fecha = models.DateField()
     hora = models.TimeField()
     
@@ -134,8 +139,13 @@ class Cita(models.Model):
     folio_fiscal = models.CharField(max_length=100, blank=True, null=True)
     notas = models.TextField(blank=True, null=True)
 
+    def pacientes_display(self):
+        nombres = [self.paciente.nombre] if self.paciente_id else []
+        nombres.extend(self.pacientes_adicionales.values_list('nombre', flat=True))
+        return ", ".join(nombres)
+
     def __str__(self):
-        return f"{self.paciente} - {self.fecha}"
+        return f"{self.pacientes_display()} - {self.fecha}"
 
     class Meta:
         verbose_name = "Cita"

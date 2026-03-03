@@ -112,8 +112,10 @@
                                         <th class="ps-4">Fecha</th>
                                         <th>Hora</th>
                                         <th>Servicio</th>
+                                        <th>Pacientes</th>
                                         <th>Terapeuta</th>
                                         <th>Consultorio</th>
+                                        <th>Costo</th>
                                         <th>Estatus</th>
                                         <th class="text-center pe-4">Acciones</th>
                                     </tr>
@@ -127,8 +129,16 @@
                                             {{ cita.hora|time:"H:i" }}
                                         </td>
                                         <td>{{ cita.servicio }}</td>
+                                        <td>{{ cita.pacientes_display }}</td>
                                         <td>{{ cita.terapeuta }}</td>
                                         <td><span class="badge text-bg-light border">{{ cita.consultorio }}</span></td>
+                                        <td>
+                                            {% if cita.costo %}
+                                                ${{ cita.costo }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
                                         <td>
                                             {% if cita.estatus == 'programada' %}
                                                 <span class="badge bg-success shadow-sm">Programada</span>
@@ -154,7 +164,7 @@
                                     </tr>
                                     {% empty %}
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted py-5">
+                                        <td colspan="9" class="text-center text-muted py-5">
                                             <i class="bi bi-calendar-x fs-1 d-block mb-3 opacity-50"></i>
                                             No hay citas registradas para este paciente.
                                         </td>

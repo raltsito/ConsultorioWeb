@@ -91,10 +91,10 @@
         <td>
             <div class="d-flex align-items-center">
                 <div class="avatar-initial rounded-circle bg-secondary-subtle text-secondary me-2 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; font-size: 0.8rem;">
-                    {{ cita.paciente.nombre|slice:":2"|upper }}
+                    {{ cita.pacientes_display|slice:":2"|upper }}
                 </div>
                 <a href="{% url 'detalle_paciente' cita.paciente.id %}" class="text-decoration-none fw-semibold text-primary">
-                    {{ cita.paciente.nombre }} {{ cita.paciente.apellido }}
+                    {{ cita.pacientes_display }}
                 </a>
             </div>
         </td>
@@ -114,11 +114,12 @@
             <button class="btn btn-sm btn-light text-muted btn-ver-detalle"
                 data-bs-toggle="modal" 
                 data-bs-target="#modalDetalleCita"
-                data-paciente="{{ cita.paciente.nombre }} {{ cita.paciente.apellido }}"
+                data-paciente="{{ cita.pacientes_display }}"
                 data-servicio="{{ cita.servicio }}"
                 data-fecha="{{ cita.fecha|date:'l d F' }} a las {{ cita.hora|time:'H:i' }}"
                 data-consultorio="{{ cita.consultorio }}"
                 data-terapeuta="{{ cita.terapeuta }}"
+                data-costo="{{ cita.costo|default:'' }}"
                 data-notas="{{ cita.notas|default:'Sin notas' }}"
                 data-id="{{ cita.id }}">
                 <i class="bi bi-eye"></i>
@@ -226,6 +227,10 @@
                         <span class="text-muted"> Terapeuta:</span>
                         <span class="fw-bold" id="detalle-terapeuta">---</span>
                     </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted"> Costo:</span>
+                        <span class="fw-bold" id="detalle-costo">---</span>
+                    </li>
                     <li class="list-group-item">
                         <span class="text-muted d-block mb-1"> Notas:</span>
                         <p id="detalle-notas" class="small bg-light p-2 rounded text-muted fst-italic">Sin notas adicionales.</p>
@@ -242,71 +247,112 @@
     </div>
 </div>
 
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Usamos delegación de eventos por si la tabla se actualiza sola
-            const tabla = document.querySelector('table'); // O el body si prefieres
-            
-            // Escuchar clics en botones con clase .btn-ver-detalle
-            document.body.addEventListener('click', function(e) {
-                // Buscamos si el clic fue dentro de un botón .btn-ver-detalle
-                const btn = e.target.closest('.btn-ver-detalle');
-                
-                if (btn) {
-                    console.log("¡Botón clickeado! Datos encontrados:", btn.dataset); // Chivato para la consola
-                    
-                    // 1. Obtener datos del botón (dataset usa camelCase: data-paciente -> dataset.paciente)
-                    const paciente = btn.dataset.paciente;
-                    const servicio = btn.dataset.servicio;
-                    const fecha = btn.dataset.fecha;
-                    const consultorio = btn.dataset.consultorio;
-                    const terapeuta = btn.dataset.terapeuta;
-                    const notas = btn.dataset.notas;
-                    const id = btn.dataset.id;
-    
-                    // 2. Llenar el modal (Vanilla JS para evitar líos con jQuery si no carga)
-                    document.getElementById('detalle-paciente').textContent = paciente;
-                    document.getElementById('detalle-avatar').textContent = paciente ? paciente.substring(0, 2).toUpperCase() : 'XX';
-                    document.getElementById('detalle-servicio').textContent = servicio;
-                    document.getElementById('detalle-fecha').textContent = fecha;
-                    document.getElementById('detalle-consultorio').textContent = consultorio;
-                    document.getElementById('detalle-terapeuta').textContent = terapeuta;
-                    document.getElementById('detalle-notas').textContent = notas;
-                    
-                    // Opcional: Si tienes botón de editar
-                    const btnEditar = document.getElementById('btn-editar-cita');
-                    if(btnEditar) btnEditar.href = `/citas/${id}/editar/`;
+    document.addEventListener('DOMContentLoaded', function() {
+        document.body.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-ver-detalle');
+            if (!btn) return;
+
+            const paciente = btn.dataset.paciente;
+            const servicio = btn.dataset.servicio;
+            const fecha = btn.dataset.fecha;
+            const consultorio = btn.dataset.consultorio;
+            const terapeuta = btn.dataset.terapeuta;
+            const costo = btn.dataset.costo;
+            const notas = btn.dataset.notas;
+            const id = btn.dataset.id;
+
+            document.getElementById('detalle-paciente').textContent = paciente;
+            document.getElementById('detalle-avatar').textContent = paciente ? paciente.substring(0, 2).toUpperCase() : 'XX';
+            document.getElementById('detalle-servicio').textContent = servicio;
+            document.getElementById('detalle-fecha').textContent = fecha;
+            document.getElementById('detalle-consultorio').textContent = consultorio;
+            document.getElementById('detalle-terapeuta').textContent = terapeuta;
+            document.getElementById('detalle-costo').textContent = costo ? ('$' + costo) : 'Sin costo';
+            document.getElementById('detalle-notas').textContent = notas;
+
+            const btnEditar = document.getElementById('btn-editar-cita');
+            if (btnEditar) btnEditar.href = `/citas/${id}/editar/`;
+        });
+
+        const $modal = $('#modalCita');
+        const $paciente = $modal.find('#id_paciente');
+        const $servicio = $modal.find('#id_servicio');
+        const $pacientesExtra = $modal.find('#id_pacientes_extra');
+        const $wrapperPacientesExtra = $pacientesExtra.closest('p');
+        const serviciosMultiples = ['terapia de pareja', 'terapia familiar', 'terapia infantil'];
+
+        $paciente.after('<div id="caja-terapeutas-modal" class="mt-2 d-none p-3 bg-light border rounded-3 border-info border-start border-4 shadow-sm"></div>');
+
+        $paciente.select2({
+            dropdownParent: $modal,
+            width: '100%',
+            placeholder: 'Paciente principal'
+        });
+        $pacientesExtra.select2({
+            dropdownParent: $modal,
+            width: '100%',
+            placeholder: 'Escribe para buscar familiares...'
+        });
+
+        function servicioPermiteMultiples() {
+            const txt = ($servicio.find('option:selected').text() || '').toLowerCase().trim();
+            return serviciosMultiples.includes(txt);
+        }
+
+        function actualizarTerapeutasPrevios() {
+            const pacienteId = $paciente.val();
+            const $cajaTerapeutas = $('#caja-terapeutas-modal');
+            if (!pacienteId) {
+                $cajaTerapeutas.addClass('d-none').html('');
+                return;
+            }
+            $.get('/api/terapeutas-paciente/', { paciente_id: pacienteId }, function(data) {
+                if (data.terapeutas && data.terapeutas.length > 0) {
+                    const badges = data.terapeutas.map(t => `<span class="badge bg-info text-dark me-1 border">${t}</span>`).join('');
+                    $cajaTerapeutas.html(`<small class="text-muted d-block fw-bold mb-2">Atendido previamente por:</small>${badges}`).removeClass('d-none');
+                } else {
+                    $cajaTerapeutas.html('<small class="text-muted fst-italic">Paciente de primera vez (sin historial).</small>').removeClass('d-none');
                 }
             });
-        // 1. INYECTAR LA CAJITA EN EL MODAL DE CITA RÁPIDA
-        // Como usamos form.as_p, creamos el div con JS y lo ponemos justo después del selector de paciente
-        $('#modalCita #id_paciente').after('<div id="caja-terapeutas-modal" class="mt-2 d-none p-3 bg-light border rounded-3 border-info border-start border-4 shadow-sm"></div>');
+        }
 
-        // 2. LÓGICA DE CONSULTA A LA API (Igual que en la otra pantalla)
-        $('#modalCita #id_paciente').on('change', function() {
-            const pacienteId = $(this).val();
-            const $cajaTerapeutas = $('#caja-terapeutas-modal');
-            
-            if (pacienteId) {
-                $.get('/api/terapeutas-paciente/', { 'paciente_id': pacienteId }, function(data) {
-                    if (data.terapeutas && data.terapeutas.length > 0) {
-                        let badges = data.terapeutas.map(t => `<span class="badge bg-info text-dark me-1 border">${t}</span>`).join('');
-                        
-                        $cajaTerapeutas.html(`
-                            <small class="text-muted d-block fw-bold mb-2">Atendido previamente por:</small>
-                            ${badges}
-                        `).removeClass('d-none');
-                    } else {
-                        $cajaTerapeutas.html(`
-                            <small class="text-muted fst-italic">Paciente de primera vez (sin historial).</small>
-                        `).removeClass('d-none');
-                    }
-                });
-            } else {
-                $cajaTerapeutas.addClass('d-none').html('');
+        function actualizarPacientesRelacionados() {
+            const pacienteId = $paciente.val();
+            if (!pacienteId || !servicioPermiteMultiples()) {
+                $pacientesExtra.empty().trigger('change');
+                $wrapperPacientesExtra.hide();
+                return;
             }
-        });});
-    </script>
+
+            $.get('/api/pacientes-relacionados/', { paciente_id: pacienteId }, function(data) {
+                $pacientesExtra.empty();
+                (data.relacionados || []).forEach(function(p) {
+                    const option = new Option(p.nombre, p.id, false, false);
+                    $pacientesExtra.append(option);
+                });
+                $pacientesExtra.trigger('change');
+                $wrapperPacientesExtra.show();
+            }).fail(function() {
+                $pacientesExtra.empty().trigger('change');
+                $wrapperPacientesExtra.hide();
+            });
+        }
+
+        $wrapperPacientesExtra.hide();
+        $paciente.on('change', function() {
+            actualizarTerapeutasPrevios();
+            actualizarPacientesRelacionados();
+        });
+        $servicio.on('change', actualizarPacientesRelacionados);
+        $modal.on('shown.bs.modal', function() {
+            actualizarTerapeutasPrevios();
+            actualizarPacientesRelacionados();
+        });
+    });
+</script>
 
 
     {% if solicitudes_pendientes %}
