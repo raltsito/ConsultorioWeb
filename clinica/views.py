@@ -23,31 +23,6 @@ def quitar_tildes(texto):
     return ''.join(c for c in unicodedata.normalize('NFD', str(texto))
                    if unicodedata.category(c) != 'Mn').lower()
 
-def limpiar_encoding(texto):
-    """Corrige texto con encoding corrompido"""
-    if not texto:
-        return texto
-    
-    # Conversiones precisas de caracteres corruptos
-    conversiones_precisas = {
-        'Ã¡': 'á', 'Ã©': 'é', 'Ã­': 'í', 'Ã³': 'ó', 'Ãš': 'ú', 'Ã¼': 'ü', 'Ã±': 'ñ',
-        'Ã': 'Á', 'Ã©': 'É', 'Ã­': 'Í', 'Ã³': 'Ó', 'ÃŠ': 'Ú', 'Ã': 'Ñ',
-        'Ý': 'í', 'ý': 'y', '┴': 'á', '┬': 'á', 'Á': 'á', '·': 'i', 'ß': 'a', '¾': 'ó',
-        'º': '', 'ª': '', 'Â': '', 'Ã': '', 'â€™': "'", 
-        # Patrones largos
-        'CÃ³': 'Có', 'MÃ©ndez': 'Méndez', 'DÃ­az': 'Díaz', 'SÃ¡nchez': 'Sánchez',
-        'RamÃ­rez': 'Ramírez', 'GarcÃ­a': 'García', 'FernÃ¡ndez': 'Fernández',
-    }
-    
-    resultado = texto
-    conversiones_ordenadas = sorted(conversiones_precisas.items(), key=lambda x: len(x[0]), reverse=True)
-    
-    for corrupto, correcto in conversiones_ordenadas:
-        resultado = resultado.replace(corrupto, correcto)
-    
-    resultado = ' '.join(resultado.split())
-    return resultado.strip()
-
 @login_required
 def home(request):
     # --- EL SEMAFORO INTELIGENTE ---
@@ -122,10 +97,7 @@ def registrar_paciente(request):
     if request.method == 'POST':
         form = PacienteForm(request.POST)
         if form.is_valid():
-            paciente = form.save(commit=False)
-            # Limpiar encoding del nombre
-            paciente.nombre = limpiar_encoding(paciente.nombre)
-            paciente.save()
+            form.save()
             return redirect('lista_pacientes')
     else:
         form = PacienteForm()
@@ -171,10 +143,7 @@ def editar_paciente(request, paciente_id):
         # FILES es necesario para recibir archivos (PDFs, fotos)
         form = PacienteForm(request.POST, request.FILES, instance=paciente)
         if form.is_valid():
-            paciente_actualizado = form.save(commit=False)
-            # Limpiar encoding del nombre
-            paciente_actualizado.nombre = limpiar_encoding(paciente_actualizado.nombre)
-            paciente_actualizado.save()
+            form.save()
             return redirect('detalle_paciente', paciente_id=paciente.id)
     else:
         form = PacienteForm(instance=paciente)
@@ -253,14 +222,8 @@ def crear_cita(request):
     if request.method == 'POST':
         form = CitaForm(request.POST)
         if form.is_valid():
-            # Guardamos la cita SIN los pacientes primero (ManyToMany)
-            cita = form.save(commit=False)
-            cita.save()
-            
-            # Ahora agregamos los pacientes seleccionados
-            pacientes_ids = form.cleaned_data.get('pacientes', [])
-            if pacientes_ids:
-                cita.pacientes.set(pacientes_ids)
+            # Guardamos la cita en la base de datos
+            form.save()
             
             # --- NUEVA MAGIA: Limpieza de la bandeja de entrada ---
             # Atrapamos el ID de la solicitud que sigue en la URL
@@ -603,22 +566,6 @@ def solicitar_cita_terapeuta(request):
     return render(request, 'clinica/solicitar_cita_terapeuta.html', {
         'pacientes': pacientes
     })
-
-
-def api_pacientes_relacionados(request):
-    """API para obtener pacientes relacionados de un paciente específico"""
-    paciente_id = request.GET.get('paciente_id')
-    
-    if not paciente_id:
-        return JsonResponse({'relacionados': []})
-    
-    try:
-        paciente = Paciente.objects.get(id=paciente_id)
-        relacionados = paciente.pacientes_relacionados.all().values('id', 'nombre')
-        return JsonResponse({'relacionados': list(relacionados)})
-    except Paciente.DoesNotExist:
-        return JsonResponse({'relacionados': []})
-
 
 def api_disponibilidad_terapeuta(request):
     fecha_str = request.GET.get('fecha')

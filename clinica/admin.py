@@ -12,13 +12,8 @@ class PacienteAdmin(admin.ModelAdmin):
     search_fields = ('nombre',)
 
 class CitaAdmin(admin.ModelAdmin):
-    list_display = ('get_pacientes', 'fecha', 'hora', 'terapeuta', 'estatus')
+    list_display = ('paciente', 'fecha', 'hora', 'terapeuta', 'estatus')
     list_filter = ('fecha', 'estatus', 'terapeuta', 'consultorio')
-    
-    def get_pacientes(self, obj):
-        """Mostrar lista de pacientes en la cita"""
-        return ', '.join([p.nombre for p in obj.pacientes.all()] or ['Sin pacientes'])
-    get_pacientes.short_description = 'Pacientes'
 
 admin.site.register(Paciente, PacienteAdmin)
 admin.site.register(Cita, CitaAdmin)

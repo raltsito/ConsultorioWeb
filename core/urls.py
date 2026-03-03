@@ -30,7 +30,6 @@ urlpatterns = [
     path('solicitud/rechazar/<int:solicitud_id>/', clinica_views.rechazar_solicitud, name='rechazar_solicitud'),
     path('mi-portal-doc/solicitar/', clinica_views.solicitar_cita_terapeuta, name='solicitar_cita_terapeuta'),
     path('api/disponibilidad-terapeuta/', clinica_views.api_disponibilidad_terapeuta, name='api_disponibilidad'),
-    path('api/pacientes-relacionados/', clinica_views.api_pacientes_relacionados, name='api_pacientes_relacionados'),
     
 ]
 

@@ -117,7 +117,7 @@ class Cita(models.Model):
         ('Pendiente', 'Pendiente'),
     ]
 
-    pacientes = models.ManyToManyField(Paciente, related_name='citas_grupo')
+    paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='citas')
     fecha = models.DateField()
     hora = models.TimeField()
     
@@ -135,8 +135,7 @@ class Cita(models.Model):
     notas = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        pacientes_str = ', '.join([p.nombre for p in self.pacientes.all()] or ['Sin pacientes'])
-        return f"{pacientes_str} - {self.fecha}"
+        return f"{self.paciente} - {self.fecha}"
 
     class Meta:
         verbose_name = "Cita"

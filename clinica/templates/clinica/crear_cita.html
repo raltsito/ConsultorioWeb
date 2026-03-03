@@ -15,17 +15,8 @@
                     <form method="post" id="form-crear">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label class="form-label text-muted mb-1">Pacientes:</label>
-                            <div class="p-3 border rounded bg-light">
-                                {{ form.pacientes }}
-                            </div>
-                            
-                            <!-- Recomendaciones de pacientes relacionados -->
-                            <div id="recomendaciones-familiares" class="mt-3 d-none p-3 bg-light border rounded-3 border-info border-start border-4">
-                                <small class="text-info fw-bold mb-2 d-block">👥 Pacientes Relacionados (Recomendados):</small>
-                                <div id="lista-recomendados" class="d-flex flex-wrap gap-2">
-                                </div>
-                            </div>
+                            <label class="form-label text-muted mb-1">Paciente:</label>
+                            {{ form.paciente }}
                             
                             <div id="caja-terapeutas" class="mt-2 d-none p-2 bg-light border rounded-3 border-info border-start border-4">
                             </div>
@@ -108,72 +99,17 @@
         const $consultorio = $('#id_consultorio');
         const $terapeuta = $('#id_terapeuta');
         const $status = $('#availability-status');
-        const $pacientes = $('#id_pacientes');
-        const $recomendaciones = $('#recomendaciones-familiares');
-        const $listaRecomendados = $('#lista-recomendados');
-        
-        // Objeto para almacenar pacientes relacionados
-        let pacientesData = {};
-        
-        // Inicializar datos de pacientes y sus relacionados
-        function inicializarPacientes() {
-            $pacientes.find('input[type="checkbox"]').each(function() {
-                const pacienteId = $(this).val();
-                const label = $(this).closest('label').text().trim();
-                // Hacer una llamada para obtener los pacientes relacionados
-                $.get('/api/pacientes-relacionados/', {'paciente_id': pacienteId}, function(data) {
-                    pacientesData[pacienteId] = data.relacionados || [];
-                });
-            });
-        }
-        
-        // Actualizar recomendaciones cuando cambia la selección
-        function actualizarRecomendaciones() {
-            const seleccionados = $pacientes.find('input[type="checkbox"]:checked');
-            let todosRelacionados = new Set();
-            
-            seleccionados.each(function() {
-                const pacienteId = $(this).val();
-                if (pacientesData[pacienteId]) {
-                    pacientesData[pacienteId].forEach(r => todosRelacionados.add(r.id + '|' + r.nombre));
+        const $btnGuardar = $('#btn-guardar');
+$('#id_paciente').select2({
+            placeholder: "Escribe el nombre del paciente...",
+            allowClear: true,
+            width: '100%',
+            language: {
+                noResults: function() {
+                    return "No se encontraron pacientes";
                 }
-            });
-            
-            if (todosRelacionados.size > 0) {
-                let html = '';
-                todosRelacionados.forEach(item => {
-                    const [id, nombre] = item.split('|');
-                    const checkbox = $pacientes.find(`input[value="${id}"]`);
-                    const estáSeleccionado = checkbox.is(':checked');
-                    
-                    html += `
-                        <label class="badge ${estáSeleccionado ? 'bg-success' : 'bg-warning bg-opacity-50'} p-2 cursor-pointer" style="cursor: pointer;">
-                            <input type="checkbox" value="${id}" onchange="togglePacienteRecomendado(this)"> ${nombre}
-                        </label>
-                    `;
-                });
-                $listaRecomendados.html(html);
-                $recomendaciones.removeClass('d-none');
-            } else {
-                $recomendaciones.addClass('d-none');
             }
-        }
-        
-        // Hacer disponible globalmente
-        window.togglePacienteRecomendado = function(checkbox) {
-            const pacienteId = checkbox.value;
-            const mainCheckbox = $pacientes.find(`input[value="${pacienteId}"]`);
-            mainCheckbox.prop('checked', checkbox.checked);
-            actualizarRecomendaciones();
-        };
-        
-        // Eventos para actualizar recomendaciones
-        $pacientes.find('input[type="checkbox"]').on('change', actualizarRecomendaciones);
-        
-        // Inicializar
-        inicializarPacientes();
-        setTimeout(actualizarRecomendaciones, 500);
-        
+        });
         // Función de validación silenciosa
         const $radar = $('#radar-disponibilidad');
         const $listaHorarios = $('#lista-horarios');
@@ -212,7 +148,6 @@
         }
 
         // El boton siempre esta habilitado - se puede agendar sin restricciones
-        const $btnGuardar = $('#btn-agendar-forzado');
         $btnGuardar.prop('disabled', false);
 
         // Radar solo muestra información, no bloquea
@@ -220,8 +155,6 @@
         $terapeuta.on('change', actualizarRadar);
         
         setTimeout(actualizarRadar, 300);
-    });
-
 {% endblock %}
 <script>
     $(document).ready(function() {
