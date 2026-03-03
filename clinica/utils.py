@@ -17,18 +17,13 @@ def sincronizar_google_sheet(cita):
     periodo = cita.fecha.strftime("%B %Y").capitalize() 
     
     
-    # tomar el primer paciente para la sincronización (o vacío si no hay)
-    primero = cita.pacientes.first()
-    nombre_paciente = primero.nombre if primero else ""
-    sexo_paciente = primero.sexo if primero else ""
-
     fila_nueva = [
         cita.fecha.day,                 # Columna A: Dia
         periodo,                        # Columna B: Periodo
         str(cita.hora)[:5],             # Columna C: Hora
         str(cita.division),             # Columna D: División
-        nombre_paciente,                # Columna E: Paciente
-        sexo_paciente,                  # Columna F: Sexo
+        str(cita.paciente.nombre),      # Columna E: Paciente
+        str(cita.paciente.sexo),        # Columna F: Sexo
         str(cita.servicio),             # Columna G: Servicio
         str(cita.terapeuta),            # Columna H: Terapeuta
         str(cita.consultorio),          # Columna I: Consultorio

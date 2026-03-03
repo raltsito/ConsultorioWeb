@@ -136,14 +136,10 @@ def registrar_paciente(request):
 
 def detalle_paciente(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)
-    # ahora filtramos por el ManyToMany
-    historial = Cita.objects.filter(pacientes=paciente).order_by('-fecha', '-hora')
+    historial = Cita.objects.filter(paciente=paciente).order_by('-fecha', '-hora')
     
     # Extraemos los terapeutas unicos que han atendido a este paciente
-    terapeutas_previos = set()
-    for cita in historial:
-        if cita.terapeuta:
-            terapeutas_previos.add(cita.terapeuta)
+    terapeutas_previos = set(cita.terapeuta for cita in historial if cita.terapeuta)
 
     context = {
         'paciente': paciente,
@@ -151,7 +147,22 @@ def detalle_paciente(request, paciente_id):
         'terapeutas_previos': terapeutas_previos, # Pasamos la lista al HTML
     }
     return render(request, 'clinica/detalle_paciente.html', context)
-
+@login_required
+def agendar_cita(request, paciente_id):
+    paciente = get_object_or_404(Paciente, id=paciente_id)
+    
+    if request.method == 'POST':
+        form = CitaForm(request.POST)
+        if form.is_valid():
+            cita = form.save(commit=False)
+            cita.paciente = paciente  # Aquí vinculamos la cita al paciente automáticamente
+            cita.save()
+            return redirect('detalle_paciente', paciente_id=paciente.id)
+    else:
+        # Pre-llenamos el terapeuta por defecto si quieres, o lo dejamos vacío
+        form = CitaForm(initial={'costo': 500})
+    
+    return render(request, 'clinica/agendar_cita.html', {'form': form, 'paciente': paciente})
 @login_required
 def editar_paciente(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)
@@ -177,16 +188,17 @@ def agendar_cita(request, paciente_id):
         form = CitaForm(request.POST)
         if form.is_valid():
             cita = form.save(commit=False)
+            cita.paciente = paciente
             cita.save()
-            # agregamos al paciente que vino desde la URL
-            cita.pacientes.add(paciente)
             
+           
             try:
                 sincronizar_google_sheet(cita)
                 print("✅ Sincronización exitosa")
             except Exception as e:
                 print(f" Error al sincronizar con Google: {e}")
             
+
             return redirect('detalle_paciente', paciente_id=paciente.id)
     else:
         form = CitaForm(initial={'costo': 500})
@@ -225,16 +237,12 @@ def calendario_citas(request):
         elif cita.estatus == 'programada':
             color = '#26C6DA' # Tu color INTRA Primary
 
-        # construir cadena de nombres de pacientes
-        pacientes_nombres = ', '.join(p.nombre for p in cita.pacientes.all())
-        first_patient = cita.pacientes.first()
-
         eventos.append({
-            'title': f"{pacientes_nombres} ({cita.terapeuta})",
+            'title': f"{cita.paciente.nombre} ({cita.terapeuta})",
             'start': start.isoformat(),
             'end': end.isoformat(),
             'color': color,
-            'url': f"/pacientes/{first_patient.id}/" if first_patient else '#'
+            'url': f"/pacientes/{cita.paciente.id}/" # Al dar click, lleva al paciente
         })
 
     return JsonResponse(eventos, safe=False)
@@ -367,10 +375,7 @@ def editar_cita(request, cita_id):
             
             origen = request.GET.get('next', 'home')
             if origen == 'paciente':
-                # redirigir al primer paciente si existe
-                primeros = cita.pacientes.first()
-                if primeros:
-                    return redirect('detalle_paciente', paciente_id=primeros.id)
+                return redirect('detalle_paciente', paciente_id=cita.paciente.id)
             return redirect('home')
         else:
             # 👇 AQUÍ ESTÁ LA MAGIA: Mostramos el error exacto
