@@ -1,8 +1,6 @@
 from django import forms
-from .models import Paciente, Cita
-from django.core.exceptions import ValidationError
-from datetime import timedelta
-from .models import Cita
+
+from .models import Cita, Paciente
 class PacienteForm(forms.ModelForm):
     class Meta:
         model = Paciente
@@ -33,6 +31,18 @@ class PacienteForm(forms.ModelForm):
         }
 
 class CitaForm(forms.ModelForm):
+    pacientes_extra = forms.ModelMultipleChoiceField(
+        queryset=Paciente.objects.none(),
+        required=False,
+        widget=forms.SelectMultiple(
+            attrs={
+                'class': 'form-select select2-pacientes-extra',
+                'multiple': 'multiple',
+            }
+        ),
+        label='Pacientes relacionados',
+    )
+
     class Meta:
         model = Cita
         fields = [
@@ -51,6 +61,8 @@ class CitaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['pacientes_extra'].queryset = Paciente.objects.order_by('nombre')
+
         # Bucle para estilos Bootstrap
         for field_name, field in self.fields.items():
             if 'class' not in field.widget.attrs:

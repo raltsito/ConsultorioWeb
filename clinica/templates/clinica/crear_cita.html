@@ -3,87 +3,92 @@
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <div class="container mt-4 mb-5">
     <div class="row justify-content-center">
-        <div class="col-md-5">
+        <div class="col-md-6">
             <div class="card shadow border-0 rounded-3">
-                <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #0d6efd; border-top-left-radius: 0.3rem; border-top-right-radius: 0.3rem;">
+                <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #0d6efd;">
                     <h5 class="mb-0 fw-semibold">Nueva Cita</h5>
                 </div>
-                
                 <div class="card-body p-4 bg-white">
-                    <form method="post" id="form-crear">
+                    <form method="post" id="form-crear" novalidate>
                         {% csrf_token %}
+
                         <div class="mb-3">
-                            <label class="form-label text-muted mb-1">Paciente:</label>
+                            <label class="form-label text-muted mb-1">Paciente</label>
                             {{ form.paciente }}
-                            
-                            <div id="caja-terapeutas" class="mt-2 d-none p-2 bg-light border rounded-3 border-info border-start border-4">
-                            </div>
+                            <div id="caja-terapeutas" class="mt-2 d-none p-2 bg-light border rounded-3 border-info border-start border-4"></div>
                         </div>
+
+                        <div id="grupo-pacientes-relacionados" class="mb-3 d-none">
+                            <label class="form-label text-muted mb-1">Pacientes recomendados (familiares)</label>
+                            {{ form.pacientes_extra }}
+                            <small class="text-muted">Disponible solo para terapia de pareja, familiar e infantil.</small>
+                        </div>
+
                         <div class="mb-3">
-                            <label class="form-label text-muted mb-1">Fecha:</label>
+                            <label class="form-label text-muted mb-1">Fecha</label>
                             {{ form.fecha }}
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-muted mb-1">Hora:</label>
+                            <label class="form-label text-muted mb-1">Hora</label>
                             {{ form.hora }}
-                            <div id="availability-status" class="form-text mt-1"></div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-muted mb-1">División:</label>
+                            <label class="form-label text-muted mb-1">División</label>
                             {{ form.division }}
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-muted mb-1">Consultorio:</label>
+                            <label class="form-label text-muted mb-1">Consultorio</label>
                             {{ form.consultorio }}
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-muted mb-1">Servicio:</label>
+                            <label class="form-label text-muted mb-1">Servicio</label>
                             {{ form.servicio }}
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-muted mb-1">Terapeuta:</label>
+                            <label class="form-label text-muted mb-1">Terapeuta</label>
                             {{ form.terapeuta }}
                             <div id="radar-disponibilidad" class="mt-2 d-none p-3 bg-light border border-primary rounded-3">
-    <small class="text-primary fw-bold mb-2 d-block">Horarios Libres del Terapeuta:</small>
-    <div id="lista-horarios" class="d-flex flex-wrap gap-2"></div>
-</div>
+                                <small class="text-primary fw-bold mb-2 d-block">Horarios libres del terapeuta</small>
+                                <div id="lista-horarios" class="d-flex flex-wrap gap-2"></div>
+                            </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-muted mb-1">Costo:</label>
+                            <label class="form-label text-muted mb-1">Costo</label>
                             {{ form.costo }}
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-muted mb-1">Método pago:</label>
+                            <label class="form-label text-muted mb-1">Método de pago</label>
                             {{ form.metodo_pago }}
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-muted mb-1">Estatus:</label>
+                            <label class="form-label text-muted mb-1">Estatus</label>
                             {{ form.estatus }}
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-muted mb-1">Folio fiscal:</label>
+                            <label class="form-label text-muted mb-1">Folio fiscal</label>
                             {{ form.folio_fiscal }}
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-muted mb-1">Notas:</label>
+                            <label class="form-label text-muted mb-1">Notas</label>
                             {{ form.notas }}
                         </div>
 
                         <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
                             <a href="javascript:history.back()" class="btn btn-secondary px-4">Cerrar</a>
-                            <button type="submit" class="btn btn-success px-4" id="btn-agendar-forzado">Agendar Cita</button>
+                            <button type="submit" class="btn btn-success px-4">Agendar Cita</button>
                         </div>
                     </form>
                 </div>
@@ -94,118 +99,98 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        const $paciente = $('#id_paciente');
+        const $servicio = $('#id_servicio');
         const $fecha = $('#id_fecha');
-        const $hora = $('#id_hora');
-        const $consultorio = $('#id_consultorio');
         const $terapeuta = $('#id_terapeuta');
-        const $status = $('#availability-status');
-        const $btnGuardar = $('#btn-guardar');
-$('#id_paciente').select2({
-            placeholder: "Escribe el nombre del paciente...",
-            allowClear: true,
-            width: '100%',
-            language: {
-                noResults: function() {
-                    return "No se encontraron pacientes";
-                }
-            }
-        });
-        // Función de validación silenciosa
         const $radar = $('#radar-disponibilidad');
         const $listaHorarios = $('#lista-horarios');
+        const $grupoRelacionados = $('#grupo-pacientes-relacionados');
+        const $pacientesExtra = $('#id_pacientes_extra');
+
+        const serviciosMultiples = [
+            'terapia de pareja',
+            'terapia familiar',
+            'terapia infantil'
+        ];
+
+        $paciente.select2({
+            placeholder: 'Escribe el nombre del paciente...',
+            allowClear: true,
+            width: '100%'
+        });
+
+        $pacientesExtra.select2({
+            placeholder: 'Selecciona familiares relacionados...',
+            allowClear: true,
+            width: '100%'
+        });
+
+        function servicioPermiteMultiples() {
+            const txt = ($servicio.find('option:selected').text() || '').toLowerCase().trim();
+            return serviciosMultiples.includes(txt);
+        }
+
+        function cargarRelacionados() {
+            const pacienteId = $paciente.val();
+            if (!pacienteId || !servicioPermiteMultiples()) {
+                $pacientesExtra.empty().trigger('change');
+                $grupoRelacionados.addClass('d-none');
+                return;
+            }
+
+            $.get('/api/pacientes-relacionados/', { paciente_id: pacienteId }, function(data) {
+                $pacientesExtra.empty();
+                (data.relacionados || []).forEach(function(p) {
+                    const option = new Option(p.nombre, p.id, false, false);
+                    $pacientesExtra.append(option);
+                });
+                $pacientesExtra.trigger('change');
+                $grupoRelacionados.removeClass('d-none');
+            }).fail(function() {
+                $pacientesExtra.empty().trigger('change');
+                $grupoRelacionados.addClass('d-none');
+            });
+        }
 
         function actualizarRadar() {
             const fecha = $fecha.val();
             const terapeuta = $terapeuta.val();
 
-            if (fecha && terapeuta) {
-                $listaHorarios.html('<span class="text-muted small">Consultando agenda...</span>');
-                $radar.removeClass('d-none');
-                
-                $.get('/api/disponibilidad-terapeuta/', {
-                    'fecha': fecha,
-                    'terapeuta': terapeuta
-                }, function(data) {
-                    if (data.mensaje) {
-                        $listaHorarios.html(`<span class="text-danger small fw-bold">${data.mensaje}</span>`);
-                        return;
-                    }
-
-                    if (data.horarios && data.horarios.length > 0) {
-                        let botonesHtml = data.horarios.map(h => 
-                            `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary p-2">${h}</span>`
-                        ).join('');
-                        $listaHorarios.html(botonesHtml);
-                    } else {
-                        $listaHorarios.html('<span class="text-danger small fw-bold">Agenda llena para este día.</span>');
-                    }
-                }).fail(function() {
-                    $listaHorarios.html('<span class="text-muted small">Error al conectar con la base de datos.</span>');
-                });
-            } else {
+            if (!fecha || !terapeuta) {
                 $radar.addClass('d-none');
+                return;
             }
+
+            $listaHorarios.html('<span class="text-muted small">Consultando agenda...</span>');
+            $radar.removeClass('d-none');
+
+            $.get('/api/disponibilidad-terapeuta/', { fecha: fecha, terapeuta: terapeuta }, function(data) {
+                if (data.mensaje) {
+                    $listaHorarios.html('<span class="text-danger small fw-bold">' + data.mensaje + '</span>');
+                    return;
+                }
+
+                if (data.horarios && data.horarios.length > 0) {
+                    const html = data.horarios.map(function(h) {
+                        return '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary p-2">' + h + '</span>';
+                    }).join('');
+                    $listaHorarios.html(html);
+                } else {
+                    $listaHorarios.html('<span class="text-danger small fw-bold">Agenda llena para este día.</span>');
+                }
+            }).fail(function() {
+                $listaHorarios.html('<span class="text-muted small">No se pudo consultar disponibilidad.</span>');
+            });
         }
 
-        // El boton siempre esta habilitado - se puede agendar sin restricciones
-        $btnGuardar.prop('disabled', false);
-
-        // Radar solo muestra información, no bloquea
+        $paciente.on('change', cargarRelacionados);
+        $servicio.on('change', cargarRelacionados);
         $fecha.on('change', actualizarRadar);
         $terapeuta.on('change', actualizarRadar);
-        
-        setTimeout(actualizarRadar, 300);
-{% endblock %}
-<script>
-    $(document).ready(function() {
-        // Script defensivo contra cualquier validación HTML5
-        const form = document.querySelector('#form-crear');
-        const submitBtn = $('#btn-agendar-forzado');
-        
-        // Desactivar noValidate
-        if (form) {
-            form.noValidate = true;
-            form.setAttribute('novalidate', 'novalidate');
-        }
-        
-        // Remover atributos 'required' de TODOS los inputs
-        document.querySelectorAll('input, select, textarea').forEach(field => {
-            field.removeAttribute('required');
-            field.classList.remove('is-invalid', 'is-valid');
-        });
-        
-        // Botón siempre habilitado
-        submitBtn.prop('disabled', false).removeClass('disabled');
-        submitBtn.removeAttr('disabled');
-        
-        // Limpiar errores visuales
-        $('.errorlist, .invalid-feedback, .text-danger, .alert-danger').fadeOut('fast');
-        
-        // Al cambiar campos, limpiar validación
-        $('input, select, textarea').on('change blur', function() {
-            $(this).removeClass('is-invalid is-valid');
-            $(this).removeAttribute('required');
-        });
-        
-        // No validar en submit
-        form.addEventListener('submit', function(e) {
-            // Permitir envío sin validación
-            const inputs = this.querySelectorAll('input, select, textarea');
-            inputs.forEach(input => {
-                input.removeAttribute('required');
-                input.classList.remove('is-invalid');
-            });
-            submitBtn.prop('disabled', false);
-        });
-        
-        // Cada 200ms asegurar que no hay requeridos
-        setInterval(function() {
-            document.querySelectorAll('input, select, textarea').forEach(field => {
-                if (field.hasAttribute('required')) {
-                    field.removeAttribute('required');
-                }
-            });
-            submitBtn.prop('disabled', false).removeClass('disabled');
-        }, 200);
+
+        cargarRelacionados();
+        actualizarRadar();
     });
 </script>
+{% endblock %}

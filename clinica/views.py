@@ -23,6 +23,13 @@ def quitar_tildes(texto):
     return ''.join(c for c in unicodedata.normalize('NFD', str(texto))
                    if unicodedata.category(c) != 'Mn').lower()
 
+
+SERVICIOS_GRUPALES = {
+    'terapia de pareja',
+    'terapia familiar',
+    'terapia infantil',
+}
+
 @login_required
 def home(request):
     # --- EL SEMAFORO INTELIGENTE ---
@@ -222,8 +229,31 @@ def crear_cita(request):
     if request.method == 'POST':
         form = CitaForm(request.POST)
         if form.is_valid():
-            # Guardamos la cita en la base de datos
-            form.save()
+            cita = form.save()
+
+            # Para servicios grupales, creamos citas hermanas para pacientes relacionados.
+            servicio_nombre = quitar_tildes(cita.servicio.nombre if cita.servicio else '')
+            if servicio_nombre in SERVICIOS_GRUPALES:
+                pacientes_extra = form.cleaned_data.get('pacientes_extra')
+                if pacientes_extra:
+                    paciente_principal_id = cita.paciente_id
+                    for paciente_rel in pacientes_extra:
+                        if paciente_rel.id == paciente_principal_id:
+                            continue
+                        Cita.objects.create(
+                            paciente=paciente_rel,
+                            fecha=cita.fecha,
+                            hora=cita.hora,
+                            division=cita.division,
+                            consultorio=cita.consultorio,
+                            servicio=cita.servicio,
+                            terapeuta=cita.terapeuta,
+                            costo=cita.costo,
+                            metodo_pago=cita.metodo_pago,
+                            estatus=cita.estatus,
+                            folio_fiscal=cita.folio_fiscal,
+                            notas=cita.notas,
+                        )
             
             # --- NUEVA MAGIA: Limpieza de la bandeja de entrada ---
             # Atrapamos el ID de la solicitud que sigue en la URL
@@ -297,6 +327,21 @@ def crear_cita(request):
     # ESTO ES VITAL: Renderizamos la plantilla HTML en lugar de redirigir.
     # Asi el usuario puede ver el formulario para llenarlo o corregirlo.
     return render(request, 'clinica/crear_cita.html', {'form': form})
+
+
+@login_required
+def api_pacientes_relacionados(request):
+    paciente_id = request.GET.get('paciente_id')
+    if not paciente_id:
+        return JsonResponse({'relacionados': []})
+
+    try:
+        paciente = Paciente.objects.get(id=paciente_id)
+    except Paciente.DoesNotExist:
+        return JsonResponse({'relacionados': []})
+
+    relacionados = paciente.pacientes_relacionados.order_by('nombre').values('id', 'nombre')
+    return JsonResponse({'relacionados': list(relacionados)})
 
 # En clinica/views.py
 
