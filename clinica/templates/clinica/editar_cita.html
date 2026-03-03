@@ -11,7 +11,11 @@
                 <div class="card-body p-4">
                     <div class="alert alert-light border mb-4">
                         <small class="text-muted text-uppercase fw-bold">Editando cita para:</small>
-                        <h4 class="text-primary mb-0">{{ cita.paciente.nombre }} {{ cita.paciente.apellido }}</h4>
+                        <h4 class="text-primary mb-0">
+                            {% with nombres=cita.pacientes.all|join:", " %}
+                                {{ nombres }}
+                            {% endwith %}
+                        </h4>
                     </div>
 
                     <form method="post" id="form-editar">
@@ -57,7 +61,7 @@
                             </div>
                             
                             <div class="d-none">
-                                {{ form.paciente }}
+                                {{ form.pacientes }}
                             </div>
                         </div>
 
