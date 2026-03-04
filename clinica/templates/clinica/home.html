@@ -94,7 +94,7 @@
                     {{ cita.pacientes_display|slice:":2"|upper }}
                 </div>
                 <a href="{% url 'detalle_paciente' cita.paciente.id %}" class="text-decoration-none fw-semibold text-primary">
-                    {{ cita.pacientes_display }}
+                    {{ cita.titulo_cita }}
                 </a>
             </div>
         </td>
@@ -114,7 +114,7 @@
             <button class="btn btn-sm btn-light text-muted btn-ver-detalle"
                 data-bs-toggle="modal" 
                 data-bs-target="#modalDetalleCita"
-                data-paciente="{{ cita.pacientes_display }}"
+                data-paciente="{{ cita.titulo_cita }}"
                 data-servicio="{{ cita.servicio }}"
                 data-fecha="{{ cita.fecha|date:'l d F' }} a las {{ cita.hora|time:'H:i' }}"
                 data-consultorio="{{ cita.consultorio }}"

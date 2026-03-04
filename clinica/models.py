@@ -144,6 +144,21 @@ class Cita(models.Model):
         nombres.extend(self.pacientes_adicionales.values_list('nombre', flat=True))
         return ", ".join(nombres)
 
+    def pacientes_display_natural(self):
+        nombres = [self.paciente.nombre] if self.paciente_id else []
+        nombres.extend(list(self.pacientes_adicionales.values_list('nombre', flat=True)))
+        if not nombres:
+            return ""
+        if len(nombres) == 1:
+            return nombres[0]
+        if len(nombres) == 2:
+            return f"{nombres[0]} y {nombres[1]}"
+        return f"{', '.join(nombres[:-1])} y {nombres[-1]}"
+
+    def titulo_cita(self):
+        pacientes = self.pacientes_display_natural()
+        return f"Cita de {pacientes}" if pacientes else "Cita"
+
     def __str__(self):
         return f"{self.pacientes_display()} - {self.fecha}"
 

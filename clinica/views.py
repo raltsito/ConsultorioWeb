@@ -138,6 +138,14 @@ def agendar_cita(request, paciente_id):
             cita = form.save(commit=False)
             cita.paciente = paciente  # Aquí vinculamos la cita al paciente automáticamente
             cita.save()
+            servicio_nombre = quitar_tildes(cita.servicio.nombre if cita.servicio else '')
+            if servicio_nombre in SERVICIOS_GRUPALES:
+                pacientes_extra = form.cleaned_data.get('pacientes_extra')
+                cita.pacientes_adicionales.set(
+                    (pacientes_extra or Paciente.objects.none()).exclude(pk=cita.paciente_id)
+                )
+            else:
+                cita.pacientes_adicionales.clear()
             return redirect('detalle_paciente', paciente_id=paciente.id)
     else:
         # Pre-llenamos el terapeuta por defecto si quieres, o lo dejamos vacío
@@ -168,6 +176,14 @@ def agendar_cita(request, paciente_id):
             cita = form.save(commit=False)
             cita.paciente = paciente
             cita.save()
+            servicio_nombre = quitar_tildes(cita.servicio.nombre if cita.servicio else '')
+            if servicio_nombre in SERVICIOS_GRUPALES:
+                pacientes_extra = form.cleaned_data.get('pacientes_extra')
+                cita.pacientes_adicionales.set(
+                    (pacientes_extra or Paciente.objects.none()).exclude(pk=cita.paciente_id)
+                )
+            else:
+                cita.pacientes_adicionales.clear()
             
            
             try:
@@ -398,6 +414,24 @@ def editar_cita(request, cita_id):
         'cita': cita
     }
     )
+
+
+@login_required
+def eliminar_cita(request, cita_id):
+    if request.method != 'POST':
+        return redirect('editar_cita', cita_id=cita_id)
+
+    cita = get_object_or_404(Cita, id=cita_id)
+    paciente_id = cita.paciente_id
+    cita.delete()
+    messages.success(request, 'Cita eliminada correctamente.')
+
+    origen = request.GET.get('next', 'home')
+    if origen == 'paciente' and paciente_id:
+        return redirect('detalle_paciente', paciente_id=paciente_id)
+    return redirect('home')
+
+
 def api_citas_calendario(request):
     citas = Cita.objects.all()
     eventos = []
