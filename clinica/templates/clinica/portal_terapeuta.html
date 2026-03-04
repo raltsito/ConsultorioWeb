@@ -89,9 +89,13 @@
                                             </p>
                                             
                                             <div class="d-flex gap-2">
-                                                <a href="{% url 'detalle_paciente' cita.paciente.id %}" class="btn btn-outline-primary btn-lg px-4 fw-semibold">
-                                                    Abrir Expediente
-                                                </a>
+                                                {% if cita.paciente_id %}
+                                                    <a href="{% url 'detalle_paciente' cita.paciente.id %}" class="btn btn-outline-primary btn-lg px-4 fw-semibold">
+                                                        Abrir Expediente
+                                                    </a>
+                                                {% else %}
+                                                    <span class="btn btn-outline-secondary btn-lg px-4 fw-semibold disabled">Sin expediente</span>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>

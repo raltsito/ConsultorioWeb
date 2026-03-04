@@ -71,7 +71,8 @@ def home(request):
     # CORRECCIÓN 2: Usamos 'estatus' y ordenamos por 'hora' (no hora_inicio)
     proximas_citas = Cita.objects.filter(
         fecha__gte=hoy,
-        estatus='programada' 
+        estatus='programada',
+        paciente__isnull=False,
     ).order_by('fecha', 'hora')[:5] 
 
     return render(request, 'clinica/home.html', {
@@ -497,12 +498,14 @@ def portal_terapeuta(request):
     
     citas_hoy = Cita.objects.filter(
         terapeuta=mi_perfil, 
-        fecha=hoy
+        fecha=hoy,
+        paciente__isnull=False,
     ).order_by('hora')
     
     citas_proximas = Cita.objects.filter(
         terapeuta=mi_perfil, 
-        fecha__gt=hoy
+        fecha__gt=hoy,
+        paciente__isnull=False,
     ).order_by('fecha', 'hora')[:10] 
     
     mis_solicitudes = SolicitudCita.objects.filter(
