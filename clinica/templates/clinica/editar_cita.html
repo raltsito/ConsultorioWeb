@@ -76,12 +76,13 @@
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center gap-2 mt-4">
-                            <form method="post" action="{% url 'eliminar_cita' cita.id %}?next={{ request.GET.next|default:'home' }}" onsubmit="return confirm('¿Seguro que deseas borrar esta cita? Esta acción no se puede deshacer.');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-danger">
-                                    <i class="bi bi-trash me-1"></i> Borrar Cita
-                                </button>
-                            </form>
+                            <button
+                                type="submit"
+                                form="form-eliminar-cita"
+                                class="btn btn-outline-danger"
+                                onclick="return confirm('¿Seguro que deseas borrar esta cita? Esta acción no se puede deshacer.');">
+                                <i class="bi bi-trash me-1"></i> Borrar Cita
+                            </button>
                             <div class="d-flex gap-2">
                             <a href="javascript:history.back()" class="btn btn-secondary">Cancelar</a>
                             <button type="submit" class="btn btn-primary fw-bold px-4">
@@ -89,6 +90,12 @@
                             </button>
                             </div>
                         </div>
+                    </form>
+                    <form
+                        id="form-eliminar-cita"
+                        method="post"
+                        action="{% url 'eliminar_cita' cita.id %}?next={{ request.GET.next|default:'home' }}">
+                        {% csrf_token %}
                     </form>
                 </div>
             </div>
@@ -105,7 +112,11 @@
         const $pacientesExtra = $('#id_pacientes_extra');
 
         $paciente.select2({ width: '100%', placeholder: 'Paciente principal' });
-        $pacientesExtra.select2({ width: '100%', placeholder: 'Pacientes relacionados' });
+        $pacientesExtra.select2({
+            width: '100%',
+            placeholder: 'Pacientes relacionados',
+            dropdownParent: $pacientesExtra.closest('.col-md-6')
+        });
 
         const serviciosMultiples = ['terapia de pareja', 'terapia familiar', 'terapia infantil'];
         function servicioPermiteMultiples() {

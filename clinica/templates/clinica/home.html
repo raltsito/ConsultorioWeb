@@ -292,7 +292,7 @@
             placeholder: 'Paciente principal'
         });
         $pacientesExtra.select2({
-            dropdownParent: $modal,
+            dropdownParent: $wrapperPacientesExtra.length ? $wrapperPacientesExtra : $modal,
             width: '100%',
             placeholder: 'Escribe para buscar familiares...'
         });
