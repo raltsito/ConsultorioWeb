@@ -30,6 +30,11 @@ SERVICIOS_GRUPALES = {
     'terapia infantil',
 }
 
+
+def es_servicio_grupal(servicio):
+    nombre = quitar_tildes(servicio.nombre if servicio else '').strip()
+    return any(base in nombre for base in SERVICIOS_GRUPALES)
+
 @login_required
 def home(request):
     # --- EL SEMAFORO INTELIGENTE ---
@@ -138,8 +143,7 @@ def agendar_cita(request, paciente_id):
             cita = form.save(commit=False)
             cita.paciente = paciente  # Aquí vinculamos la cita al paciente automáticamente
             cita.save()
-            servicio_nombre = quitar_tildes(cita.servicio.nombre if cita.servicio else '')
-            if servicio_nombre in SERVICIOS_GRUPALES:
+            if es_servicio_grupal(cita.servicio):
                 pacientes_extra = form.cleaned_data.get('pacientes_extra')
                 cita.pacientes_adicionales.set(
                     (pacientes_extra or Paciente.objects.none()).exclude(pk=cita.paciente_id)
@@ -176,8 +180,7 @@ def agendar_cita(request, paciente_id):
             cita = form.save(commit=False)
             cita.paciente = paciente
             cita.save()
-            servicio_nombre = quitar_tildes(cita.servicio.nombre if cita.servicio else '')
-            if servicio_nombre in SERVICIOS_GRUPALES:
+            if es_servicio_grupal(cita.servicio):
                 pacientes_extra = form.cleaned_data.get('pacientes_extra')
                 cita.pacientes_adicionales.set(
                     (pacientes_extra or Paciente.objects.none()).exclude(pk=cita.paciente_id)
@@ -250,8 +253,7 @@ def crear_cita(request):
             cita = form.save()
 
             # Para servicios grupales guardamos pacientes adicionales en la misma cita.
-            servicio_nombre = quitar_tildes(cita.servicio.nombre if cita.servicio else '')
-            if servicio_nombre in SERVICIOS_GRUPALES:
+            if es_servicio_grupal(cita.servicio):
                 pacientes_extra = form.cleaned_data.get('pacientes_extra')
                 if pacientes_extra:
                     cita.pacientes_adicionales.set(
@@ -384,8 +386,7 @@ def editar_cita(request, cita_id):
         form = CitaForm(request.POST, instance=cita)
         if form.is_valid():
             cita = form.save()
-            servicio_nombre = quitar_tildes(cita.servicio.nombre if cita.servicio else '')
-            if servicio_nombre in SERVICIOS_GRUPALES:
+            if es_servicio_grupal(cita.servicio):
                 pacientes_extra = form.cleaned_data.get('pacientes_extra')
                 cita.pacientes_adicionales.set(
                     (pacientes_extra or Paciente.objects.none()).exclude(pk=cita.paciente_id)

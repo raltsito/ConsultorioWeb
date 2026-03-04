@@ -128,7 +128,7 @@
 
         function servicioPermiteMultiples() {
             const txt = ($servicio.find('option:selected').text() || '').toLowerCase().trim();
-            return serviciosMultiples.includes(txt);
+            return serviciosMultiples.some(base => txt.includes(base));
         }
 
         function cargarRelacionados() {

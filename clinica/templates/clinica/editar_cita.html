@@ -110,7 +110,7 @@
         const serviciosMultiples = ['terapia de pareja', 'terapia familiar', 'terapia infantil'];
         function servicioPermiteMultiples() {
             const txt = ($servicio.find('option:selected').text() || '').toLowerCase().trim();
-            return serviciosMultiples.includes(txt);
+            return serviciosMultiples.some(base => txt.includes(base));
         }
         function cargarRelacionados() {
             const pacienteId = $paciente.val();
