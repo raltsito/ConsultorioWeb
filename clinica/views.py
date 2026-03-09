@@ -76,6 +76,7 @@ def home(request):
     ).order_by('fecha', 'hora')[:5] 
 
     citas_tablero = Cita.objects.filter(
+        fecha=hoy,
         paciente__isnull=False,
     ).select_related(
         'division', 'servicio', 'terapeuta', 'consultorio', 'paciente'
