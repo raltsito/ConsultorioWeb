@@ -75,8 +75,15 @@ def home(request):
         paciente__isnull=False,
     ).order_by('fecha', 'hora')[:5] 
 
+    dia_tablero = request.GET.get('dia', 'hoy')
+    if dia_tablero == 'manana':
+        fecha_tablero = hoy + timedelta(days=1)
+    else:
+        dia_tablero = 'hoy'
+        fecha_tablero = hoy
+
     citas_tablero = Cita.objects.filter(
-        fecha=hoy,
+        fecha=fecha_tablero,
         paciente__isnull=False,
     ).select_related(
         'division', 'servicio', 'terapeuta', 'consultorio', 'paciente'
@@ -90,6 +97,8 @@ def home(request):
         'pacientes_nuevos': pacientes_nuevos,
         'proximas_citas': proximas_citas,
         'citas_tablero': citas_tablero,
+        'dia_tablero': dia_tablero,
+        'fecha_tablero': fecha_tablero,
         'hoy': hoy,
         'form': CitaForm(),
         'solicitudes_pendientes': solicitudes_pendientes, # <--- AQUI YA ESTA INCLUIDO EN EL PAQUETE
