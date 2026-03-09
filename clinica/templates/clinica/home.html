@@ -183,6 +183,80 @@
     </div>
 </div>
 
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header border-0 py-3 text-white" style="background: linear-gradient(90deg, #263248 0%, #1b2334 100%);">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-grid-3x3-gap-fill me-2"></i>Tablero General de Citas
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0 tabla-tablero-citas">
+                        <thead>
+                            <tr>
+                                <th>Hora</th>
+                                <th>Tipo</th>
+                                <th>División</th>
+                                <th>Paciente</th>
+                                <th>Servicio</th>
+                                <th>Terapeuta</th>
+                                <th>Situación</th>
+                                <th>Consultorio</th>
+                                <th>$/Pase</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cita in citas_tablero %}
+                            <tr>
+                                <td class="fw-bold">{{ cita.hora|time:"H:i" }}</td>
+                                <td>
+                                    {% if cita.estatus == 'programada' %}
+                                        <span class="badge bg-info text-dark">S</span>
+                                    {% elif cita.estatus == 'no_asistio' %}
+                                        <span class="badge bg-warning text-dark">N</span>
+                                    {% elif cita.estatus == 'asistio' %}
+                                        <span class="badge bg-primary">R</span>
+                                    {% elif cita.estatus == 'cancelada' %}
+                                        <span class="badge bg-danger">C</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ cita.estatus|slice:":1"|upper }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ cita.division|default:"-" }}</td>
+                                <td class="fw-semibold">{{ cita.titulo_cita }}</td>
+                                <td>{{ cita.servicio|default:"-" }}</td>
+                                <td>{{ cita.terapeuta|default:"-" }}</td>
+                                <td>
+                                    {% if cita.estatus == 'programada' %}
+                                        <span class="badge rounded-pill text-bg-success">Confirmó</span>
+                                    {% elif cita.estatus == 'asistio' %}
+                                        <span class="badge rounded-pill text-bg-primary">Asistió</span>
+                                    {% elif cita.estatus == 'no_asistio' %}
+                                        <span class="badge rounded-pill text-bg-warning">No confirmó</span>
+                                    {% elif cita.estatus == 'cancelada' %}
+                                        <span class="badge rounded-pill text-bg-danger">Canceló</span>
+                                    {% else %}
+                                        <span class="badge rounded-pill text-bg-secondary">{{ cita.get_estatus_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ cita.consultorio|default:"-" }}</td>
+                                <td class="text-end fw-bold">${{ cita.costo|default_if_none:"0" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="9" class="text-center py-4 text-muted">No hay citas registradas.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="modalCita" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -357,6 +431,25 @@
         });
     });
 </script>
+
+<style>
+    .tabla-tablero-citas thead th {
+        background: #19ced7;
+        color: #101b2c;
+        font-style: italic;
+        border-bottom: 2px solid #0f8f95;
+        white-space: nowrap;
+    }
+
+    .tabla-tablero-citas tbody tr:nth-child(odd) {
+        background-color: #f4f6f8;
+    }
+
+    .tabla-tablero-citas tbody td {
+        border-color: #d3d8dd;
+        white-space: nowrap;
+    }
+</style>
 
 
     {% if solicitudes_pendientes %}

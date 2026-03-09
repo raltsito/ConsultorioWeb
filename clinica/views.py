@@ -75,11 +75,20 @@ def home(request):
         paciente__isnull=False,
     ).order_by('fecha', 'hora')[:5] 
 
+    citas_tablero = Cita.objects.filter(
+        paciente__isnull=False,
+    ).select_related(
+        'division', 'servicio', 'terapeuta', 'consultorio', 'paciente'
+    ).prefetch_related(
+        'pacientes_adicionales'
+    ).order_by('fecha', 'hora')
+
     return render(request, 'clinica/home.html', {
         'citas_hoy': citas_hoy_count,
         'pendientes': pendientes_count,
         'pacientes_nuevos': pacientes_nuevos,
         'proximas_citas': proximas_citas,
+        'citas_tablero': citas_tablero,
         'hoy': hoy,
         'form': CitaForm(),
         'solicitudes_pendientes': solicitudes_pendientes, # <--- AQUI YA ESTA INCLUIDO EN EL PAQUETE
