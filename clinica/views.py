@@ -73,7 +73,7 @@ def home(request):
         fecha__gte=hoy,
         estatus='programada',
         paciente__isnull=False,
-    ).order_by('fecha', 'hora')[:5] 
+    ).order_by('fecha', 'hora')
 
     dia_tablero = request.GET.get('dia', 'hoy')
     if dia_tablero == 'manana':
