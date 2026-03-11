@@ -209,6 +209,7 @@
                                 <th>Situación</th>
                                 <th>Consultorio</th>
                                 <th>$/Pase</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -247,10 +248,15 @@
                                 </td>
                                 <td>{{ cita.consultorio|default:"-" }}</td>
                                 <td class="text-end fw-bold">${{ cita.costo|default_if_none:"0" }}</td>
+                                <td class="text-center">
+                                    <a href="{% url 'editar_cita' cita.id %}?next=home" class="btn btn-sm btn-outline-secondary" title="Editar cita">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="9" class="text-center py-4 text-muted">No hay citas registradas.</td>
+                                <td colspan="10" class="text-center py-4 text-muted">No hay citas registradas.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
