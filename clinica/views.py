@@ -35,6 +35,63 @@ def es_servicio_grupal(servicio):
     nombre = quitar_tildes(servicio.nombre if servicio else '').strip()
     return any(base in nombre for base in SERVICIOS_GRUPALES)
 
+
+def obtener_configuracion_estatus_cita(estatus):
+    configuraciones = {
+        Cita.ESTATUS_CONFIRMADA: {
+            'label': 'Confirmada',
+            'color': '#22c55e',
+            'bg': '#dcfce7',
+            'border': '#16a34a',
+            'text': '#14532d',
+        },
+        Cita.ESTATUS_SIN_CONFIRMAR: {
+            'label': 'Sin confirmar',
+            'color': '#06b6d4',
+            'bg': '#cffafe',
+            'border': '#0891b2',
+            'text': '#164e63',
+        },
+        Cita.ESTATUS_REAGENDO: {
+            'label': 'Reagendo',
+            'color': '#f59e0b',
+            'bg': '#fef3c7',
+            'border': '#d97706',
+            'text': '#78350f',
+        },
+        Cita.ESTATUS_CANCELO: {
+            'label': 'Cancelo',
+            'color': '#ef4444',
+            'bg': '#fee2e2',
+            'border': '#dc2626',
+            'text': '#7f1d1d',
+        },
+        Cita.ESTATUS_NO_ASISTIO: {
+            'label': 'No asistio',
+            'color': '#7c3aed',
+            'bg': '#ede9fe',
+            'border': '#6d28d9',
+            'text': '#4c1d95',
+        },
+        Cita.ESTATUS_INCIDENCIA: {
+            'label': 'Incidencia',
+            'color': '#64748b',
+            'bg': '#e2e8f0',
+            'border': '#475569',
+            'text': '#1e293b',
+        },
+    }
+    return configuraciones.get(
+        estatus,
+        {
+            'label': estatus or 'Sin estatus',
+            'color': '#334155',
+            'bg': '#e2e8f0',
+            'border': '#334155',
+            'text': '#0f172a',
+        },
+    )
+
 @login_required
 def home(request):
     # --- EL SEMAFORO INTELIGENTE ---
@@ -458,7 +515,11 @@ def eliminar_cita(request, cita_id):
 
 
 def api_citas_calendario(request):
-    citas = Cita.objects.all()
+    citas = Cita.objects.select_related(
+        'division', 'servicio', 'terapeuta', 'consultorio', 'paciente'
+    ).prefetch_related(
+        'pacientes_adicionales'
+    ).all()
     eventos = []
     
     for cita in citas:
@@ -466,30 +527,41 @@ def api_citas_calendario(request):
         start_datetime = datetime.combine(cita.fecha, cita.hora)
         # Asumimos que la cita dura 1 hora por defecto para pintar el bloque
         end_datetime = start_datetime + timedelta(hours=1)
-        
-        # Logica de colores segun el estatus para que se vea bien en el front
-        color = '#37474F' # Gris oscuro por defecto
-        if cita.estatus == Cita.ESTATUS_SIN_CONFIRMAR:
-            color = '#26C6DA' # Intra Primary (Tu azulito)
-        elif cita.estatus == Cita.ESTATUS_CONFIRMADA:
-            color = '#198754' # Verde Bootstrap
-        elif cita.estatus == Cita.ESTATUS_REAGENDO:
-            color = '#f59f00'
-        elif cita.estatus == Cita.ESTATUS_CANCELO:
-            color = '#dc3545' # Rojo Bootstrap
-        elif cita.estatus == Cita.ESTATUS_NO_ASISTIO:
-            color = '#6f42c1'
-        elif cita.estatus == Cita.ESTATUS_INCIDENCIA:
-            color = '#6c757d'
+        configuracion_estatus = obtener_configuracion_estatus_cita(cita.estatus)
+        pacientes = cita.titulo_cita()
+        consultorio = str(cita.consultorio) if cita.consultorio else 'Sin consultorio'
+        terapeuta = str(cita.terapeuta) if cita.terapeuta else 'Sin terapeuta'
+        servicio = str(cita.servicio) if cita.servicio else 'Sin servicio'
+        division = str(cita.division) if cita.division else 'Sin division'
+        costo = str(cita.costo) if cita.costo is not None else ''
 
         eventos.append({
             'id': cita.id,
-            'title': f'{cita.pacientes_display()} - {cita.terapeuta}',
+            'title': pacientes,
             'start': start_datetime.isoformat(),
             'end': end_datetime.isoformat(),
-            'backgroundColor': color,
-            'borderColor': color,
-            'textColor': '#ffffff',
+            'backgroundColor': configuracion_estatus['bg'],
+            'borderColor': configuracion_estatus['border'],
+            'textColor': configuracion_estatus['text'],
+            'classNames': ['evento-cita'],
+            'extendedProps': {
+                'paciente': pacientes,
+                'paciente_upper': pacientes.upper(),
+                'terapeuta': terapeuta,
+                'servicio': servicio,
+                'consultorio': consultorio,
+                'division': division,
+                'situacion': configuracion_estatus['label'],
+                'situacion_color': configuracion_estatus['color'],
+                'situacion_bg': configuracion_estatus['bg'],
+                'situacion_border': configuracion_estatus['border'],
+                'situacion_text': configuracion_estatus['text'],
+                'tipo_paciente': cita.tipo_paciente,
+                'tipo_paciente_label': cita.get_tipo_paciente_display(),
+                'costo': costo,
+                'notas': cita.notas or '',
+                'editar_url': f"/citas/{cita.id}/editar/?next=calendario",
+            },
         })
         
     return JsonResponse(eventos, safe=False)
