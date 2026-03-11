@@ -122,7 +122,7 @@
                                 </thead>
                                 <tbody>
                                     {% for cita in historial %}
-                                    <tr class="{% if cita.estatus == 'programada' %}bg-warning bg-opacity-10{% endif %}">
+                                    <tr class="{% if cita.estatus == 'sin_confirmar' %}bg-warning bg-opacity-10{% endif %}">
                                         <td class="ps-4 fw-medium">{{ cita.fecha|date:"d M Y" }}</td>
                                         <td>
                                             <i class="bi bi-clock small text-muted me-1"></i>
@@ -140,18 +140,24 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            {% if cita.estatus == 'programada' %}
-                                                <span class="badge bg-success shadow-sm">Programada</span>
-                                            {% elif cita.estatus == 'realizada' %}
-                                                <span class="badge bg-primary">Realizada</span>
-                                            {% elif cita.estatus == 'cancelada' %}
-                                                <span class="badge bg-danger">Cancelada</span>
+                                            {% if cita.estatus == 'confirmada' %}
+                                                <span class="badge bg-success shadow-sm">Confirmada</span>
+                                            {% elif cita.estatus == 'sin_confirmar' %}
+                                                <span class="badge bg-info">Sin confirmar</span>
+                                            {% elif cita.estatus == 'reagendo' %}
+                                                <span class="badge bg-warning text-dark">Reagendo</span>
+                                            {% elif cita.estatus == 'cancelo' %}
+                                                <span class="badge bg-danger">Cancelo</span>
+                                            {% elif cita.estatus == 'no_asistio' %}
+                                                <span class="badge bg-dark">No asistio</span>
+                                            {% elif cita.estatus == 'incidencia' %}
+                                                <span class="badge bg-secondary">Incidencia</span>
                                             {% else %}
-                                                <span class="badge bg-secondary">{{ cita.estatus }}</span>
+                                                <span class="badge bg-secondary">{{ cita.get_estatus_display }}</span>
                                             {% endif %}
                                         </td>
                                         <td class="text-center pe-4">
-                                            {% if cita.estatus == 'programada' %}
+                                            {% if cita.estatus != 'cancelo' and cita.estatus != 'no_asistio' %}
                                                 <a href="{% url 'editar_cita' cita.id %}?next=paciente" 
                                                    class="btn btn-sm btn-outline-primary shadow-sm" 
                                                    title="Editar Cita Próxima">

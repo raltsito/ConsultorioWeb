@@ -101,12 +101,28 @@ class Paciente(models.Model):
 
 
 class Cita(models.Model):
+    ESTATUS_CONFIRMADA = 'confirmada'
+    ESTATUS_SIN_CONFIRMAR = 'sin_confirmar'
+    ESTATUS_REAGENDO = 'reagendo'
+    ESTATUS_CANCELO = 'cancelo'
+    ESTATUS_NO_ASISTIO = 'no_asistio'
+    ESTATUS_INCIDENCIA = 'incidencia'
+
     ESTATUS_CHOICES = [
-        ('programada', 'Programada'),
-        ('asistio', 'Asistió'),
-        ('cancelada', 'Cancelada'),
-        ('no_asistio', 'No Asistió'),
+        (ESTATUS_CONFIRMADA, 'Confirmada'),
+        (ESTATUS_SIN_CONFIRMAR, 'Sin confirmar'),
+        (ESTATUS_REAGENDO, 'Reagendo'),
+        (ESTATUS_CANCELO, 'Cancelo'),
+        (ESTATUS_NO_ASISTIO, 'No asistio'),
+        (ESTATUS_INCIDENCIA, 'Incidencia'),
     ]
+
+    ESTATUS_ACTIVOS = (
+        ESTATUS_CONFIRMADA,
+        ESTATUS_SIN_CONFIRMAR,
+        ESTATUS_REAGENDO,
+        ESTATUS_INCIDENCIA,
+    )
 
     PAGO_CHOICES = [
         ('Efectivo', 'Efectivo'),
@@ -134,7 +150,11 @@ class Cita(models.Model):
     
     costo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     metodo_pago = models.CharField(max_length=50, null=True, blank=True)
-    estatus = models.CharField(max_length=20, choices=ESTATUS_CHOICES, default='programada')
+    estatus = models.CharField(
+        max_length=20,
+        choices=ESTATUS_CHOICES,
+        default=ESTATUS_SIN_CONFIRMAR,
+    )
     
     folio_fiscal = models.CharField(max_length=100, blank=True, null=True)
     notas = models.TextField(blank=True, null=True)

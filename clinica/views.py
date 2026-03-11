@@ -59,8 +59,8 @@ def home(request):
     
     # CORRECCIÓN 1: Usamos 'estatus' en lugar de 'estado'
     pendientes_count = Cita.objects.filter(
-        fecha__lte=hoy, 
-        estatus='programada' 
+        fecha__lte=hoy,
+        estatus__in=Cita.ESTATUS_ACTIVOS,
     ).count()
     
     pacientes_nuevos = Paciente.objects.filter(
@@ -71,7 +71,7 @@ def home(request):
     # CORRECCIÓN 2: Usamos 'estatus' y ordenamos por 'hora' (no hora_inicio)
     proximas_citas = Cita.objects.filter(
         fecha__gte=hoy,
-        estatus='programada',
+        estatus__in=Cita.ESTATUS_ACTIVOS,
         paciente__isnull=False,
     ).order_by('fecha', 'hora')
 
@@ -235,7 +235,7 @@ def calendario_citas(request):
     from datetime import datetime
     
     # Obtenemos todas las citas activas
-    citas = Cita.objects.filter(estatus__in=['programada', 'confirmada', 'asistio'])
+    citas = Cita.objects.filter(estatus__in=Cita.ESTATUS_ACTIVOS)
     
     eventos = []
     for cita in citas:
@@ -249,10 +249,14 @@ def calendario_citas(request):
 
         # Colores según estatus
         color = '#3788d8' # Azul default
-        if cita.estatus == 'asistio':
+        if cita.estatus == Cita.ESTATUS_CONFIRMADA:
             color = '#28a745' # Verde
-        elif cita.estatus == 'programada':
+        elif cita.estatus == Cita.ESTATUS_SIN_CONFIRMAR:
             color = '#26C6DA' # Tu color INTRA Primary
+        elif cita.estatus == Cita.ESTATUS_REAGENDO:
+            color = '#f59f00'
+        elif cita.estatus == Cita.ESTATUS_INCIDENCIA:
+            color = '#6c757d'
 
         eventos.append({
             'title': f"{cita.pacientes_display()} ({cita.terapeuta})",
@@ -465,12 +469,18 @@ def api_citas_calendario(request):
         
         # Logica de colores segun el estatus para que se vea bien en el front
         color = '#37474F' # Gris oscuro por defecto
-        if cita.estatus == 'programada':
+        if cita.estatus == Cita.ESTATUS_SIN_CONFIRMAR:
             color = '#26C6DA' # Intra Primary (Tu azulito)
-        elif cita.estatus == 'realizada':
+        elif cita.estatus == Cita.ESTATUS_CONFIRMADA:
             color = '#198754' # Verde Bootstrap
-        elif cita.estatus == 'cancelada':
+        elif cita.estatus == Cita.ESTATUS_REAGENDO:
+            color = '#f59f00'
+        elif cita.estatus == Cita.ESTATUS_CANCELO:
             color = '#dc3545' # Rojo Bootstrap
+        elif cita.estatus == Cita.ESTATUS_NO_ASISTIO:
+            color = '#6f42c1'
+        elif cita.estatus == Cita.ESTATUS_INCIDENCIA:
+            color = '#6c757d'
 
         eventos.append({
             'id': cita.id,
@@ -705,7 +715,7 @@ def api_disponibilidad_terapeuta(request):
         citas_ocupadas = Cita.objects.filter(
             terapeuta_id=terapeuta_id,
             fecha=fecha_obj,
-            estatus='programada'
+            estatus__in=Cita.ESTATUS_ACTIVOS,
         ).values_list('hora', flat=True)
 
         # 4. Restar las ocupadas a las posibles

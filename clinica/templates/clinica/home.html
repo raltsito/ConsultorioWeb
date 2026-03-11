@@ -108,10 +108,16 @@
             </span>
         </td>
         <td>
-            {% if cita.estatus == 'programada' %}
-                <span class="badge bg-info bg-opacity-10 text-info">Programada</span>
+            {% if cita.estatus == 'confirmada' %}
+                <span class="badge bg-success bg-opacity-10 text-success">Confirmada</span>
+            {% elif cita.estatus == 'sin_confirmar' %}
+                <span class="badge bg-info bg-opacity-10 text-info">Sin confirmar</span>
+            {% elif cita.estatus == 'reagendo' %}
+                <span class="badge bg-warning text-dark">Reagendo</span>
+            {% elif cita.estatus == 'incidencia' %}
+                <span class="badge bg-secondary">Incidencia</span>
             {% else %}
-                <span class="badge bg-secondary">{{ cita.estatus }}</span>
+                <span class="badge bg-secondary">{{ cita.get_estatus_display }}</span>
             {% endif %}
         </td>
         <td>
@@ -134,7 +140,7 @@
     <tr>
         <td colspan="5" class="text-center py-5 text-muted">
             <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
-            No hay más citas programadas.
+            No hay mas citas activas.
         </td>
     </tr>
     {% endfor %}
@@ -217,14 +223,18 @@
                             <tr>
                                 <td class="fw-bold">{{ cita.hora|time:"H:i" }}</td>
                                 <td>
-                                    {% if cita.estatus == 'programada' %}
+                                    {% if cita.estatus == 'sin_confirmar' %}
                                         <span class="badge bg-info text-dark">S</span>
+                                    {% elif cita.estatus == 'confirmada' %}
+                                        <span class="badge bg-success">C</span>
+                                    {% elif cita.estatus == 'reagendo' %}
+                                        <span class="badge bg-warning text-dark">R</span>
+                                    {% elif cita.estatus == 'incidencia' %}
+                                        <span class="badge bg-secondary">I</span>
                                     {% elif cita.estatus == 'no_asistio' %}
                                         <span class="badge bg-warning text-dark">N</span>
-                                    {% elif cita.estatus == 'asistio' %}
-                                        <span class="badge bg-primary">R</span>
-                                    {% elif cita.estatus == 'cancelada' %}
-                                        <span class="badge bg-danger">C</span>
+                                    {% elif cita.estatus == 'cancelo' %}
+                                        <span class="badge bg-danger">X</span>
                                     {% else %}
                                         <span class="badge bg-secondary">{{ cita.estatus|slice:":1"|upper }}</span>
                                     {% endif %}
@@ -234,14 +244,18 @@
                                 <td>{{ cita.servicio|default:"-" }}</td>
                                 <td>{{ cita.terapeuta|default:"-" }}</td>
                                 <td>
-                                    {% if cita.estatus == 'programada' %}
-                                        <span class="badge rounded-pill text-bg-success">Confirmó</span>
-                                    {% elif cita.estatus == 'asistio' %}
-                                        <span class="badge rounded-pill text-bg-primary">Asistió</span>
+                                    {% if cita.estatus == 'confirmada' %}
+                                        <span class="badge rounded-pill text-bg-success">Confirmada</span>
+                                    {% elif cita.estatus == 'sin_confirmar' %}
+                                        <span class="badge rounded-pill text-bg-info">Sin confirmar</span>
+                                    {% elif cita.estatus == 'reagendo' %}
+                                        <span class="badge rounded-pill text-bg-warning">Reagendo</span>
                                     {% elif cita.estatus == 'no_asistio' %}
-                                        <span class="badge rounded-pill text-bg-warning">No confirmó</span>
-                                    {% elif cita.estatus == 'cancelada' %}
-                                        <span class="badge rounded-pill text-bg-danger">Canceló</span>
+                                        <span class="badge rounded-pill text-bg-dark">No asistio</span>
+                                    {% elif cita.estatus == 'cancelo' %}
+                                        <span class="badge rounded-pill text-bg-danger">Cancelo</span>
+                                    {% elif cita.estatus == 'incidencia' %}
+                                        <span class="badge rounded-pill text-bg-secondary">Incidencia</span>
                                     {% else %}
                                         <span class="badge rounded-pill text-bg-secondary">{{ cita.get_estatus_display }}</span>
                                     {% endif %}
@@ -564,3 +578,5 @@
 
 
 {% endblock %}
+
+
