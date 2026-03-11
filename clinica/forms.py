@@ -46,7 +46,7 @@ class CitaForm(forms.ModelForm):
     class Meta:
         model = Cita
         fields = [
-            'paciente', 'fecha', 'hora', 'division', 
+            'paciente', 'fecha', 'hora', 'tipo_paciente', 'division', 
             'consultorio', 'servicio', 'terapeuta', 
             'costo', 'metodo_pago', 'estatus', 
             'folio_fiscal', 'notas'
@@ -57,6 +57,7 @@ class CitaForm(forms.ModelForm):
             'hora': forms.TimeInput(format='%H:%M', attrs={'type': 'time', 'class': 'form-control'}),
             'notas': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'paciente': forms.Select(attrs={'class': 'form-select select2-paciente'}),
+            'tipo_paciente': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):

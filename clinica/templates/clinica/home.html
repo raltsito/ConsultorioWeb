@@ -223,20 +223,14 @@
                             <tr>
                                 <td class="fw-bold">{{ cita.hora|time:"H:i" }}</td>
                                 <td>
-                                    {% if cita.estatus == 'sin_confirmar' %}
-                                        <span class="badge bg-info text-dark">S</span>
-                                    {% elif cita.estatus == 'confirmada' %}
-                                        <span class="badge bg-success">C</span>
-                                    {% elif cita.estatus == 'reagendo' %}
-                                        <span class="badge bg-warning text-dark">R</span>
-                                    {% elif cita.estatus == 'incidencia' %}
-                                        <span class="badge bg-secondary">I</span>
-                                    {% elif cita.estatus == 'no_asistio' %}
-                                        <span class="badge bg-warning text-dark">N</span>
-                                    {% elif cita.estatus == 'cancelo' %}
-                                        <span class="badge bg-danger">X</span>
+                                    {% if cita.tipo_paciente == 'N' %}
+                                        <span class="badge bg-warning text-dark" title="{{ cita.get_tipo_paciente_display }}">N</span>
+                                    {% elif cita.tipo_paciente == 'R' %}
+                                        <span class="badge bg-primary" title="{{ cita.get_tipo_paciente_display }}">R</span>
+                                    {% elif cita.tipo_paciente == 'S' %}
+                                        <span class="badge bg-info text-dark" title="{{ cita.get_tipo_paciente_display }}">S</span>
                                     {% else %}
-                                        <span class="badge bg-secondary">{{ cita.estatus|slice:":1"|upper }}</span>
+                                        <span class="badge bg-secondary">{{ cita.tipo_paciente|default:"-" }}</span>
                                     {% endif %}
                                 </td>
                                 <td>{{ cita.division|default:"-" }}</td>

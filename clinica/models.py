@@ -124,6 +124,16 @@ class Cita(models.Model):
         ESTATUS_INCIDENCIA,
     )
 
+    TIPO_NUEVO = 'N'
+    TIPO_REFERIDO = 'R'
+    TIPO_SEGUIMIENTO = 'S'
+
+    TIPO_PACIENTE_CHOICES = [
+        (TIPO_NUEVO, 'Nuevo'),
+        (TIPO_REFERIDO, 'Referido'),
+        (TIPO_SEGUIMIENTO, 'Seguimiento'),
+    ]
+
     PAGO_CHOICES = [
         ('Efectivo', 'Efectivo'),
         ('Transferencia', 'Transferencia'),
@@ -141,6 +151,11 @@ class Cita(models.Model):
     )
     fecha = models.DateField()
     hora = models.TimeField()
+    tipo_paciente = models.CharField(
+        max_length=1,
+        choices=TIPO_PACIENTE_CHOICES,
+        default=TIPO_SEGUIMIENTO,
+    )
     
  
     division = models.ForeignKey(Division, on_delete=models.SET_NULL, null=True)

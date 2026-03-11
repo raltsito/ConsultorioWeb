@@ -111,6 +111,7 @@
                                     <tr>
                                         <th class="ps-4">Fecha</th>
                                         <th>Hora</th>
+                                        <th>Tipo</th>
                                         <th>Servicio</th>
                                         <th>Pacientes</th>
                                         <th>Terapeuta</th>
@@ -127,6 +128,9 @@
                                         <td>
                                             <i class="bi bi-clock small text-muted me-1"></i>
                                             {{ cita.hora|time:"H:i" }}
+                                        </td>
+                                        <td>
+                                            <span class="badge text-bg-light border">{{ cita.tipo_paciente|default:"-" }}</span>
                                         </td>
                                         <td>{{ cita.servicio }}</td>
                                         <td>{{ cita.titulo_cita }}</td>

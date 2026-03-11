@@ -12,8 +12,8 @@ class PacienteAdmin(admin.ModelAdmin):
     search_fields = ('nombre',)
 
 class CitaAdmin(admin.ModelAdmin):
-    list_display = ('paciente', 'fecha', 'hora', 'terapeuta', 'estatus')
-    list_filter = ('fecha', 'estatus', 'terapeuta', 'consultorio')
+    list_display = ('paciente', 'fecha', 'hora', 'tipo_paciente', 'terapeuta', 'estatus')
+    list_filter = ('fecha', 'tipo_paciente', 'estatus', 'terapeuta', 'consultorio')
 
 admin.site.register(Paciente, PacienteAdmin)
 admin.site.register(Cita, CitaAdmin)
