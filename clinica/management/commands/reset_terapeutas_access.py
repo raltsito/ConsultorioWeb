@@ -42,6 +42,38 @@ CREDENTIALS = {
     "terapeuta prueba": ("terapeuta.prueba", "Intra!K5b9P3"),
 }
 
+NAME_ALIASES = {
+    "Alejandra Durán": [
+        "Alejandra Duran",
+        "Alejandra DurÃ¡n",
+    ],
+    "Javier Martínez": [
+        "Javier Martinez",
+        "Javier MartÃ­nez",
+    ],
+    "José Arcadio": [
+        "Jose Arcadio",
+        "JosÃ© Arcadio",
+    ],
+    "Lucía Sánchez": [
+        "Lucia Sanchez",
+        "LucÃ­a SÃ¡nchez",
+        "Lucia SÃ¡nchez",
+    ],
+    "María Amancio - Ind": [
+        "Maria Amancio - Ind",
+        "MarÃ­a Amancio - Ind",
+    ],
+    "María Amancio - Par": [
+        "Maria Amancio - Par",
+        "MarÃ­a Amancio - Par",
+    ],
+    "Rosy Macías": [
+        "Rosy Macias",
+        "Rosy MacÃ­as",
+    ],
+}
+
 
 class Command(BaseCommand):
     help = "Crea o resetea accesos para terapeutas y los enlaza a su perfil."
@@ -62,7 +94,12 @@ class Command(BaseCommand):
         faltantes = []
 
         for nombre in CREDENTIALS:
-            terapeuta = terapeutas_por_nombre.get(quitar_tildes(nombre))
+            candidatos = [nombre] + NAME_ALIASES.get(nombre, [])
+            terapeuta = None
+            for candidato in candidatos:
+                terapeuta = terapeutas_por_nombre.get(quitar_tildes(candidato))
+                if terapeuta is not None:
+                    break
             if terapeuta is None:
                 faltantes.append(nombre)
                 continue
