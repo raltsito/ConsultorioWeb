@@ -105,6 +105,7 @@ class Cita(models.Model):
     ESTATUS_SIN_CONFIRMAR = 'sin_confirmar'
     ESTATUS_REAGENDO = 'reagendo'
     ESTATUS_CANCELO = 'cancelo'
+    ESTATUS_SI_ASISTIO = 'si_asistio'
     ESTATUS_NO_ASISTIO = 'no_asistio'
     ESTATUS_INCIDENCIA = 'incidencia'
 
@@ -113,6 +114,7 @@ class Cita(models.Model):
         (ESTATUS_SIN_CONFIRMAR, 'Sin confirmar'),
         (ESTATUS_REAGENDO, 'Reagendo'),
         (ESTATUS_CANCELO, 'Cancelo'),
+        (ESTATUS_SI_ASISTIO, 'Si asistio'),
         (ESTATUS_NO_ASISTIO, 'No asistio'),
         (ESTATUS_INCIDENCIA, 'Incidencia'),
     ]

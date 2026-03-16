@@ -114,6 +114,8 @@
                 <span class="badge bg-info bg-opacity-10 text-info">Sin confirmar</span>
             {% elif cita.estatus == 'reagendo' %}
                 <span class="badge bg-warning text-dark">Reagendo</span>
+            {% elif cita.estatus == 'si_asistio' %}
+                <span class="badge bg-success">Si asistio</span>
             {% elif cita.estatus == 'incidencia' %}
                 <span class="badge bg-secondary">Incidencia</span>
             {% else %}
@@ -244,6 +246,8 @@
                                         <span class="badge rounded-pill text-bg-info">Sin confirmar</span>
                                     {% elif cita.estatus == 'reagendo' %}
                                         <span class="badge rounded-pill text-bg-warning">Reagendo</span>
+                                    {% elif cita.estatus == 'si_asistio' %}
+                                        <span class="badge rounded-pill text-bg-success">Si asistio</span>
                                     {% elif cita.estatus == 'no_asistio' %}
                                         <span class="badge rounded-pill text-bg-dark">No asistio</span>
                                     {% elif cita.estatus == 'cancelo' %}

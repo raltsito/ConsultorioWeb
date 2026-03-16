@@ -66,6 +66,13 @@ def obtener_configuracion_estatus_cita(estatus):
             'border': '#dc2626',
             'text': '#7f1d1d',
         },
+        Cita.ESTATUS_SI_ASISTIO: {
+            'label': 'Si asistio',
+            'color': '#16a34a',
+            'bg': '#dcfce7',
+            'border': '#15803d',
+            'text': '#14532d',
+        },
         Cita.ESTATUS_NO_ASISTIO: {
             'label': 'No asistio',
             'color': '#7c3aed',
