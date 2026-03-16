@@ -16,5 +16,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app/
 
 RUN mkdir -p /app/staticfiles
+RUN chmod +x /app/start.sh
 
-CMD sh -c "python manage.py collectstatic --noinput && python manage.py migrate && gunicorn core.wsgi --bind 0.0.0.0:${PORT:-8080}"
+CMD ["/app/start.sh"]
