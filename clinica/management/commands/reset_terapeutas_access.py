@@ -8,6 +8,7 @@ from clinica.models import quitar_tildes
 
 CREDENTIALS = {
     "Alejandra Durán": ("alejandra.duran", "Intra!A7k2L9"),
+    "Alisson Berman": ("alisson.berman", "Intra!L8c4Q7"),
     "Alondra Escalon": ("alondra.escalon", "Intra!B4m8Q2"),
     "Ana Juarez": ("ana.juarez", "Intra!C6r3W7"),
     "Benjamin Villagomez": ("benjamin.villagomez", "Intra!D9t5E1"),
@@ -46,31 +47,41 @@ NAME_ALIASES = {
     "Alejandra Durán": [
         "Alejandra Duran",
         "Alejandra DurÃ¡n",
+        "Alejandra Durn",
+    ],
+    "Alisson Berman": [
+        "Alisson Bermea",
     ],
     "Javier Martínez": [
         "Javier Martinez",
         "Javier MartÃ­nez",
+        "Javier Martnez",
     ],
     "José Arcadio": [
         "Jose Arcadio",
         "JosÃ© Arcadio",
+        "Jos Arcadio",
     ],
     "Lucía Sánchez": [
         "Lucia Sanchez",
         "LucÃ­a SÃ¡nchez",
         "Lucia SÃ¡nchez",
+        "Luca Sánchez",
     ],
     "María Amancio - Ind": [
         "Maria Amancio - Ind",
         "MarÃ­a Amancio - Ind",
+        "Mara Amancio - Ind",
     ],
     "María Amancio - Par": [
         "Maria Amancio - Par",
         "MarÃ­a Amancio - Par",
+        "Mara Amancio - Par",
     ],
     "Rosy Macías": [
         "Rosy Macias",
         "Rosy MacÃ­as",
+        "Rosy Macas",
     ],
 }
 
