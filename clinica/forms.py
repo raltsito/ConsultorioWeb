@@ -58,6 +58,7 @@ class CitaForm(forms.ModelForm):
             'notas': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'paciente': forms.Select(attrs={'class': 'form-select select2-paciente'}),
             'tipo_paciente': forms.Select(attrs={'class': 'form-select'}),
+            'metodo_pago': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):

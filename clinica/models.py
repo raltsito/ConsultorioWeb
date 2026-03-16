@@ -137,12 +137,10 @@ class Cita(models.Model):
     ]
 
     PAGO_CHOICES = [
-        ('Efectivo', 'Efectivo'),
-        ('Transferencia', 'Transferencia'),
         ('Terminal', 'Terminal'),
+        ('Transferencia', 'Transferencia'),
+        ('Efectivo', 'Efectivo'),
         ('Pase', 'Pase'),
-        ('Gratuito', 'Gratuito'),
-        ('Pendiente', 'Pendiente'),
     ]
 
     paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='citas')
@@ -166,7 +164,12 @@ class Cita(models.Model):
     terapeuta = models.ForeignKey(Terapeuta, on_delete=models.SET_NULL, null=True)
     
     costo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    metodo_pago = models.CharField(max_length=50, null=True, blank=True)
+    metodo_pago = models.CharField(
+        max_length=50,
+        choices=PAGO_CHOICES,
+        null=True,
+        blank=True,
+    )
     estatus = models.CharField(
         max_length=20,
         choices=ESTATUS_CHOICES,
