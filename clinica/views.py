@@ -521,6 +521,18 @@ def eliminar_cita(request, cita_id):
     return redirect('home')
 
 
+@login_required
+def eliminar_paciente(request, paciente_id):
+    if request.method != 'POST':
+        return redirect('detalle_paciente', paciente_id=paciente_id)
+
+    paciente = get_object_or_404(Paciente, id=paciente_id)
+    nombre = paciente.nombre
+    paciente.delete()
+    messages.success(request, f'Expediente de {nombre} eliminado correctamente.')
+    return redirect('lista_pacientes')
+
+
 def api_citas_calendario(request):
     citas = Cita.objects.select_related(
         'division', 'servicio', 'terapeuta', 'consultorio', 'paciente'

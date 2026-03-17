@@ -189,10 +189,49 @@
                 </div>
             </div> <div class="col-lg-4">
                 
-                <div class="mb-4">
+                <div class="mb-4 d-flex flex-column gap-2">
                     <a href="{% url 'editar_paciente' paciente.id %}" class="btn btn-outline-primary rounded-pill w-100 shadow-sm fw-bold">
                         <i class="bi bi-pencil-square me-2"></i>Editar Datos / Subir Docs
                     </a>
+                    <button type="button"
+                            class="btn btn-outline-danger rounded-pill w-100 shadow-sm fw-bold"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalEliminarExpediente">
+                        <i class="bi bi-trash3 me-2"></i>Eliminar Expediente
+                    </button>
+                </div>
+
+                <!-- Modal confirmación eliminar expediente -->
+                <div class="modal fade" id="modalEliminarExpediente" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content rounded-4 border-0 shadow-lg">
+                            <div class="modal-header border-0 pb-0">
+                                <h5 class="modal-title fw-bold text-danger" id="modalEliminarLabel">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>¿Estás seguro?
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                            </div>
+                            <div class="modal-body pt-2">
+                                <p class="text-muted mb-1">Estás a punto de eliminar el expediente de:</p>
+                                <p class="fw-bold fs-6 mb-3">{{ paciente.nombre }}</p>
+                                <p class="small text-danger mb-0">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Esta acción es permanente y no se puede deshacer.
+                                </p>
+                            </div>
+                            <div class="modal-footer border-0 pt-0">
+                                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                                    Cancelar
+                                </button>
+                                <form method="post" action="{% url 'eliminar_paciente' paciente.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">
+                                        <i class="bi bi-trash3 me-1"></i>Sí, eliminar
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="card-zen p-4 mb-4">
