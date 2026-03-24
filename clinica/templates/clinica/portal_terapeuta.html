@@ -16,9 +16,14 @@
                         <p class="mb-0 fs-5 text-white-50">Portal Médico | Tu agenda para hoy: {{ fecha_bonita }}</p>
                     </div>
                 </div>
-                <a href="{% url 'solicitar_cita_terapeuta' %}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm d-flex align-items-center">
-                    <i class="bi bi-calendar-plus fs-5 me-2"></i>Solicitar Cita a Recepción
-                </a>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'expedientes_terapeuta' %}" class="btn btn-outline-light btn-lg fw-bold shadow-sm d-flex align-items-center">
+                        <i class="bi bi-folder2-open fs-5 me-2"></i>Mis Expedientes
+                    </a>
+                    <a href="{% url 'solicitar_cita_terapeuta' %}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm d-flex align-items-center">
+                        <i class="bi bi-calendar-plus fs-5 me-2"></i>Solicitar Cita a Recepción
+                    </a>
+                </div>
             </div>
         </div>
     </div>

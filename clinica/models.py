@@ -155,6 +155,29 @@ class BloqueoAgendaTerapeuta(models.Model):
         verbose_name_plural = "Bloqueos de Agenda de Terapeutas"
         ordering = ['fecha_inicio', '-creado_en']
 
+
+class NotaTerapeutaPaciente(models.Model):
+    terapeuta = models.ForeignKey(
+        'Terapeuta',
+        on_delete=models.CASCADE,
+        related_name='notas_pacientes',
+    )
+    paciente = models.ForeignKey(
+        'Paciente',
+        on_delete=models.CASCADE,
+        related_name='notas_terapeutas',
+    )
+    notas = models.TextField(blank=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Notas de {self.terapeuta} para {self.paciente}"
+
+    class Meta:
+        verbose_name = "Nota de Terapeuta por Paciente"
+        verbose_name_plural = "Notas de Terapeutas por Paciente"
+        unique_together = [('terapeuta', 'paciente')]
+
 class Consultorio(models.Model):
     nombre = models.CharField(max_length=100)
     

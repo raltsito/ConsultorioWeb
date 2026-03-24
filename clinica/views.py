@@ -23,6 +23,7 @@ from openpyxl.utils import get_column_letter
 from .models import (
     BloqueoAgendaTerapeuta,
     Paciente,
+    NotaTerapeutaPaciente,
     Terapeuta,
     Cita,
     Horario,
@@ -34,6 +35,7 @@ from .forms import (
     BloqueoAgendaTerapeutaForm,
     PacienteForm,
     CitaForm,
+    NotaTerapeutaPacienteForm,
     CheckoutCitaForm,
 )
 from .services import calcular_nomina_semanal, preview_nomina_semanal, aprobar_corte_semanal
@@ -298,6 +300,78 @@ def detalle_paciente(request, paciente_id):
         'terapeutas_previos': terapeutas_previos, # Pasamos la lista al HTML
     }
     return render(request, 'clinica/detalle_paciente.html', context)
+
+
+def _pacientes_ids_terapeuta(terapeuta):
+    ids = set(
+        Cita.objects.filter(
+            terapeuta=terapeuta,
+            paciente__isnull=False,
+        ).values_list('paciente_id', flat=True)
+    )
+    ids.update(
+        Cita.objects.filter(
+            terapeuta=terapeuta,
+            pacientes_adicionales__isnull=False,
+        ).values_list('pacientes_adicionales__id', flat=True)
+    )
+    return {pid for pid in ids if pid}
+
+
+@login_required
+def expedientes_terapeuta(request):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    terapeuta = request.user.perfil_terapeuta
+    paciente_ids = _pacientes_ids_terapeuta(terapeuta)
+    pacientes = Paciente.objects.filter(id__in=paciente_ids).order_by('nombre')
+
+    return render(request, 'clinica/expedientes_terapeuta.html', {
+        'terapeuta': terapeuta,
+        'pacientes': pacientes,
+    })
+
+
+@login_required
+def expediente_terapeuta_detalle(request, paciente_id):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    terapeuta = request.user.perfil_terapeuta
+    paciente_ids = _pacientes_ids_terapeuta(terapeuta)
+    if paciente_id not in paciente_ids:
+        messages.error(request, 'Solo puedes abrir expedientes de pacientes agendados contigo.')
+        return redirect('expedientes_terapeuta')
+
+    paciente = get_object_or_404(Paciente, id=paciente_id)
+    historial = Cita.objects.filter(
+        terapeuta=terapeuta
+    ).filter(
+        Q(paciente=paciente) | Q(pacientes_adicionales=paciente)
+    ).distinct().order_by('-fecha', '-hora')
+
+    nota, _ = NotaTerapeutaPaciente.objects.get_or_create(
+        terapeuta=terapeuta,
+        paciente=paciente,
+    )
+
+    if request.method == 'POST':
+        form = NotaTerapeutaPacienteForm(request.POST, instance=nota)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Notas guardadas correctamente.')
+            return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
+    else:
+        form = NotaTerapeutaPacienteForm(instance=nota)
+
+    return render(request, 'clinica/expediente_terapeuta_detalle.html', {
+        'terapeuta': terapeuta,
+        'paciente': paciente,
+        'historial': historial,
+        'form_notas': form,
+        'nota_terapeuta': nota,
+    })
 @login_required
 def agendar_cita(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)

@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from .models import (
     BloqueoAgendaTerapeuta,
     Cita,
+    NotaTerapeutaPaciente,
     Paciente,
     ReglaTerapeuta,
     TabuladorGeneral,
@@ -204,6 +205,24 @@ class BloqueoAgendaTerapeutaForm(forms.ModelForm):
             'hora_inicio': 'Hora inicial',
             'hora_fin': 'Hora final',
             'motivo': 'Motivo',
+        }
+
+
+class NotaTerapeutaPacienteForm(forms.ModelForm):
+    class Meta:
+        model = NotaTerapeutaPaciente
+        fields = ['notas']
+        widgets = {
+            'notas': forms.Textarea(
+                attrs={
+                    'class': 'form-control',
+                    'rows': 8,
+                    'placeholder': 'Escribe notas clínicas, seguimiento, acuerdos o recordatorios para este paciente.',
+                }
+            )
+        }
+        labels = {
+            'notas': 'Notas del terapeuta',
         }
 
 
