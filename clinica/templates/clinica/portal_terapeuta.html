@@ -79,12 +79,11 @@
                             {% if bloqueo.motivo %}{{ bloqueo.motivo }}{% else %}Sin motivo especificado.{% endif %}
                         </small>
                     </div>
-                    <form method="post" action="{% url 'eliminar_bloqueo_terapeuta' bloqueo.id %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-outline-secondary btn-sm" onclick="return confirm('¿Eliminar este bloqueo de agenda?');">
-                            <i class="bi bi-trash me-1"></i>Quitar
-                        </button>
-                    </form>
+                    <a href="{% url 'eliminar_bloqueo_terapeuta' bloqueo.id %}"
+                       class="btn btn-outline-secondary btn-sm"
+                       onclick="return confirm('¿Eliminar este bloqueo de agenda?');">
+                        <i class="bi bi-trash me-1"></i>Quitar
+                    </a>
                 </div>
             </div>
             {% endfor %}

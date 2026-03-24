@@ -764,9 +764,6 @@ def eliminar_bloqueo_terapeuta(request, bloqueo_id):
     if not hasattr(request.user, 'perfil_terapeuta'):
         return redirect('home')
 
-    if request.method != 'POST':
-        return redirect('portal_terapeuta')
-
     bloqueo = get_object_or_404(
         BloqueoAgendaTerapeuta,
         id=bloqueo_id,
