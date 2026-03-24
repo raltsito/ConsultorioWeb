@@ -95,15 +95,37 @@
                             {{ form_notas.notas }}
                         </div>
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <small class="text-muted">
-                                Ultima actualizacion:
-                                {% if nota_terapeuta.actualizado_en %}{{ nota_terapeuta.actualizado_en|date:"d/m/Y H:i" }}{% else %}-{% endif %}
-                            </small>
+                            <small class="text-muted">Cada guardado crea una nueva nota en este expediente.</small>
                             <button type="submit" class="btn btn-primary fw-semibold">
-                                <i class="bi bi-save me-1"></i>Guardar Notas
+                                <i class="bi bi-save me-1"></i>Agregar Nota
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-header bg-white border-bottom p-4">
+                    <h5 class="fw-bold mb-0 text-primary">
+                        <i class="bi bi-card-text me-2"></i>Historial de Notas
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if notas_historial %}
+                    <div class="list-group list-group-flush">
+                        {% for nota in notas_historial %}
+                        <div class="list-group-item p-4">
+                            <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                                <strong class="text-dark">Nota {{ forloop.counter }}</strong>
+                                <small class="text-muted">{{ nota.creado_en|date:"d/m/Y H:i" }}</small>
+                            </div>
+                            <div class="text-muted small">{{ nota.notas|linebreaks }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="p-4 text-muted">Aun no has agregado notas para este paciente.</div>
+                    {% endif %}
                 </div>
             </div>
 

@@ -16,14 +16,14 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('notas', models.TextField(blank=True)),
-                ('actualizado_en', models.DateTimeField(auto_now=True)),
+                ('creado_en', models.DateTimeField(auto_now_add=True)),
                 ('paciente', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='notas_terapeutas', to='clinica.paciente')),
                 ('terapeuta', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='notas_pacientes', to='clinica.terapeuta')),
             ],
             options={
                 'verbose_name': 'Nota de Terapeuta por Paciente',
                 'verbose_name_plural': 'Notas de Terapeutas por Paciente',
-                'unique_together': {('terapeuta', 'paciente')},
+                'ordering': ['-creado_en'],
             },
         ),
     ]

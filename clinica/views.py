@@ -350,27 +350,29 @@ def expediente_terapeuta_detalle(request, paciente_id):
     ).filter(
         Q(paciente=paciente) | Q(pacientes_adicionales=paciente)
     ).distinct().order_by('-fecha', '-hora')
-
-    nota, _ = NotaTerapeutaPaciente.objects.get_or_create(
+    notas_historial = NotaTerapeutaPaciente.objects.filter(
         terapeuta=terapeuta,
         paciente=paciente,
-    )
+    ).order_by('-creado_en')
 
     if request.method == 'POST':
-        form = NotaTerapeutaPacienteForm(request.POST, instance=nota)
+        form = NotaTerapeutaPacienteForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Notas guardadas correctamente.')
+            nota = form.save(commit=False)
+            nota.terapeuta = terapeuta
+            nota.paciente = paciente
+            nota.save()
+            messages.success(request, 'Nota agregada correctamente.')
             return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
     else:
-        form = NotaTerapeutaPacienteForm(instance=nota)
+        form = NotaTerapeutaPacienteForm()
 
     return render(request, 'clinica/expediente_terapeuta_detalle.html', {
         'terapeuta': terapeuta,
         'paciente': paciente,
         'historial': historial,
         'form_notas': form,
-        'nota_terapeuta': nota,
+        'notas_historial': notas_historial,
     })
 @login_required
 def agendar_cita(request, paciente_id):

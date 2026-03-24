@@ -168,15 +168,15 @@ class NotaTerapeutaPaciente(models.Model):
         related_name='notas_terapeutas',
     )
     notas = models.TextField(blank=True)
-    actualizado_en = models.DateTimeField(auto_now=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Notas de {self.terapeuta} para {self.paciente}"
+        return f"Nota de {self.terapeuta} para {self.paciente} ({self.creado_en:%d/%m/%Y %H:%M})"
 
     class Meta:
         verbose_name = "Nota de Terapeuta por Paciente"
         verbose_name_plural = "Notas de Terapeutas por Paciente"
-        unique_together = [('terapeuta', 'paciente')]
+        ordering = ['-creado_en']
 
 class Consultorio(models.Model):
     nombre = models.CharField(max_length=100)
