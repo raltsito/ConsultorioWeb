@@ -161,13 +161,16 @@ class CitaForm(forms.ModelForm):
         cleaned_data = super().clean()
         terapeuta = cleaned_data.get('terapeuta')
         fecha = cleaned_data.get('fecha')
+        hora = cleaned_data.get('hora')
 
         if terapeuta and fecha:
-            bloqueo = obtener_bloqueo_terapeuta_en_fecha(terapeuta.id, fecha)
+            bloqueo = obtener_bloqueo_terapeuta_en_fecha(terapeuta.id, fecha, hora)
             if bloqueo:
                 mensaje = bloqueo.mensaje_bloqueo()
                 self.add_error('fecha', mensaje)
                 self.add_error('terapeuta', 'Este terapeuta tiene esa fecha bloqueada.')
+                if hora:
+                    self.add_error('hora', 'La hora seleccionada cae dentro de un bloqueo del terapeuta.')
                 raise ValidationError(mensaje)
 
         return cleaned_data
@@ -176,11 +179,15 @@ class CitaForm(forms.ModelForm):
 class BloqueoAgendaTerapeutaForm(forms.ModelForm):
     class Meta:
         model = BloqueoAgendaTerapeuta
-        fields = ['tipo_bloqueo', 'fecha_inicio', 'fecha_fin', 'motivo']
+        fields = ['tipo_bloqueo', 'alcance', 'fecha_inicio', 'fecha_fin', 'dia_semana', 'hora_inicio', 'hora_fin', 'motivo']
         widgets = {
             'tipo_bloqueo': forms.Select(attrs={'class': 'form-select'}),
+            'alcance': forms.Select(attrs={'class': 'form-select'}),
             'fecha_inicio': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'fecha_fin': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'dia_semana': forms.Select(attrs={'class': 'form-select'}),
+            'hora_inicio': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'hora_fin': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
             'motivo': forms.TextInput(
                 attrs={
                     'class': 'form-control',
@@ -190,8 +197,12 @@ class BloqueoAgendaTerapeutaForm(forms.ModelForm):
         }
         labels = {
             'tipo_bloqueo': 'Tipo de bloqueo',
+            'alcance': 'Aplicar a',
             'fecha_inicio': 'Fecha inicial',
             'fecha_fin': 'Fecha final',
+            'dia_semana': 'Día semanal',
+            'hora_inicio': 'Hora inicial',
+            'hora_fin': 'Hora final',
             'motivo': 'Motivo',
         }
 

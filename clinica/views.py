@@ -539,7 +539,8 @@ def verificar_disponibilidad(request):
             hora_str = hora_str[:5]
 
         fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-        bloqueo = obtener_bloqueo_terapeuta_en_fecha(terapeuta_id, fecha_obj)
+        hora_obj = datetime.strptime(hora_str, '%H:%M').time()
+        bloqueo = obtener_bloqueo_terapeuta_en_fecha(terapeuta_id, fecha_obj, hora_obj)
         if bloqueo:
             return JsonResponse({'available': False, 'msg': bloqueo.mensaje_bloqueo()})
 
@@ -721,7 +722,7 @@ def portal_terapeuta(request):
         Q(tipo_bloqueo=BloqueoAgendaTerapeuta.TIPO_PERMANENTE) |
         Q(fecha_fin__gte=hoy) |
         Q(fecha_fin__isnull=True, fecha_inicio__gte=hoy)
-    ).order_by('fecha_inicio', 'fecha_fin')
+    ).order_by('alcance', 'dia_semana', 'fecha_inicio', 'hora_inicio')
     context = {
         'terapeuta': mi_perfil,
         'citas_hoy': citas_hoy,
@@ -914,12 +915,26 @@ def api_disponibilidad_terapeuta(request):
         
         fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
         dia_semana = fecha_obj.weekday()
-        bloqueo = obtener_bloqueo_terapeuta_en_fecha(terapeuta_id, fecha_obj)
+        bloqueos = list(
+            BloqueoAgendaTerapeuta.objects.filter(
+                terapeuta_id=terapeuta_id,
+                activo=True,
+                fecha_inicio__lte=fecha_obj,
+            ).filter(
+                Q(tipo_bloqueo=BloqueoAgendaTerapeuta.TIPO_PERMANENTE) |
+                Q(fecha_fin__gte=fecha_obj)
+            ).order_by('hora_inicio', 'fecha_inicio')
+        )
 
-        if bloqueo:
+        bloqueo_total = next(
+            (bloqueo for bloqueo in bloqueos if bloqueo.bloquea_fecha_hora(fecha_obj)),
+            None,
+        )
+
+        if bloqueo_total and not bloqueo_total.es_bloqueo_parcial():
             return JsonResponse({
                 'bloqueado': True,
-                'mensaje': bloqueo.mensaje_bloqueo(),
+                'mensaje': bloqueo_total.mensaje_bloqueo(),
                 'horarios': [],
             })
 
@@ -952,11 +967,20 @@ def api_disponibilidad_terapeuta(request):
         # 4. Restar las ocupadas a las posibles
         horarios_libres = []
         for slot in slots_posibles:
+            if slot in citas_ocupadas:
+                continue
+            bloqueo_slot = obtener_bloqueo_terapeuta_en_fecha(terapeuta_id, fecha_obj, slot)
+            if bloqueo_slot:
+                continue
             if slot not in citas_ocupadas:
                 horarios_libres.append(slot.strftime('%H:%M'))
 
+        mensaje = ''
+        if any(b.es_bloqueo_parcial() and b.aplica_en_fecha(fecha_obj) for b in bloqueos):
+            mensaje = 'Hay horas bloqueadas por el terapeuta en esta fecha.'
+
         # Devolver la lista ordenada y sin duplicados
-        return JsonResponse({'horarios': sorted(list(set(horarios_libres)))})
+        return JsonResponse({'horarios': sorted(list(set(horarios_libres))), 'mensaje': mensaje})
 
     except Exception as e:
         print(f"Error en radar: {e}")

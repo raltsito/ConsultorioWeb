@@ -25,10 +25,25 @@ class Terapeuta(models.Model):
 class BloqueoAgendaTerapeuta(models.Model):
     TIPO_TEMPORAL = 'temporal'
     TIPO_PERMANENTE = 'permanente'
+    ALCANCE_FECHA = 'fecha'
+    ALCANCE_DIA_SEMANA = 'dia_semana'
 
     TIPO_CHOICES = [
         (TIPO_TEMPORAL, 'Temporal'),
         (TIPO_PERMANENTE, 'Permanente'),
+    ]
+    ALCANCE_CHOICES = [
+        (ALCANCE_FECHA, 'Fecha específica'),
+        (ALCANCE_DIA_SEMANA, 'Día semanal'),
+    ]
+    DIAS_SEMANA = [
+        (0, 'Lunes'),
+        (1, 'Martes'),
+        (2, 'Miércoles'),
+        (3, 'Jueves'),
+        (4, 'Viernes'),
+        (5, 'Sábado'),
+        (6, 'Domingo'),
     ]
 
     terapeuta = models.ForeignKey(
@@ -37,8 +52,12 @@ class BloqueoAgendaTerapeuta(models.Model):
         related_name='bloqueos_agenda',
     )
     tipo_bloqueo = models.CharField(max_length=20, choices=TIPO_CHOICES, default=TIPO_TEMPORAL)
+    alcance = models.CharField(max_length=20, choices=ALCANCE_CHOICES, default=ALCANCE_FECHA)
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField(null=True, blank=True)
+    dia_semana = models.IntegerField(choices=DIAS_SEMANA, null=True, blank=True)
+    hora_inicio = models.TimeField(null=True, blank=True)
+    hora_fin = models.TimeField(null=True, blank=True)
     motivo = models.CharField(max_length=255, blank=True)
     activo = models.BooleanField(default=True)
     creado_por = models.ForeignKey(
@@ -56,6 +75,12 @@ class BloqueoAgendaTerapeuta(models.Model):
         if self.fecha_inicio and self.fecha_inicio < date.today():
             errores['fecha_inicio'] = 'Solo puedes bloquear fechas actuales o futuras.'
 
+        if self.alcance == self.ALCANCE_DIA_SEMANA and self.dia_semana is None:
+            errores['dia_semana'] = 'Selecciona el día semanal a bloquear.'
+
+        if self.alcance == self.ALCANCE_FECHA:
+            self.dia_semana = None
+
         if self.tipo_bloqueo == self.TIPO_TEMPORAL:
             if not self.fecha_fin:
                 errores['fecha_fin'] = 'Indica la fecha final del bloqueo temporal.'
@@ -64,25 +89,60 @@ class BloqueoAgendaTerapeuta(models.Model):
         else:
             self.fecha_fin = None
 
+        if self.hora_inicio or self.hora_fin:
+            if not self.hora_inicio or not self.hora_fin:
+                errores['hora_fin'] = 'Indica hora de inicio y hora final para un bloqueo parcial.'
+            elif self.hora_fin <= self.hora_inicio:
+                errores['hora_fin'] = 'La hora final debe ser posterior a la inicial.'
+
         if errores:
             raise ValidationError(errores)
 
-    def bloquea_fecha(self, fecha_obj):
+    def aplica_en_fecha(self, fecha_obj):
         if not self.activo or not fecha_obj or fecha_obj < self.fecha_inicio:
+            return False
+        if self.alcance == self.ALCANCE_DIA_SEMANA and fecha_obj.weekday() != self.dia_semana:
             return False
         if self.tipo_bloqueo == self.TIPO_PERMANENTE:
             return True
         return bool(self.fecha_fin and self.fecha_inicio <= fecha_obj <= self.fecha_fin)
 
+    def bloquea_fecha_hora(self, fecha_obj, hora_obj=None):
+        if not self.aplica_en_fecha(fecha_obj):
+            return False
+        if self.hora_inicio and self.hora_fin and hora_obj:
+            return self.hora_inicio <= hora_obj < self.hora_fin
+        return True
+
+    def es_bloqueo_parcial(self):
+        return bool(self.hora_inicio and self.hora_fin)
+
+    def alcance_display(self):
+        if self.alcance == self.ALCANCE_DIA_SEMANA and self.dia_semana is not None:
+            return self.get_dia_semana_display()
+        return 'Fecha específica'
+
     def rango_display(self):
+        sufijo_hora = ''
+        if self.es_bloqueo_parcial():
+            sufijo_hora = f" | {self.hora_inicio:%H:%M} a {self.hora_fin:%H:%M}"
+
+        if self.alcance == self.ALCANCE_DIA_SEMANA and self.dia_semana is not None:
+            dia = self.get_dia_semana_display()
+            if self.tipo_bloqueo == self.TIPO_PERMANENTE:
+                return f"Todos los {dia.lower()} desde {self.fecha_inicio:%d/%m/%Y}{sufijo_hora}"
+            if self.fecha_fin:
+                return f"Todos los {dia.lower()} del {self.fecha_inicio:%d/%m/%Y} al {self.fecha_fin:%d/%m/%Y}{sufijo_hora}"
+            return f"Todos los {dia.lower()} desde {self.fecha_inicio:%d/%m/%Y}{sufijo_hora}"
+
         if self.tipo_bloqueo == self.TIPO_PERMANENTE:
-            return f"Desde {self.fecha_inicio:%d/%m/%Y} en adelante"
+            return f"Desde {self.fecha_inicio:%d/%m/%Y} en adelante{sufijo_hora}"
         if self.fecha_fin:
-            return f"Del {self.fecha_inicio:%d/%m/%Y} al {self.fecha_fin:%d/%m/%Y}"
-        return f"Desde {self.fecha_inicio:%d/%m/%Y}"
+            return f"Del {self.fecha_inicio:%d/%m/%Y} al {self.fecha_fin:%d/%m/%Y}{sufijo_hora}"
+        return f"Desde {self.fecha_inicio:%d/%m/%Y}{sufijo_hora}"
 
     def mensaje_bloqueo(self):
-        base = f"El terapeuta bloqueó esta fecha ({self.rango_display()})."
+        base = f"El terapeuta bloqueó esta disponibilidad ({self.rango_display()})."
         if self.motivo:
             return f"{base} Motivo: {self.motivo}"
         return base
@@ -557,9 +617,9 @@ class BonoExtra(models.Model):
         verbose_name_plural = "Bonos Extra"
 
 
-def obtener_bloqueo_terapeuta_en_fecha(terapeuta_id, fecha_obj):
+def obtener_bloqueos_terapeuta_en_fecha(terapeuta_id, fecha_obj):
     if not terapeuta_id or not fecha_obj:
-        return None
+        return BloqueoAgendaTerapeuta.objects.none()
 
     return (
         BloqueoAgendaTerapeuta.objects.filter(
@@ -574,6 +634,12 @@ def obtener_bloqueo_terapeuta_en_fecha(terapeuta_id, fecha_obj):
                 fecha_fin__gte=fecha_obj,
             )
         )
-        .order_by('-tipo_bloqueo', 'fecha_inicio')
-        .first()
+        .order_by('alcance', 'dia_semana', 'hora_inicio', 'fecha_inicio')
     )
+
+
+def obtener_bloqueo_terapeuta_en_fecha(terapeuta_id, fecha_obj, hora_obj=None):
+    for bloqueo in obtener_bloqueos_terapeuta_en_fecha(terapeuta_id, fecha_obj):
+        if bloqueo.bloquea_fecha_hora(fecha_obj, hora_obj):
+            return bloqueo
+    return None

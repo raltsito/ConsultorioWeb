@@ -24,78 +24,6 @@
     </div>
 </div>
 
-<div class="card shadow-sm border-0 rounded-4 mb-4">
-    <div class="card-header bg-white border-bottom p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <div>
-            <h5 class="fw-bold text-dark mb-1"><i class="bi bi-calendar-x me-2 text-danger"></i>Bloqueos de Agenda</h5>
-            <p class="text-muted mb-0">Define fechas temporales o permanentes donde no te puedan asignar citas.</p>
-        </div>
-        <button class="btn btn-outline-danger fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#panelBloqueoAgenda" aria-expanded="false" aria-controls="panelBloqueoAgenda">
-            <i class="bi bi-plus-circle me-1"></i>Bloquear Fechas
-        </button>
-    </div>
-    <div class="collapse" id="panelBloqueoAgenda">
-        <div class="card-body border-bottom">
-            <form method="post" action="{% url 'crear_bloqueo_terapeuta' %}" class="row g-3 align-items-end">
-                {% csrf_token %}
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.tipo_bloqueo.label }}</label>
-                    {{ bloqueo_form.tipo_bloqueo }}
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.fecha_inicio.label }}</label>
-                    {{ bloqueo_form.fecha_inicio }}
-                </div>
-                <div class="col-md-3" id="wrapper-fecha-fin">
-                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.fecha_fin.label }}</label>
-                    {{ bloqueo_form.fecha_fin }}
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.motivo.label }}</label>
-                    {{ bloqueo_form.motivo }}
-                </div>
-                <div class="col-12 d-flex justify-content-end">
-                    <button type="submit" class="btn btn-danger fw-semibold">
-                        <i class="bi bi-calendar-x me-1"></i>Guardar Bloqueo
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div class="card-body p-0">
-        {% if bloqueos_agenda %}
-        <div class="list-group list-group-flush">
-            {% for bloqueo in bloqueos_agenda %}
-            <div class="list-group-item p-3">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                    <div>
-                        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-                            <span class="badge {% if bloqueo.tipo_bloqueo == 'permanente' %}bg-dark{% else %}bg-warning text-dark{% endif %}">
-                                {{ bloqueo.get_tipo_bloqueo_display }}
-                            </span>
-                            <strong class="text-dark">{{ bloqueo.rango_display }}</strong>
-                        </div>
-                        <small class="text-muted">
-                            {% if bloqueo.motivo %}{{ bloqueo.motivo }}{% else %}Sin motivo especificado.{% endif %}
-                        </small>
-                    </div>
-                    <a href="{% url 'eliminar_bloqueo_terapeuta' bloqueo.id %}"
-                       class="btn btn-outline-secondary btn-sm"
-                       onclick="return confirm('¿Eliminar este bloqueo de agenda?');">
-                        <i class="bi bi-trash me-1"></i>Quitar
-                    </a>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="p-4 text-center text-muted">
-            No tienes fechas bloqueadas actualmente.
-        </div>
-        {% endif %}
-    </div>
-</div>
-
 {# ─────────────────────────── SOLICITUDES ENVIADAS ─────────────────────────── #}
 {% if mis_solicitudes %}
 <div class="card shadow-sm border-0 rounded-4 mb-4 border-start border-primary border-5">
@@ -260,6 +188,94 @@
 </div>{# /row #}
 
 
+<div class="card shadow-sm border-0 rounded-4 mt-4 mb-4">
+    <div class="card-header bg-white border-bottom p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h5 class="fw-bold text-dark mb-1"><i class="bi bi-calendar-x me-2 text-danger"></i>Bloqueos de Agenda</h5>
+            <p class="text-muted mb-0">Configura bloqueos por fecha o por dia semanal, completos o por rango horario.</p>
+        </div>
+        <button class="btn btn-outline-danger fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#panelBloqueoAgenda" aria-expanded="false" aria-controls="panelBloqueoAgenda">
+            <i class="bi bi-plus-circle me-1"></i>Bloquear Disponibilidad
+        </button>
+    </div>
+    <div class="collapse" id="panelBloqueoAgenda">
+        <div class="card-body border-bottom">
+            <form method="post" action="{% url 'crear_bloqueo_terapeuta' %}" class="row g-3 align-items-end">
+                {% csrf_token %}
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.tipo_bloqueo.label }}</label>
+                    {{ bloqueo_form.tipo_bloqueo }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.alcance.label }}</label>
+                    {{ bloqueo_form.alcance }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.fecha_inicio.label }}</label>
+                    {{ bloqueo_form.fecha_inicio }}
+                </div>
+                <div class="col-md-3" id="wrapper-fecha-fin">
+                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.fecha_fin.label }}</label>
+                    {{ bloqueo_form.fecha_fin }}
+                </div>
+                <div class="col-md-3" id="wrapper-dia-semana">
+                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.dia_semana.label }}</label>
+                    {{ bloqueo_form.dia_semana }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.hora_inicio.label }}</label>
+                    {{ bloqueo_form.hora_inicio }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.hora_fin.label }}</label>
+                    {{ bloqueo_form.hora_fin }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.motivo.label }}</label>
+                    {{ bloqueo_form.motivo }}
+                </div>
+                <div class="col-12">
+                    <small class="text-muted d-block">Ejemplos: fecha completa, todos los lunes, o todos los lunes de 16:00 a 18:00.</small>
+                </div>
+                <div class="col-12 d-flex justify-content-end">
+                    <button type="submit" class="btn btn-danger fw-semibold">
+                        <i class="bi bi-calendar-x me-1"></i>Guardar Bloqueo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if bloqueos_agenda %}
+        <div class="list-group list-group-flush">
+            {% for bloqueo in bloqueos_agenda %}
+            <div class="list-group-item p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                            <span class="badge {% if bloqueo.tipo_bloqueo == 'permanente' %}bg-dark{% else %}bg-warning text-dark{% endif %}">
+                                {{ bloqueo.get_tipo_bloqueo_display }}
+                            </span>
+                            <span class="badge bg-light text-dark border">{{ bloqueo.alcance_display }}</span>
+                            <strong class="text-dark">{{ bloqueo.rango_display }}</strong>
+                        </div>
+                        <small class="text-muted">{% if bloqueo.motivo %}{{ bloqueo.motivo }}{% else %}Sin motivo especificado.{% endif %}</small>
+                    </div>
+                    <a href="{% url 'eliminar_bloqueo_terapeuta' bloqueo.id %}" class="btn btn-outline-secondary btn-sm" onclick="return confirm('Eliminar este bloqueo de agenda?');">
+                        <i class="bi bi-trash me-1"></i>Quitar
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">
+            No tienes bloqueos configurados actualmente.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
 <div class="modal fade" id="modalCheckout" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content checkout-card">
@@ -328,7 +344,10 @@
                             <label class="form-label fw-semibold text-secondary small">Método de Pago</label>
                             <select name="metodo_pago" class="form-select">
                                 <option value="">— Sin pago —</option>
-                                <option value="Efectivo">Efectivo</option>
+                                <option value="Efectivo">Efect
+
+
+ivo</option>
                                 <option value="Terminal">Terminal</option>
                                 <option value="Transferencia">Transferencia</option>
                                 <option value="Pase">Pase</option>
@@ -393,22 +412,31 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const tipoBloqueo = document.getElementById('id_tipo_bloqueo');
+        const alcance = document.getElementById('id_alcance');
         const wrapperFechaFin = document.getElementById('wrapper-fecha-fin');
+        const wrapperDiaSemana = document.getElementById('wrapper-dia-semana');
         const fechaFin = document.getElementById('id_fecha_fin');
+        const diaSemana = document.getElementById('id_dia_semana');
 
         function syncBloqueoForm() {
-            if (!tipoBloqueo || !wrapperFechaFin || !fechaFin) {
+            if (!tipoBloqueo || !alcance || !wrapperFechaFin || !fechaFin || !wrapperDiaSemana || !diaSemana) {
                 return;
             }
             const esPermanente = tipoBloqueo.value === 'permanente';
+            const esSemanal = alcance.value === 'dia_semana';
             wrapperFechaFin.style.display = esPermanente ? 'none' : '';
+            wrapperDiaSemana.style.display = esSemanal ? '' : 'none';
             if (esPermanente) {
                 fechaFin.value = '';
             }
+            if (!esSemanal) {
+                diaSemana.value = '';
+            }
         }
 
-        if (tipoBloqueo) {
+        if (tipoBloqueo && alcance) {
             tipoBloqueo.addEventListener('change', syncBloqueoForm);
+            alcance.addEventListener('change', syncBloqueoForm);
             syncBloqueoForm();
         }
     });
