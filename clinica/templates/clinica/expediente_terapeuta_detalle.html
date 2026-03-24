@@ -136,26 +136,48 @@
                     </h5>
                 </div>
                 <div class="card-body p-4">
-                    <div class="d-grid gap-2">
-                        {% if paciente.consentimiento_firmado %}
-                        <a href="{{ paciente.consentimiento_firmado.url }}" target="_blank" class="btn btn-outline-success">
-                            Ver consentimiento
-                        </a>
-                        {% endif %}
-                        {% if paciente.estudio_socioeconomico %}
-                        <a href="{{ paciente.estudio_socioeconomico.url }}" target="_blank" class="btn btn-outline-primary">
-                            Ver estudio socioeconomico
-                        </a>
-                        {% endif %}
-                        {% if paciente.apertura_expediente %}
-                        <a href="{{ paciente.apertura_expediente.url }}" target="_blank" class="btn btn-outline-secondary">
-                            Ver apertura de expediente
-                        </a>
-                        {% endif %}
-                        {% if not paciente.consentimiento_firmado and not paciente.estudio_socioeconomico and not paciente.apertura_expediente %}
-                        <p class="text-muted mb-0">No hay documentos cargados.</p>
-                        {% endif %}
+                    <form method="post" enctype="multipart/form-data" class="mb-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="subir_documento">
+                        <div class="mb-3">
+                            <label class="form-label">{{ form_documento.tipo_documento.label }}</label>
+                            {{ form_documento.tipo_documento }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ form_documento.archivo.label }}</label>
+                            {{ form_documento.archivo }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ form_documento.descripcion.label }}</label>
+                            {{ form_documento.descripcion }}
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary fw-semibold">
+                            <i class="bi bi-upload me-1"></i>Subir Documento
+                        </button>
+                    </form>
+
+                    {% if documentos_historial %}
+                    <div class="list-group list-group-flush border rounded-3">
+                        {% for documento in documentos_historial %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start gap-3">
+                                <div>
+                                    <strong class="d-block">{{ documento.get_tipo_documento_display }}</strong>
+                                    <small class="text-muted d-block">
+                                        Subido por {{ documento.autor_display }} el {{ documento.creado_en|date:"d/m/Y H:i" }}
+                                    </small>
+                                    {% if documento.descripcion %}
+                                    <small class="text-muted d-block">{{ documento.descripcion }}</small>
+                                    {% endif %}
+                                </div>
+                                <a href="{{ documento.archivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">Ver</a>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No hay documentos cargados.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>

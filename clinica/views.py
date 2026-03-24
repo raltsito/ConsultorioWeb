@@ -22,6 +22,7 @@ from openpyxl.utils import get_column_letter
 #Modelos, Formularios y Utilidades de nuestra App
 from .models import (
     BloqueoAgendaTerapeuta,
+    DocumentoPaciente,
     Paciente,
     NotaTerapeutaPaciente,
     Terapeuta,
@@ -35,6 +36,7 @@ from .forms import (
     BloqueoAgendaTerapeutaForm,
     PacienteForm,
     CitaForm,
+    DocumentoPacienteForm,
     NotaTerapeutaPacienteForm,
     CheckoutCitaForm,
 )
@@ -293,11 +295,19 @@ def detalle_paciente(request, paciente_id):
     
     # Extraemos los terapeutas unicos que han atendido a este paciente
     terapeutas_previos = set(cita.terapeuta for cita in historial if cita.terapeuta)
+    notas_historial = NotaTerapeutaPaciente.objects.filter(
+        paciente=paciente
+    ).select_related('terapeuta').order_by('-creado_en')
+    documentos_historial = DocumentoPaciente.objects.filter(
+        paciente=paciente
+    ).select_related('terapeuta', 'subido_por').order_by('-creado_en')
 
     context = {
         'paciente': paciente,
         'historial': historial,
         'terapeutas_previos': terapeutas_previos, # Pasamos la lista al HTML
+        'notas_historial': notas_historial,
+        'documentos_historial': documentos_historial,
     }
     return render(request, 'clinica/detalle_paciente.html', context)
 
@@ -355,17 +365,36 @@ def expediente_terapeuta_detalle(request, paciente_id):
         paciente=paciente,
     ).order_by('-creado_en')
 
+    documentos_historial = DocumentoPaciente.objects.filter(
+        paciente=paciente
+    ).select_related('terapeuta', 'subido_por').order_by('-creado_en')
+
     if request.method == 'POST':
-        form = NotaTerapeutaPacienteForm(request.POST)
-        if form.is_valid():
-            nota = form.save(commit=False)
-            nota.terapeuta = terapeuta
-            nota.paciente = paciente
-            nota.save()
-            messages.success(request, 'Nota agregada correctamente.')
-            return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
+        accion = request.POST.get('accion')
+        if accion == 'subir_documento':
+            form_documento = DocumentoPacienteForm(request.POST, request.FILES)
+            form = NotaTerapeutaPacienteForm()
+            if form_documento.is_valid():
+                documento = form_documento.save(commit=False)
+                documento.paciente = paciente
+                documento.terapeuta = terapeuta
+                documento.subido_por = request.user
+                documento.save()
+                messages.success(request, 'Documento agregado correctamente.')
+                return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
+        else:
+            form = NotaTerapeutaPacienteForm(request.POST)
+            form_documento = DocumentoPacienteForm()
+            if form.is_valid():
+                nota = form.save(commit=False)
+                nota.terapeuta = terapeuta
+                nota.paciente = paciente
+                nota.save()
+                messages.success(request, 'Nota agregada correctamente.')
+                return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
     else:
         form = NotaTerapeutaPacienteForm()
+        form_documento = DocumentoPacienteForm()
 
     return render(request, 'clinica/expediente_terapeuta_detalle.html', {
         'terapeuta': terapeuta,
@@ -373,6 +402,8 @@ def expediente_terapeuta_detalle(request, paciente_id):
         'historial': historial,
         'form_notas': form,
         'notas_historial': notas_historial,
+        'form_documento': form_documento,
+        'documentos_historial': documentos_historial,
     })
 @login_required
 def agendar_cita(request, paciente_id):

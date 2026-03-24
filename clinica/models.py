@@ -170,12 +170,67 @@ class NotaTerapeutaPaciente(models.Model):
     notas = models.TextField(blank=True)
     creado_en = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def autor_display(self):
+        return self.terapeuta.nombre if self.terapeuta_id else 'Sin terapeuta'
+
     def __str__(self):
         return f"Nota de {self.terapeuta} para {self.paciente} ({self.creado_en:%d/%m/%Y %H:%M})"
 
     class Meta:
         verbose_name = "Nota de Terapeuta por Paciente"
         verbose_name_plural = "Notas de Terapeutas por Paciente"
+        ordering = ['-creado_en']
+
+
+class DocumentoPaciente(models.Model):
+    TIPO_CHOICES = [
+        ('consentimiento', 'Consentimiento'),
+        ('estudio', 'Estudio socioeconomico'),
+        ('apertura', 'Apertura de expediente'),
+        ('resultado', 'Resultado'),
+        ('otro', 'Otro'),
+    ]
+
+    paciente = models.ForeignKey(
+        'Paciente',
+        on_delete=models.CASCADE,
+        related_name='documentos_subidos',
+    )
+    terapeuta = models.ForeignKey(
+        'Terapeuta',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='documentos_pacientes_subidos',
+    )
+    subido_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='documentos_pacientes_subidos',
+    )
+    tipo_documento = models.CharField(max_length=20, choices=TIPO_CHOICES, default='otro')
+    archivo = models.FileField(upload_to='documentos_pacientes_historial/')
+    descripcion = models.CharField(max_length=255, blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def autor_display(self):
+        if self.terapeuta_id:
+            return self.terapeuta.nombre
+        if self.subido_por_id:
+            nombre = self.subido_por.get_full_name().strip()
+            return nombre or self.subido_por.username
+        return 'Usuario no identificado'
+
+    def __str__(self):
+        return f"{self.paciente} | {self.get_tipo_documento_display()} | {self.creado_en:%d/%m/%Y %H:%M}"
+
+    class Meta:
+        verbose_name = "Documento de Paciente"
+        verbose_name_plural = "Documentos de Pacientes"
         ordering = ['-creado_en']
 
 class Consultorio(models.Model):

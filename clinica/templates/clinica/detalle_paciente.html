@@ -267,7 +267,30 @@
                     </div>
                 </div>
 
-                <div class="card-zen p-4 mb-4 bg-light">
+                
+                    <h6 class="text-muted text-uppercase small fw-bold mt-4 mb-3">Historial de documentos</h6>
+                    {% if documentos_historial %}
+                        <div class="list-group list-group-flush border rounded-3">
+                            {% for documento in documentos_historial %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <strong class="d-block">{{ documento.get_tipo_documento_display }}</strong>
+                                        <small class="text-muted d-block">Subido por {{ documento.autor_display }} el {{ documento.creado_en|date:"d/m/Y H:i" }}</small>
+                                        {% if documento.descripcion %}
+                                        <small class="text-muted d-block">{{ documento.descripcion }}</small>
+                                        {% endif %}
+                                    </div>
+                                    <a href="{{ documento.archivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">Ver</a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="small text-muted fst-italic mb-0">Sin documentos historicos registrados.</p>
+                    {% endif %}
+
+<div class="card-zen p-4 mb-4 bg-light">
                     <h5 class="mb-3"><i class="bi bi-lock-fill me-2"></i>Resumen Clínico</h5>
                     {% if paciente.resumen_clinico %}
                         <p class="small text-muted mb-0">{{ paciente.resumen_clinico|linebreaks }}</p>
@@ -275,7 +298,26 @@
                         <p class="small text-muted fst-italic">Sin notas clínicas registradas.</p>
                     {% endif %}
                 </div>
+                
                 <div class="card-zen p-4 mb-4">
+                    <h5 class="mb-3"><i class="bi bi-journal-text me-2 text-primary"></i>Historial de Notas</h5>
+                    {% if notas_historial %}
+                        <div class="list-group list-group-flush border rounded-3">
+                            {% for nota in notas_historial %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start gap-3 mb-1">
+                                    <strong>{{ nota.autor_display }}</strong>
+                                    <small class="text-muted">{{ nota.creado_en|date:"d/m/Y H:i" }}</small>
+                                </div>
+                                <div class="small text-muted">{{ nota.notas|linebreaks }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="small text-muted fst-italic mb-0">Sin notas historicas registradas.</p>
+                    {% endif %}
+                </div>
+<div class="card-zen p-4 mb-4">
                     <h5 class="mb-3"><i class="bi bi-people-fill me-2 text-primary"></i>Equipo Clinico</h5>
                     {% if terapeutas_previos %}
                         <div class="d-flex flex-wrap gap-2">

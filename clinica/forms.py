@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from .models import (
     BloqueoAgendaTerapeuta,
     Cita,
+    DocumentoPaciente,
     NotaTerapeutaPaciente,
     Paciente,
     ReglaTerapeuta,
@@ -223,6 +224,27 @@ class NotaTerapeutaPacienteForm(forms.ModelForm):
         }
         labels = {
             'notas': 'Notas del terapeuta',
+        }
+
+
+class DocumentoPacienteForm(forms.ModelForm):
+    class Meta:
+        model = DocumentoPaciente
+        fields = ['tipo_documento', 'archivo', 'descripcion']
+        widgets = {
+            'tipo_documento': forms.Select(attrs={'class': 'form-select'}),
+            'archivo': forms.FileInput(attrs={'class': 'form-control'}),
+            'descripcion': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Descripcion opcional del documento',
+                }
+            ),
+        }
+        labels = {
+            'tipo_documento': 'Tipo de documento',
+            'archivo': 'Archivo',
+            'descripcion': 'Descripcion',
         }
 
 
