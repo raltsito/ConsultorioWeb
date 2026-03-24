@@ -1,20 +1,42 @@
 #Librerias estandar de Python
 import unicodedata
+import csv
+import io
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 
 #Herramientas base de Django
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Sum, Count
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+from django.urls import reverse
+
+#Excel
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
 
 #Modelos, Formularios y Utilidades de nuestra App
-from .models import Paciente, Cita, Horario
-from .models import SolicitudCita, Terapeuta # Asegurate de importar SolicitudCita
-from .models import Paciente, Terapeuta, Cita, Horario, SolicitudCita
-from .forms import PacienteForm, CitaForm
+from .models import (
+    BloqueoAgendaTerapeuta,
+    Paciente,
+    Terapeuta,
+    Cita,
+    Horario,
+    SolicitudCita,
+    obtener_bloqueo_terapeuta_en_fecha,
+)
+from .models import CorteSemanal, LineaNomina, BonoExtra
+from .forms import (
+    BloqueoAgendaTerapeutaForm,
+    PacienteForm,
+    CitaForm,
+    CheckoutCitaForm,
+)
+from .services import calcular_nomina_semanal, preview_nomina_semanal, aprobar_corte_semanal
 #from .utils import sincronizar_google_sheet
 
 def quitar_tildes(texto):
@@ -22,6 +44,65 @@ def quitar_tildes(texto):
         return ""
     return ''.join(c for c in unicodedata.normalize('NFD', str(texto))
                    if unicodedata.category(c) != 'Mn').lower()
+
+
+# ─── Excel helper ─────────────────────────────────────────────────────────────
+_TEAL_FILL  = PatternFill("solid", fgColor="26C6DA")
+_HEADER_FONT = Font(bold=True, color="FFFFFF", name="Calibri", size=11)
+_BODY_FONT   = Font(name="Calibri", size=10)
+_ALT_FILL    = PatternFill("solid", fgColor="F0F4F8")
+
+def _build_excel_response(filename, sheet_title, headers, rows, col_widths=None):
+    """
+    Genera un HttpResponse con un .xlsx estilizado.
+    headers: lista de str
+    rows: lista de listas (valores de celda)
+    col_widths: lista opcional de anchos de columna
+    """
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = sheet_title
+
+    # Fila de encabezado
+    for col_idx, header in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        cell.font = _HEADER_FONT
+        cell.fill = _TEAL_FILL
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    ws.row_dimensions[1].height = 20
+
+    # Filas de datos
+    for row_idx, row in enumerate(rows, start=2):
+        fill = _ALT_FILL if row_idx % 2 == 0 else None
+        for col_idx, value in enumerate(row, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            cell.font = _BODY_FONT
+            if fill:
+                cell.fill = fill
+
+    # Anchos de columna
+    if col_widths:
+        for idx, w in enumerate(col_widths, start=1):
+            ws.column_dimensions[get_column_letter(idx)].width = w
+    else:
+        for col_idx in range(1, len(headers) + 1):
+            ws.column_dimensions[get_column_letter(col_idx)].width = 18
+
+    # Freeze panes (encabezado fijo)
+    ws.freeze_panes = "A2"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    response = HttpResponse(
+        buf.read(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+# ──────────────────────────────────────────────────────────────────────────────
 
 
 SERVICIOS_GRUPALES = {
@@ -457,6 +538,11 @@ def verificar_disponibilidad(request):
         if len(hora_str) > 5:
             hora_str = hora_str[:5]
 
+        fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        bloqueo = obtener_bloqueo_terapeuta_en_fecha(terapeuta_id, fecha_obj)
+        if bloqueo:
+            return JsonResponse({'available': False, 'msg': bloqueo.mensaje_bloqueo()})
+
         # CAMBIO: Siempre devolver disponibilidad sin validar conflictos
         return JsonResponse({'available': True, 'msg': 'Disponible para agendar'})
 
@@ -584,8 +670,6 @@ def api_citas_calendario(request):
         })
         
     return JsonResponse(eventos, safe=False)
-# En clinica/views.py (al final del archivo)
-from django.http import JsonResponse
 
 def api_terapeutas_paciente(request):
     paciente_id = request.GET.get('paciente_id')
@@ -631,15 +715,66 @@ def portal_terapeuta(request):
     mis_solicitudes = SolicitudCita.objects.filter(
         terapeuta=mi_perfil
     ).order_by('-fecha_creacion')[:5]
+    bloqueos_futuros = mi_perfil.bloqueos_agenda.filter(
+        activo=True,
+    ).filter(
+        Q(tipo_bloqueo=BloqueoAgendaTerapeuta.TIPO_PERMANENTE) |
+        Q(fecha_fin__gte=hoy) |
+        Q(fecha_fin__isnull=True, fecha_inicio__gte=hoy)
+    ).order_by('fecha_inicio', 'fecha_fin')
     context = {
         'terapeuta': mi_perfil,
         'citas_hoy': citas_hoy,
         'citas_proximas': citas_proximas,
         'fecha_bonita': fecha_bonita, # <--- Pasamos la fecha arreglada
-        'mis_solicitudes': mis_solicitudes, 
+        'mis_solicitudes': mis_solicitudes,
+        'bloqueos_agenda': bloqueos_futuros,
+        'bloqueo_form': BloqueoAgendaTerapeutaForm(),
     }
     
     return render(request, 'clinica/portal_terapeuta.html', context)
+
+
+@login_required
+def crear_bloqueo_terapeuta(request):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    if request.method != 'POST':
+        return redirect('portal_terapeuta')
+
+    mi_perfil = request.user.perfil_terapeuta
+    form = BloqueoAgendaTerapeutaForm(request.POST)
+    if form.is_valid():
+        bloqueo = form.save(commit=False)
+        bloqueo.terapeuta = mi_perfil
+        bloqueo.creado_por = request.user
+        bloqueo.save()
+        messages.success(request, 'Bloqueo de agenda guardado correctamente.')
+    else:
+        for _, errors in form.errors.items():
+            for error in errors:
+                messages.error(request, error)
+
+    return redirect('portal_terapeuta')
+
+
+@login_required
+def eliminar_bloqueo_terapeuta(request, bloqueo_id):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    if request.method != 'POST':
+        return redirect('portal_terapeuta')
+
+    bloqueo = get_object_or_404(
+        BloqueoAgendaTerapeuta,
+        id=bloqueo_id,
+        terapeuta=request.user.perfil_terapeuta,
+    )
+    bloqueo.delete()
+    messages.success(request, 'Bloqueo eliminado correctamente.')
+    return redirect('portal_terapeuta')
 
 @login_required
 def portal_paciente(request):
@@ -782,6 +917,14 @@ def api_disponibilidad_terapeuta(request):
         
         fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
         dia_semana = fecha_obj.weekday()
+        bloqueo = obtener_bloqueo_terapeuta_en_fecha(terapeuta_id, fecha_obj)
+
+        if bloqueo:
+            return JsonResponse({
+                'bloqueado': True,
+                'mensaje': bloqueo.mensaje_bloqueo(),
+                'horarios': [],
+            })
 
         # 1. Buscar si el terapeuta trabaja ese dia
         horarios_laborales = Horario.objects.filter(
@@ -821,3 +964,652 @@ def api_disponibilidad_terapeuta(request):
     except Exception as e:
         print(f"Error en radar: {e}")
         return JsonResponse({'horarios': [], 'error': 'Error procesando datos'})
+
+
+@login_required
+def checkout_cita(request, cita_id):
+    """
+    Procesa el cierre de sesión de una cita desde el portal del terapeuta.
+    Solo acepta POST (el formulario se envía desde el modal en portal_terapeuta.html).
+    Opcionalmente crea una SolicitudCita de seguimiento si el terapeuta lo indicó.
+    """
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    mi_perfil = request.user.perfil_terapeuta
+    cita = get_object_or_404(Cita, id=cita_id, terapeuta=mi_perfil)
+
+    if not cita.es_finalizable:
+        messages.warning(request, f'La cita de {cita.paciente.nombre} ya fue finalizada anteriormente.')
+        return redirect('portal_terapeuta')
+
+    if request.method != 'POST':
+        return redirect('portal_terapeuta')
+
+    form = CheckoutCitaForm(request.POST)
+    if form.is_valid():
+        # Actualizar cita
+        cita.estatus = form.cleaned_data['estatus']
+        metodo = form.cleaned_data.get('metodo_pago')
+        costo = form.cleaned_data.get('costo')
+        if metodo:
+            cita.metodo_pago = metodo
+        if costo is not None:
+            cita.costo = costo
+        cita.save()
+
+        # Crear solicitud de seguimiento si fue solicitada
+        if form.cleaned_data.get('solicitar_siguiente') and form.cleaned_data.get('siguiente_fecha'):
+            SolicitudCita.objects.create(
+                paciente_nombre=cita.paciente.nombre,
+                telefono=cita.paciente.telefono or '',
+                fecha_deseada=form.cleaned_data['siguiente_fecha'],
+                hora_deseada=form.cleaned_data.get('siguiente_hora'),
+                terapeuta=mi_perfil,
+                notas_paciente=form.cleaned_data.get('notas_recepcion') or '',
+                estado='pendiente',
+            )
+            messages.success(request, f'Sesión de {cita.paciente.nombre} cerrada. Solicitud de siguiente cita enviada a Recepción.')
+        else:
+            messages.success(request, f'Sesión de {cita.paciente.nombre} registrada correctamente.')
+    else:
+        messages.error(request, 'Hubo un error al procesar el cierre de sesión. Intenta de nuevo.')
+
+    return redirect('portal_terapeuta')
+
+
+# =============================================================================
+# SPRINT 3 — VISTAS DE RECEPCIÓN
+# =============================================================================
+
+@login_required
+def bitacora_diaria(request):
+    """
+    Bitácora de citas de un día concreto para el staff.
+    GET ?fecha=YYYY-MM-DD  → muestra ese día (default: hoy).
+    Acceso exclusivo a is_staff.
+    """
+    if not request.user.is_staff:
+        return redirect('home')
+
+    from datetime import date as date_type
+    fecha_str = request.GET.get('fecha', '')
+    try:
+        fecha = date_type.fromisoformat(fecha_str) if fecha_str else date_type.today()
+    except ValueError:
+        fecha = date_type.today()
+
+    citas_qs = (
+        Cita.objects
+        .filter(fecha=fecha)
+        .select_related('paciente', 'terapeuta', 'servicio', 'consultorio', 'division')
+        .prefetch_related('pacientes_adicionales')
+        .order_by('hora', 'terapeuta__nombre')
+    )
+
+    # Evaluar queryset una sola vez para cómputos Python eficientes
+    citas = list(citas_qs)
+
+    # Indicador "Solicitó Seguimiento": SolicitudCita creada ese día para ese par (terapeuta, paciente)
+    sol_set = set(
+        SolicitudCita.objects
+        .filter(fecha_creacion__date=fecha)
+        .values_list('terapeuta_id', 'paciente_nombre')
+    )
+    for cita in citas:
+        key = (cita.terapeuta_id, cita.paciente.nombre if cita.paciente else '')
+        cita.solicito_seguimiento = key in sol_set
+
+    # Stats del día
+    total         = len(citas)
+    asistieron    = sum(1 for c in citas if c.estatus == Cita.ESTATUS_SI_ASISTIO)
+    no_asistieron = sum(1 for c in citas if c.estatus in (Cita.ESTATUS_NO_ASISTIO, Cita.ESTATUS_CANCELO))
+    por_cerrar    = sum(1 for c in citas if c.es_finalizable)
+    monto_dia     = sum(
+        (c.costo or Decimal('0')) for c in citas if c.estatus == Cita.ESTATUS_SI_ASISTIO
+    )
+
+    solicitudes_pendientes_count = SolicitudCita.objects.filter(estado='pendiente').count()
+
+    # ── Exportar Excel ────────────────────────────────────────────────────────
+    if request.GET.get('export') == 'xlsx':
+        bita_headers = [
+            'Hora', 'Consultorio', 'Paciente', 'Terapeuta',
+            'Servicio', 'Estatus', 'Método de Pago', 'Costo ($)', 'Solicitó Seguimiento',
+        ]
+        bita_rows = [
+            [
+                c.hora.strftime('%H:%M'),
+                str(c.consultorio) if c.consultorio else '—',
+                c.paciente.nombre if c.paciente else '—',
+                str(c.terapeuta) if c.terapeuta else '—',
+                str(c.servicio) if c.servicio else '—',
+                c.get_estatus_display(),
+                c.metodo_pago or '—',
+                float(c.costo) if c.costo is not None else 0,
+                'Sí' if c.solicito_seguimiento else 'No',
+            ]
+            for c in citas
+        ]
+        return _build_excel_response(
+            filename=f"bitacora_{fecha.isoformat()}.xlsx",
+            sheet_title=f"Bitácora {fecha.isoformat()}",
+            headers=bita_headers,
+            rows=bita_rows,
+            col_widths=[8, 18, 24, 22, 22, 14, 16, 10, 18],
+        )
+    # ─────────────────────────────────────────────────────────────────────────
+
+    meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+             'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+    fecha_bonita = f"{fecha.day} de {meses[fecha.month - 1]} de {fecha.year}"
+
+    return render(request, 'clinica/bitacora_diaria.html', {
+        'citas':                        citas,
+        'fecha':                        fecha,
+        'fecha_iso':                    fecha.isoformat(),
+        'fecha_bonita':                 fecha_bonita,
+        'total':                        total,
+        'asistieron':                   asistieron,
+        'no_asistieron':                no_asistieron,
+        'por_cerrar':                   por_cerrar,
+        'monto_dia':                    monto_dia,
+        'solicitudes_pendientes_count': solicitudes_pendientes_count,
+    })
+
+
+@login_required
+def reporte_general(request):
+    """
+    Reporte histórico de citas con filtros por rango de fechas y terapeuta.
+    GET ?fecha_inicio=&fecha_fin=&terapeuta_id=&export=csv
+    Acceso exclusivo a is_staff.
+    """
+    if not request.user.is_staff:
+        return redirect('home')
+
+    from datetime import date as date_type
+    hoy = date_type.today()
+
+    # Leer filtros (default: mes actual)
+    fecha_inicio_str = request.GET.get('fecha_inicio', '')
+    fecha_fin_str    = request.GET.get('fecha_fin', '')
+    terapeuta_id     = request.GET.get('terapeuta_id', '')
+
+    try:
+        fecha_inicio = date_type.fromisoformat(fecha_inicio_str) if fecha_inicio_str else hoy.replace(day=1)
+    except ValueError:
+        fecha_inicio = hoy.replace(day=1)
+
+    try:
+        fecha_fin = date_type.fromisoformat(fecha_fin_str) if fecha_fin_str else hoy
+    except ValueError:
+        fecha_fin = hoy
+
+    citas = (
+        Cita.objects
+        .filter(fecha__range=(fecha_inicio, fecha_fin))
+        .select_related('paciente', 'terapeuta', 'servicio', 'consultorio', 'division')
+        .order_by('-fecha', 'hora')
+    )
+    if terapeuta_id:
+        citas = citas.filter(terapeuta_id=terapeuta_id)
+
+    # ── Exportar Excel / CSV ──────────────────────────────────────────────────
+    export = request.GET.get('export', '')
+    if export in ('xlsx', 'csv'):
+        headers = [
+            'Fecha', 'Hora', 'Tipo', 'Paciente', 'Terapeuta',
+            'Servicio', 'División', 'Consultorio',
+            'Estatus', 'Método de Pago', 'Costo ($)',
+        ]
+        rows = [
+            [
+                c.fecha.strftime('%d/%m/%Y'),
+                c.hora.strftime('%H:%M'),
+                c.get_tipo_paciente_display(),
+                c.paciente.nombre if c.paciente else '—',
+                str(c.terapeuta) if c.terapeuta else '—',
+                str(c.servicio)  if c.servicio  else '—',
+                str(c.division)  if c.division  else '—',
+                str(c.consultorio) if c.consultorio else '—',
+                c.get_estatus_display(),
+                c.metodo_pago or '—',
+                float(c.costo) if c.costo is not None else 0,
+            ]
+            for c in citas
+        ]
+        if export == 'xlsx':
+            return _build_excel_response(
+                filename=f"reporte_intra_{fecha_inicio}_{fecha_fin}.xlsx",
+                sheet_title="Reporte General",
+                headers=headers,
+                rows=rows,
+                col_widths=[14, 8, 8, 24, 22, 22, 14, 18, 16, 16, 10],
+            )
+        # CSV fallback
+        nombre = f"reporte_intra_{fecha_inicio}_{fecha_fin}.csv"
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = f'attachment; filename="{nombre}"'
+        writer = csv.writer(response)
+        writer.writerow(headers)
+        writer.writerows(rows)
+        return response
+
+    # ── Stats del rango ───────────────────────────────────────────────────────
+    total      = citas.count()
+    asistieron = citas.filter(estatus=Cita.ESTATUS_SI_ASISTIO).count()
+    monto_total = (
+        citas.filter(estatus=Cita.ESTATUS_SI_ASISTIO)
+             .aggregate(t=Sum('costo'))['t'] or Decimal('0')
+    )
+
+    terapeutas = Terapeuta.objects.filter(activo=True).order_by('nombre')
+
+    return render(request, 'clinica/reporte_general.html', {
+        'citas':            citas,
+        'fecha_inicio':     fecha_inicio,
+        'fecha_fin':        fecha_fin,
+        'fecha_inicio_iso': fecha_inicio.isoformat(),
+        'fecha_fin_iso':    fecha_fin.isoformat(),
+        'terapeuta_id_sel': terapeuta_id,
+        'terapeutas':       terapeutas,
+        'total':            total,
+        'asistieron':       asistieron,
+        'monto_total':      monto_total,
+    })
+
+
+# =============================================================================
+# SPRINT 4 — NÓMINA SEMANAL
+# =============================================================================
+
+def _semana_actual():
+    """Devuelve (lunes, domingo) de la semana en curso."""
+    hoy = date.today()
+    lunes = hoy - timedelta(days=hoy.weekday())
+    return lunes, lunes + timedelta(days=6)
+
+
+def _parse_fechas_semana(request):
+    """Extrae fecha_inicio y fecha_fin de los GET params, con fallback a semana actual."""
+    lunes, domingo = _semana_actual()
+    try:
+        fi = date.fromisoformat(request.GET.get('fecha_inicio', ''))
+    except ValueError:
+        fi = lunes
+    try:
+        ff = date.fromisoformat(request.GET.get('fecha_fin', ''))
+    except ValueError:
+        ff = domingo
+    return fi, ff
+
+
+@login_required
+def nomina_lista(request):
+    """
+    Panel de nómina semanal: muestra todos los terapeutas activos con
+    sus sesiones, ingreso clínica, pago calculado y estado del corte.
+    """
+    if not request.user.is_staff:
+        return redirect('home')
+
+    fecha_inicio, fecha_fin = _parse_fechas_semana(request)
+    prev_inicio = fecha_inicio - timedelta(days=7)
+    next_inicio = fecha_inicio + timedelta(days=7)
+
+    terapeutas = Terapeuta.objects.filter(activo=True).order_by('nombre')
+
+    # Cortes existentes para esta semana (una sola consulta)
+    cortes_map = {
+        c.terapeuta_id: c
+        for c in CorteSemanal.objects.filter(
+            fecha_inicio=fecha_inicio,
+            terapeuta__in=terapeutas,
+        )
+    }
+
+    # Stats de citas por terapeuta (una sola consulta agregada)
+    stats_map = {
+        row['terapeuta_id']: row
+        for row in Cita.objects.filter(
+            fecha__range=(fecha_inicio, fecha_fin),
+            estatus=Cita.ESTATUS_SI_ASISTIO,
+            terapeuta__in=terapeutas,
+        ).values('terapeuta_id').annotate(
+            total_citas=Count('id'),
+            ingreso_clinica=Sum('costo'),
+        )
+    }
+
+    filas = []
+    total_clinica_global = Decimal('0')
+    total_terapeutas_global = Decimal('0')
+    total_citas_global = 0
+
+    for t in terapeutas:
+        corte = cortes_map.get(t.id)
+        stats = stats_map.get(t.id, {})
+        citas_count   = stats.get('total_citas', 0)
+        ingreso       = stats.get('ingreso_clinica') or Decimal('0')
+        total_pago    = corte.total_pago if corte else None
+
+        # Solo incluir terapeutas con actividad o con corte generado
+        if not citas_count and not corte:
+            continue
+
+        total_clinica_global    += ingreso
+        total_terapeutas_global += total_pago or Decimal('0')
+        total_citas_global      += citas_count
+
+        filas.append({
+            'terapeuta':      t,
+            'citas_count':    citas_count,
+            'ingreso_clinica': ingreso,
+            'total_pago':     total_pago,
+            'corte':          corte,
+        })
+
+    meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+             'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+    semana_label = (
+        f"{fecha_inicio.day} de {meses[fecha_inicio.month-1]}"
+        f" al {fecha_fin.day} de {meses[fecha_fin.month-1]} de {fecha_fin.year}"
+    )
+
+    return render(request, 'clinica/nomina_lista.html', {
+        'filas':                    filas,
+        'fecha_inicio':             fecha_inicio,
+        'fecha_fin':                fecha_fin,
+        'fecha_inicio_iso':         fecha_inicio.isoformat(),
+        'fecha_fin_iso':            fecha_fin.isoformat(),
+        'prev_inicio_iso':          prev_inicio.isoformat(),
+        'prev_fin_iso':             (prev_inicio + timedelta(days=6)).isoformat(),
+        'next_inicio_iso':          next_inicio.isoformat(),
+        'next_fin_iso':             (next_inicio + timedelta(days=6)).isoformat(),
+        'semana_label':             semana_label,
+        'total_clinica_global':     total_clinica_global,
+        'total_terapeutas_global':  total_terapeutas_global,
+        'total_citas_global':       total_citas_global,
+        'aprobados':  sum(1 for f in filas if f['corte'] and f['corte'].estatus == CorteSemanal.ESTATUS_APROBADO),
+        'borradores': sum(1 for f in filas if f['corte'] and f['corte'].estatus == CorteSemanal.ESTATUS_BORRADOR),
+    })
+
+
+@login_required
+def nomina_detalle(request, terapeuta_id):
+    """
+    Desglose de nómina de un terapeuta para una semana.
+    Si el CorteSemanal aún no existe, muestra un preview sin persistir.
+    Si existe en borrador, permite agregar BonoExtra y aprobarlo.
+    """
+    if not request.user.is_staff:
+        return redirect('home')
+
+    terapeuta    = get_object_or_404(Terapeuta, id=terapeuta_id)
+    fecha_inicio, fecha_fin = _parse_fechas_semana(request)
+
+    try:
+        corte = CorteSemanal.objects.get(terapeuta=terapeuta, fecha_inicio=fecha_inicio)
+    except CorteSemanal.DoesNotExist:
+        corte = None
+
+    error_preview = None
+
+    if corte:
+        lineas_sesion = list(
+            corte.lineas.filter(tipo=LineaNomina.TIPO_SESION)
+                        .select_related('cita__paciente', 'cita__servicio')
+                        .order_by('cita__fecha', 'cita__hora')
+        )
+        lineas_bono = list(
+            corte.lineas.exclude(tipo=LineaNomina.TIPO_SESION)
+        )
+        bonos_extra = list(corte.bonos_extra.select_related('registrado_por').order_by('creado_en'))
+        subtotal    = corte.subtotal_sesiones
+        total_bonos = corte.total_bonos
+        total_pago  = corte.total_pago
+    else:
+        preview = preview_nomina_semanal(terapeuta, fecha_inicio, fecha_fin)
+        if 'error' in preview:
+            error_preview = preview['error']
+            lineas_sesion = lineas_bono = bonos_extra = []
+            subtotal = total_bonos = total_pago = Decimal('0')
+        else:
+            lineas_sesion = [l for l in preview['lineas'] if l['tipo'] == LineaNomina.TIPO_SESION]
+            lineas_bono   = [l for l in preview['lineas'] if l['tipo'] != LineaNomina.TIPO_SESION]
+            bonos_extra   = []
+            subtotal      = preview['subtotal_sesiones']
+            total_bonos   = preview['total_bonos']
+            total_pago    = preview['total_pago']
+
+    puede_editar  = corte and corte.estatus == CorteSemanal.ESTATUS_BORRADOR
+    puede_aprobar = puede_editar
+
+    meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+             'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+    semana_label = (
+        f"{fecha_inicio.day} de {meses[fecha_inicio.month-1]}"
+        f" al {fecha_fin.day} de {meses[fecha_fin.month-1]} de {fecha_fin.year}"
+    )
+
+    # ── Exportar nómina Excel ─────────────────────────────────────────────────
+    if request.GET.get('export') == 'xlsx' and not error_preview:
+        nom_headers = ['Tipo', 'Concepto', 'Fecha', 'Hora', 'Paciente', 'Monto ($)']
+        nom_rows = []
+        for l in lineas_sesion:
+            if isinstance(l, dict):
+                fecha_c = l['cita'].fecha.strftime('%d/%m/%Y') if l.get('cita') and l['cita'].fecha else '—'
+                hora_c  = l['cita'].hora.strftime('%H:%M') if l.get('cita') and l['cita'].hora else '—'
+                pac     = l['cita'].paciente.nombre if l.get('cita') and l['cita'].paciente else '—'
+            else:
+                fecha_c = l.cita.fecha.strftime('%d/%m/%Y') if l.cita and l.cita.fecha else '—'
+                hora_c  = l.cita.hora.strftime('%H:%M') if l.cita and l.cita.hora else '—'
+                pac     = l.cita.paciente.nombre if l.cita and l.cita.paciente else '—'
+            monto = float(l['monto'] if isinstance(l, dict) else l.monto)
+            nom_rows.append(['Sesión', l['concepto'] if isinstance(l, dict) else l.concepto, fecha_c, hora_c, pac, monto])
+        for l in lineas_bono:
+            monto = float(l['monto'] if isinstance(l, dict) else l.monto)
+            nom_rows.append(['Bono automático', l['concepto'] if isinstance(l, dict) else l.concepto, '—', '—', '—', monto])
+        for b in bonos_extra:
+            nom_rows.append(['Bono extra', b.concepto, '—', '—', '—', float(b.monto)])
+        return _build_excel_response(
+            filename=f"nomina_{terapeuta.nombre.replace(' ', '_')}_{fecha_inicio.isoformat()}.xlsx",
+            sheet_title="Nómina Detalle",
+            headers=nom_headers,
+            rows=nom_rows,
+            col_widths=[16, 35, 12, 8, 24, 12],
+        )
+    # ─────────────────────────────────────────────────────────────────────────
+
+    return render(request, 'clinica/nomina_detalle.html', {
+        'terapeuta':      terapeuta,
+        'corte':          corte,
+        'lineas_sesion':  lineas_sesion,
+        'lineas_bono':    lineas_bono,
+        'bonos_extra':    bonos_extra,
+        'subtotal':       subtotal,
+        'total_bonos':    total_bonos,
+        'total_pago':     total_pago,
+        'fecha_inicio':   fecha_inicio,
+        'fecha_fin':      fecha_fin,
+        'fecha_inicio_iso': fecha_inicio.isoformat(),
+        'fecha_fin_iso':    fecha_fin.isoformat(),
+        'semana_label':   semana_label,
+        'puede_editar':   puede_editar,
+        'puede_aprobar':  puede_aprobar,
+        'error_preview':  error_preview,
+    })
+
+
+@login_required
+def nomina_calcular(request, terapeuta_id):
+    """POST: genera o recalcula el CorteSemanal en borrador."""
+    if not request.user.is_staff or request.method != 'POST':
+        return redirect('nomina_lista')
+
+    terapeuta = get_object_or_404(Terapeuta, id=terapeuta_id)
+    fi_str = request.POST.get('fecha_inicio', '')
+    ff_str = request.POST.get('fecha_fin', '')
+
+    try:
+        fi = date.fromisoformat(fi_str)
+        ff = date.fromisoformat(ff_str)
+    except ValueError:
+        messages.error(request, 'Fechas inválidas.')
+        return redirect('nomina_lista')
+
+    try:
+        corte = calcular_nomina_semanal(terapeuta, fi, ff)
+        messages.success(
+            request,
+            f'Corte de {terapeuta.nombre} generado. '
+            f'Sesiones: {corte.total_sesiones} | Total: ${corte.total_pago:,.2f}'
+        )
+    except ValueError as e:
+        messages.error(request, str(e))
+
+    url = reverse('nomina_detalle', args=[terapeuta_id])
+    return redirect(f'{url}?fecha_inicio={fi_str}&fecha_fin={ff_str}')
+
+
+@login_required
+def nomina_aprobar(request, corte_id):
+    """POST: aprueba y sella un CorteSemanal."""
+    if not request.user.is_staff or request.method != 'POST':
+        return redirect('nomina_lista')
+
+    corte = get_object_or_404(CorteSemanal, id=corte_id)
+    fi_str = corte.fecha_inicio.isoformat()
+    ff_str = corte.fecha_fin.isoformat()
+
+    try:
+        aprobar_corte_semanal(corte, request.user)
+        messages.success(
+            request,
+            f'Nómina de {corte.terapeuta.nombre} aprobada y sellada. '
+            f'Total: ${corte.total_pago:,.2f}'
+        )
+    except ValueError as e:
+        messages.error(request, str(e))
+
+    url = reverse('nomina_detalle', args=[corte.terapeuta_id])
+    return redirect(f'{url}?fecha_inicio={fi_str}&fecha_fin={ff_str}')
+
+
+@login_required
+def nomina_agregar_bono(request, corte_id):
+    """POST: agrega un BonoExtra a un CorteSemanal en borrador y recalcula totales."""
+    if not request.user.is_staff or request.method != 'POST':
+        return redirect('nomina_lista')
+
+    corte = get_object_or_404(CorteSemanal, id=corte_id)
+    fi_str = corte.fecha_inicio.isoformat()
+    ff_str = corte.fecha_fin.isoformat()
+
+    if corte.estatus != CorteSemanal.ESTATUS_BORRADOR:
+        messages.error(request, 'Solo se pueden agregar bonos a cortes en borrador.')
+        url = reverse('nomina_detalle', args=[corte.terapeuta_id])
+        return redirect(f'{url}?fecha_inicio={fi_str}&fecha_fin={ff_str}')
+
+    concepto = request.POST.get('concepto', '').strip()
+    monto_str = request.POST.get('monto', '').strip()
+
+    try:
+        monto = Decimal(monto_str)
+        if monto <= 0:
+            raise ValueError('El monto debe ser mayor a cero.')
+        if not concepto:
+            raise ValueError('El concepto es obligatorio.')
+    except Exception as e:
+        messages.error(request, f'Error al agregar bono: {e}')
+    else:
+        BonoExtra.objects.create(
+            corte=corte,
+            concepto=concepto,
+            monto=monto,
+            registrado_por=request.user,
+        )
+        # Recalcular para que los totales del corte reflejen el nuevo BonoExtra
+        try:
+            calcular_nomina_semanal(corte.terapeuta, corte.fecha_inicio, corte.fecha_fin)
+            messages.success(request, f'Bono "{concepto}" de ${monto:,.2f} agregado correctamente.')
+        except ValueError as e:
+            messages.warning(request, f'Bono guardado pero no se pudo recalcular el total: {e}')
+
+    url = reverse('nomina_detalle', args=[corte.terapeuta_id])
+    return redirect(f'{url}?fecha_inicio={fi_str}&fecha_fin={ff_str}')
+
+
+# =============================================================================
+# MÓDULO DE TABULADORES — Misión 2
+# =============================================================================
+
+@login_required
+def tabuladores_config(request):
+    """
+    Vista principal de configuración de tabuladores.
+    Muestra dos pestañas: Tabulador General (categorías) y Reglas Individuales.
+    Acceso exclusivo a is_staff.
+    """
+    if not request.user.is_staff:
+        return redirect('home')
+
+    from .models import TabuladorGeneral, ReglaTerapeuta
+
+    categorias = TabuladorGeneral.objects.order_by('numero')
+    reglas = (
+        ReglaTerapeuta.objects
+        .select_related('terapeuta', 'tabulador_base')
+        .order_by('terapeuta__nombre')
+    )
+    return render(request, 'clinica/tabuladores_config.html', {
+        'categorias': categorias,
+        'reglas': reglas,
+    })
+
+
+@login_required
+def tabuladores_editar_categoria(request, categoria_id):
+    """POST: actualiza un TabuladorGeneral desde el modal de edición."""
+    if not request.user.is_staff or request.method != 'POST':
+        return redirect('tabuladores_config')
+
+    from .models import TabuladorGeneral
+    from .forms import TabuladorGeneralForm
+
+    categoria = get_object_or_404(TabuladorGeneral, id=categoria_id)
+    form = TabuladorGeneralForm(request.POST, instance=categoria)
+    if form.is_valid():
+        form.save()
+        messages.success(request, f'Categoría {categoria.numero} actualizada correctamente.')
+    else:
+        errores = '; '.join(
+            f'{field}: {", ".join(errs)}'
+            for field, errs in form.errors.items()
+        )
+        messages.error(request, f'Error al guardar: {errores}')
+    return redirect('tabuladores_config')
+
+
+@login_required
+def tabuladores_editar_regla(request, regla_id):
+    """POST: actualiza una ReglaTerapeuta desde el modal de edición."""
+    if not request.user.is_staff or request.method != 'POST':
+        return redirect('tabuladores_config')
+
+    from .models import ReglaTerapeuta
+    from .forms import ReglaTerapeutaForm
+
+    regla = get_object_or_404(ReglaTerapeuta, id=regla_id)
+    form = ReglaTerapeutaForm(request.POST, instance=regla)
+    if form.is_valid():
+        form.save()
+        messages.success(request, f'Regla de {regla.terapeuta.nombre} actualizada correctamente.')
+    else:
+        errores = '; '.join(
+            f'{field}: {", ".join(errs)}'
+            for field, errs in form.errors.items()
+        )
+        messages.error(request, f'Error al guardar: {errores}')
+    return redirect('tabuladores_config')

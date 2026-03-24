@@ -1,158 +1,686 @@
 {% extends 'clinica/base.html' %}
 
 {% block content %}
+
+{# ─────────────────────────── HEADER ─────────────────────────── #}
 <div class="row mb-4">
-        <div class="col-12">
-            <div class="card bg-primary text-white shadow-sm border-0 rounded-4">
-                <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
-                    
-                    <div class="d-flex align-items-center">
-                        <div class="me-4 d-none d-md-block">
-                            <i class="bi bi-person-badge" style="font-size: 3rem;"></i>
-                        </div>
-                        <div>
-                            <h2 class="fw-bold mb-1">Bienvenido, {{ terapeuta.nombre }}</h2>
-                            <p class="mb-0 fs-5 text-white-50">Portal Médico | Tu agenda para hoy: {{ fecha_bonita }}</p>
-                        </div>
-                        <div>
-                        <a href="{% url 'solicitar_cita_terapeuta' %}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm d-flex align-items-center">
-                            <i class="bi bi-calendar-plus fs-8 me-1"></i> 
-                            Solicitar Cita a Recepción
-                        </a>
+    <div class="col-12">
+        <div class="card bg-primary text-white shadow-sm border-0 rounded-4">
+            <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center">
+                    <div class="me-4 d-none d-md-block">
+                        <i class="bi bi-person-badge" style="font-size: 3rem;"></i>
                     </div>
-                    </div>
-
-                  <!-- <div>
-                        <a href="{% url 'crear_cita' %}?terapeuta={{ terapeuta.id }}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm d-flex align-items-center">
-                            <i class="bi bi-calendar-plus fs-4 me-2"></i> 
-                            Agendar Nueva Cita
-                        </a>
-                    </div>
-                     -->
-                </div>
-            </div>
-        </div>
-    </div>{% if mis_solicitudes %}
-            <div class="card shadow-sm border-0 rounded-4 mb-4 border-start border-primary border-5">
-                <div class="card-header bg-white border-bottom p-3">
-                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-send-check me-2 text-primary"></i> Mis Peticiones a Recepción</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        {% for solicitud in mis_solicitudes %}
-                            <div class="list-group-item p-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <strong class="text-dark">{{ solicitud.paciente_nombre }} - {{ solicitud.fecha_deseada|date:"d M" }} a las {{ solicitud.hora_deseada|time:"H:i" }}</strong>
-                                    
-                                    {% if solicitud.estado == 'pendiente' %}
-                                        <span class="badge bg-warning text-dark border px-2 py-1">Esperando Confirmación</span>
-                                    {% elif solicitud.estado == 'aceptada' %}
-                                        <span class="badge bg-success border px-2 py-1">Aprobada</span>
-                                    {% elif solicitud.estado == 'rechazada' %}
-                                        <span class="badge bg-danger border px-2 py-1">Rechazada</span>
-                                    {% endif %}
-                                </div>
-                                
-                                {% if solicitud.estado == 'rechazada' and solicitud.motivo_rechazo %}
-                                    <div class="bg-light p-2 rounded border border-danger border-opacity-25 mt-2">
-                                        <small class="text-danger fw-bold d-block">Nota de Recepción:</small>
-                                        <small class="text-secondary">"{{ solicitud.motivo_rechazo }}"</small>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
+                    <div>
+                        <h2 class="fw-bold mb-1">Bienvenido, {{ terapeuta.nombre }}</h2>
+                        <p class="mb-0 fs-5 text-white-50">Portal Médico | Tu agenda para hoy: {{ fecha_bonita }}</p>
                     </div>
                 </div>
-            </div>
-            {% endif %}
-    <div class="row g-4">
-        <div class="col-lg-7">
-            <div class="card shadow-sm border-0 rounded-4 h-100">
-                <div class="card-header bg-white border-bottom p-4">
-                    <h4 class="fw-bold text-dark mb-0">Mis Citas de Hoy</h4>
-                </div>
-                <div class="card-body p-0">
-                    {% if citas_hoy %}
-                        <div class="list-group list-group-flush">
-                            {% for cita in citas_hoy %}
-                                <div class="list-group-item p-4 border-bottom hover-bg-light">
-                                    <div class="row align-items-center">
-                                        <div class="col-auto text-center pe-3" style="min-width: 100px;">
-                                            <h2 class="fw-bold text-primary mb-0">{{ cita.hora|time:"H:i" }}</h2>
-                                        </div>
-                                        
-                                        <div class="col border-start ps-4">
-                                            <h4 class="fw-bold mb-1">{{ cita.titulo_cita }}</h4>
-                                            <p class="text-muted mb-3 fs-5">
-                                                <i class="bi bi-door-open me-1"></i> {{ cita.consultorio }} | 
-                                                <i class="bi bi-tag me-1"></i> {{ cita.servicio }}
-                                            </p>
-                                            
-                                            <div class="d-flex gap-2">
-                                                {% if cita.paciente_id %}
-                                                    <a href="{% url 'detalle_paciente' cita.paciente.id %}" class="btn btn-outline-primary btn-lg px-4 fw-semibold">
-                                                        Abrir Expediente
-                                                    </a>
-                                                {% else %}
-                                                    <span class="btn btn-outline-secondary btn-lg px-4 fw-semibold disabled">Sin expediente</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="p-5 text-center">
-                            <div class="text-muted mb-3">
-                                <i class="bi bi-calendar-check" style="font-size: 4rem;"></i>
-                            </div>
-                            <h4 class="text-muted">No tienes citas programadas para hoy.</h4>
-                            <p class="text-secondary fs-5">¡Disfruta tu día!</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-5">
-            <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-header bg-white border-bottom p-4">
-                    <h5 class="fw-bold text-secondary mb-0">Próximos Días</h5>
-                </div>
-                <div class="card-body p-0">
-                    {% if citas_proximas %}
-                        <div class="list-group list-group-flush">
-                            {% for cita in citas_proximas %}
-                                <div class="list-group-item p-4">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong class="text-dark d-block fs-5">{{ cita.titulo_cita }}</strong>
-                                            <span class="text-muted fs-6">{{ cita.fecha|date:"d M" }} a las {{ cita.hora|time:"H:i" }}</span>
-                                        </div>
-                                        <span class="badge bg-light text-dark border px-3 py-2 fs-6">{{ cita.consultorio }}</span>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="p-5 text-center text-muted">
-                            <p class="fs-5 mb-0">No hay citas futuras agendadas.</p>
-                        </div>
-                    {% endif %}
-                </div>
+                <a href="{% url 'solicitar_cita_terapeuta' %}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm d-flex align-items-center">
+                    <i class="bi bi-calendar-plus fs-5 me-2"></i>Solicitar Cita a Recepción
+                </a>
             </div>
         </div>
     </div>
 </div>
 
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-header bg-white border-bottom p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h5 class="fw-bold text-dark mb-1"><i class="bi bi-calendar-x me-2 text-danger"></i>Bloqueos de Agenda</h5>
+            <p class="text-muted mb-0">Define fechas temporales o permanentes donde no te puedan asignar citas.</p>
+        </div>
+        <button class="btn btn-outline-danger fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#panelBloqueoAgenda" aria-expanded="false" aria-controls="panelBloqueoAgenda">
+            <i class="bi bi-plus-circle me-1"></i>Bloquear Fechas
+        </button>
+    </div>
+    <div class="collapse" id="panelBloqueoAgenda">
+        <div class="card-body border-bottom">
+            <form method="post" action="{% url 'crear_bloqueo_terapeuta' %}" class="row g-3 align-items-end">
+                {% csrf_token %}
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.tipo_bloqueo.label }}</label>
+                    {{ bloqueo_form.tipo_bloqueo }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.fecha_inicio.label }}</label>
+                    {{ bloqueo_form.fecha_inicio }}
+                </div>
+                <div class="col-md-3" id="wrapper-fecha-fin">
+                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.fecha_fin.label }}</label>
+                    {{ bloqueo_form.fecha_fin }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-secondary small">{{ bloqueo_form.motivo.label }}</label>
+                    {{ bloqueo_form.motivo }}
+                </div>
+                <div class="col-12 d-flex justify-content-end">
+                    <button type="submit" class="btn btn-danger fw-semibold">
+                        <i class="bi bi-calendar-x me-1"></i>Guardar Bloqueo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if bloqueos_agenda %}
+        <div class="list-group list-group-flush">
+            {% for bloqueo in bloqueos_agenda %}
+            <div class="list-group-item p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                            <span class="badge {% if bloqueo.tipo_bloqueo == 'permanente' %}bg-dark{% else %}bg-warning text-dark{% endif %}">
+                                {{ bloqueo.get_tipo_bloqueo_display }}
+                            </span>
+                            <strong class="text-dark">{{ bloqueo.rango_display }}</strong>
+                        </div>
+                        <small class="text-muted">
+                            {% if bloqueo.motivo %}{{ bloqueo.motivo }}{% else %}Sin motivo especificado.{% endif %}
+                        </small>
+                    </div>
+                    <form method="post" action="{% url 'eliminar_bloqueo_terapeuta' bloqueo.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-secondary btn-sm" onclick="return confirm('¿Eliminar este bloqueo de agenda?');">
+                            <i class="bi bi-trash me-1"></i>Quitar
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">
+            No tienes fechas bloqueadas actualmente.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# ─────────────────────────── SOLICITUDES ENVIADAS ─────────────────────────── #}
+{% if mis_solicitudes %}
+<div class="card shadow-sm border-0 rounded-4 mb-4 border-start border-primary border-5">
+    <div class="card-header bg-white border-bottom p-3">
+        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-send-check me-2 text-primary"></i> Mis Peticiones a Recepción</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+            {% for solicitud in mis_solicitudes %}
+            <div class="list-group-item p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong class="text-dark">{{ solicitud.paciente_nombre }} — {{ solicitud.fecha_deseada|date:"d M" }} a las {{ solicitud.hora_deseada|time:"H:i" }}</strong>
+                    {% if solicitud.estado == 'pendiente' %}
+                        <span class="badge bg-warning text-dark border px-2 py-1">Esperando Confirmación</span>
+                    {% elif solicitud.estado == 'aceptada' %}
+                        <span class="badge bg-success border px-2 py-1">Aprobada</span>
+                    {% elif solicitud.estado == 'rechazada' %}
+                        <span class="badge bg-danger border px-2 py-1">Rechazada</span>
+                    {% endif %}
+                </div>
+                {% if solicitud.estado == 'rechazada' and solicitud.motivo_rechazo %}
+                <div class="bg-light p-2 rounded border border-danger border-opacity-25 mt-2">
+                    <small class="text-danger fw-bold d-block">Nota de Recepción:</small>
+                    <small class="text-secondary">"{{ solicitud.motivo_rechazo }}"</small>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ─────────────────────────── GRID PRINCIPAL ─────────────────────────── #}
+<div class="row g-4">
+
+    {# ── CITAS DE HOY ── #}
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-bottom p-4">
+                <h4 class="fw-bold text-dark mb-0">
+                    <i class="bi bi-calendar-day me-2 text-primary"></i>Mis Citas de Hoy
+                </h4>
+            </div>
+            <div class="card-body p-0">
+                {% if citas_hoy %}
+                <div class="list-group list-group-flush">
+                    {% for cita in citas_hoy %}
+                    <div class="list-group-item p-4 border-bottom cita-item {% if not cita.es_finalizable %}cita-terminada{% endif %}">
+                        <div class="row align-items-center">
+
+                            {# Hora + badge de estatus #}
+                            <div class="col-auto text-center pe-3" style="min-width: 110px;">
+                                <h2 class="fw-bold mb-1 {% if cita.es_finalizable %}text-primary{% else %}text-muted{% endif %}">
+                                    {{ cita.hora|time:"H:i" }}
+                                </h2>
+                                {% if cita.estatus == 'si_asistio' %}
+                                    <span class="badge rounded-pill bg-success px-2 py-1">
+                                        <i class="bi bi-check-circle me-1"></i>Asistió
+                                    </span>
+                                {% elif cita.estatus == 'no_asistio' %}
+                                    <span class="badge rounded-pill bg-danger px-2 py-1">No asistió</span>
+                                {% elif cita.estatus == 'cancelo' %}
+                                    <span class="badge rounded-pill bg-secondary px-2 py-1">Canceló</span>
+                                {% elif cita.estatus == 'incidencia' %}
+                                    <span class="badge rounded-pill bg-warning text-dark px-2 py-1">Incidencia</span>
+                                {% elif cita.estatus == 'confirmada' %}
+                                    <span class="badge rounded-pill bg-primary px-2 py-1">Confirmada</span>
+                                {% else %}
+                                    <span class="badge rounded-pill bg-light text-secondary border px-2 py-1">Pendiente</span>
+                                {% endif %}
+                            </div>
+
+                            {# Info de la cita #}
+                            <div class="col border-start ps-4">
+                                <h4 class="fw-bold mb-1 {% if not cita.es_finalizable %}text-muted{% endif %}">
+                                    {{ cita.titulo_cita }}
+                                </h4>
+                                <p class="text-muted mb-3 fs-6">
+                                    <i class="bi bi-door-open me-1"></i>{{ cita.consultorio }}
+                                    &nbsp;|&nbsp;
+                                    <i class="bi bi-tag me-1"></i>{{ cita.servicio }}
+                                </p>
+
+                                <div class="d-flex gap-2 flex-wrap">
+                                    {% if cita.paciente_id %}
+                                    <a href="{% url 'detalle_paciente' cita.paciente.id %}"
+                                       class="btn btn-outline-primary btn-sm px-3 fw-semibold">
+                                        <i class="bi bi-folder2-open me-1"></i>Expediente
+                                    </a>
+                                    {% endif %}
+
+                                    {% if cita.es_finalizable %}
+                                    <button type="button"
+                                            class="btn btn-finalizar btn-sm px-3 fw-semibold"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalCheckout"
+                                            data-cita-id="{{ cita.id }}"
+                                            data-paciente="{{ cita.paciente.nombre }}"
+                                            data-hora="{{ cita.hora|time:'H:i' }}"
+                                            data-servicio="{{ cita.servicio }}"
+                                            data-consultorio="{{ cita.consultorio }}">
+                                        <i class="bi bi-check2-circle me-1"></i>Finalizar Sesión
+                                    </button>
+                                    {% else %}
+                                    <span class="badge bg-light text-muted border px-3 py-2 rounded-pill">
+                                        <i class="bi bi-lock me-1"></i>Sesión cerrada
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="p-5 text-center">
+                    <div class="text-muted mb-3">
+                        <i class="bi bi-calendar-check" style="font-size: 4rem;"></i>
+                    </div>
+                    <h4 class="text-muted">No tienes citas programadas para hoy.</h4>
+                    <p class="text-secondary fs-5">¡Disfruta tu día!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ── PRÓXIMOS DÍAS ── #}
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-white border-bottom p-4">
+                <h5 class="fw-bold text-secondary mb-0">
+                    <i class="bi bi-calendar-week me-2"></i>Próximos Días
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if citas_proximas %}
+                <div class="list-group list-group-flush">
+                    {% for cita in citas_proximas %}
+                    <div class="list-group-item p-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong class="text-dark d-block fs-5">{{ cita.titulo_cita }}</strong>
+                                <span class="text-muted fs-6">{{ cita.fecha|date:"d M" }} a las {{ cita.hora|time:"H:i" }}</span>
+                            </div>
+                            <span class="badge bg-light text-dark border px-3 py-2 fs-6">{{ cita.consultorio }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="p-5 text-center text-muted">
+                    <p class="fs-5 mb-0">No hay citas futuras agendadas.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>{# /row #}
+
+
+<div class="modal fade" id="modalCheckout" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content checkout-card">
+
+            {# Header del modal #}
+            <div class="checkout-header">
+                <button type="button" class="checkout-close" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="checkout-header-icon">
+                    <i class="bi bi-clipboard2-pulse"></i>
+                </div>
+                <h3 class="checkout-header-title" id="modalPacienteNombre">—</h3>
+                <p class="checkout-header-sub" id="modalSubtitulo">—</p>
+            </div>
+
+            {# Formulario #}
+            <form id="formCheckout" method="POST" action="">
+                {% csrf_token %}
+                {# El estatus se envía como hidden input; el valor lo setea el JS al elegir una tarjeta #}
+                <input type="hidden" name="estatus" id="inputEstatus" value="">
+
+                <div class="modal-body p-4 pt-3">
+
+                    {# ── SECCIÓN 1: Resultado de la sesión ── #}
+                    <div class="checkout-section-label">
+                        <span class="checkout-step">1</span>¿Cómo terminó la sesión?
+                    </div>
+
+                    <div class="estatus-grid" id="estatusGrid">
+                        <button type="button" class="estatus-card" data-value="si_asistio">
+                            <div class="estatus-icon estatus-icon--success">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+                            <span class="estatus-label">Sí asistió</span>
+                        </button>
+                        <button type="button" class="estatus-card" data-value="no_asistio">
+                            <div class="estatus-icon estatus-icon--danger">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </div>
+                            <span class="estatus-label">No asistió</span>
+                        </button>
+                        <button type="button" class="estatus-card" data-value="cancelo">
+                            <div class="estatus-icon estatus-icon--warning">
+                                <i class="bi bi-slash-circle-fill"></i>
+                            </div>
+                            <span class="estatus-label">Canceló</span>
+                        </button>
+                        <button type="button" class="estatus-card" data-value="incidencia">
+                            <div class="estatus-icon estatus-icon--orange">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                            </div>
+                            <span class="estatus-label">Incidencia</span>
+                        </button>
+                    </div>
+                    <div id="errorEstatus" class="text-danger small mt-1" style="display:none;">
+                        Selecciona el resultado de la sesión.
+                    </div>
+
+                    {# ── SECCIÓN 2: Pago ── #}
+                    <div class="checkout-section-label mt-4">
+                        <span class="checkout-step">2</span>Pago recibido <span class="text-muted fw-normal fs-6">(opcional)</span>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-secondary small">Método de Pago</label>
+                            <select name="metodo_pago" class="form-select">
+                                <option value="">— Sin pago —</option>
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Terminal">Terminal</option>
+                                <option value="Transferencia">Transferencia</option>
+                                <option value="Pase">Pase</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-secondary small">Monto cobrado al paciente ($)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted">$</span>
+                                <input type="number" name="costo" class="form-control" placeholder="0.00" step="0.01" min="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ── SECCIÓN 3: Siguiente Cita (toggle) ── #}
+                    <div class="siguiente-toggle-wrapper mt-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <p class="fw-bold mb-0 text-dark">¿Solicitar próxima cita?</p>
+                                <small class="text-muted">Enviará una petición a Recepción para agendar el siguiente seguimiento.</small>
+                            </div>
+                            <div class="form-check form-switch ms-3 mb-0">
+                                <input class="form-check-input siguiente-switch" type="checkbox"
+                                       name="solicitar_siguiente" id="toggleSiguiente" role="switch">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="seccionSiguiente" class="siguiente-panel">
+                        <div class="row g-3 pt-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary small">Fecha propuesta</label>
+                                <input type="date" name="siguiente_fecha" class="form-control" id="inputSiguienteFecha">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary small">Hora propuesta</label>
+                                <input type="time" name="siguiente_hora" class="form-control">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold text-secondary small">Comentarios para Recepción</label>
+                                <textarea name="notas_recepcion" class="form-control" rows="2"
+                                          placeholder="Ej: Necesita consultorio 1, prefiere las mañanas..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>{# /modal-body #}
+
+                <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" id="btnGuardarCheckout" class="btn btn-checkout-submit px-5">
+                        <i class="bi bi-check2-all me-2"></i>Guardar Cierre de Sesión
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tipoBloqueo = document.getElementById('id_tipo_bloqueo');
+        const wrapperFechaFin = document.getElementById('wrapper-fecha-fin');
+        const fechaFin = document.getElementById('id_fecha_fin');
+
+        function syncBloqueoForm() {
+            if (!tipoBloqueo || !wrapperFechaFin || !fechaFin) {
+                return;
+            }
+            const esPermanente = tipoBloqueo.value === 'permanente';
+            wrapperFechaFin.style.display = esPermanente ? 'none' : '';
+            if (esPermanente) {
+                fechaFin.value = '';
+            }
+        }
+
+        if (tipoBloqueo) {
+            tipoBloqueo.addEventListener('change', syncBloqueoForm);
+            syncBloqueoForm();
+        }
+    });
+</script>
+
 <style>
-    .hover-bg-light:hover {
-        background-color: #f8f9fa;
-        transition: background-color 0.2s ease;
+    /* ── Portal general ── */
+    .hover-bg-light:hover { background-color: #f8f9fa; transition: background-color 0.2s ease; }
+    .rounded-4 { border-radius: 1rem !important; }
+
+    .cita-terminada { opacity: 0.65; }
+    .cita-terminada:hover { opacity: 1; transition: opacity 0.2s; }
+
+    /* Botón Finalizar Sesión */
+    .btn-finalizar {
+        background: linear-gradient(135deg, #26C6DA, #00ACC1);
+        color: #fff;
+        border: none;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: all 0.25s ease;
+        box-shadow: 0 4px 14px rgba(38,198,218,0.35);
     }
-    .rounded-4 {
-        border-radius: 1rem !important;
+    .btn-finalizar:hover {
+        background: linear-gradient(135deg, #00BCD4, #0097A7);
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(38,198,218,0.45);
+    }
+
+    /* ── Modal checkout ── */
+    .checkout-card {
+        border: none;
+        border-radius: 1.5rem;
+        overflow: hidden;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.18);
+    }
+
+    .checkout-header {
+        background: linear-gradient(135deg, #26C6DA 0%, #0097A7 100%);
+        color: white;
+        padding: 2rem 2rem 1.75rem;
+        text-align: center;
+        position: relative;
+    }
+    .checkout-close {
+        position: absolute;
+        top: 1rem; right: 1rem;
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .checkout-close:hover { background: rgba(255,255,255,0.35); }
+    .checkout-header-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.9;
+    }
+    .checkout-header-title {
+        font-family: 'Poppins', sans-serif;
+        font-weight: 700;
+        font-size: 1.4rem;
+        margin-bottom: 0.25rem;
+    }
+    .checkout-header-sub {
+        font-size: 0.9rem;
+        opacity: 0.8;
+        margin-bottom: 0;
+    }
+
+    /* Step labels */
+    .checkout-section-label {
+        font-family: 'Poppins', sans-serif;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #37474F;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+    }
+    .checkout-step {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px; height: 24px;
+        border-radius: 50%;
+        background: #26C6DA;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    /* Tarjetas de estatus */
+    .estatus-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+    }
+    @media (max-width: 576px) {
+        .estatus-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .estatus-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 0.5rem;
+        border: 2px solid #E0E7EF;
+        border-radius: 1rem;
+        background: #F8FBFD;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: 'Poppins', sans-serif;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #546E7A;
+    }
+    .estatus-card:hover {
+        border-color: #B0BEC5;
+        background: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    }
+    .estatus-card.selected {
+        background: #fff;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+        color: #263238;
+    }
+    .estatus-card[data-value="si_asistio"].selected  { border-color: #43A047; }
+    .estatus-card[data-value="no_asistio"].selected  { border-color: #E53935; }
+    .estatus-card[data-value="cancelo"].selected     { border-color: #FDD835; }
+    .estatus-card[data-value="incidencia"].selected  { border-color: #FB8C00; }
+
+    .estatus-icon {
+        width: 48px; height: 48px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.4rem;
+    }
+    .estatus-icon--success { background: #E8F5E9; color: #43A047; }
+    .estatus-icon--danger  { background: #FFEBEE; color: #E53935; }
+    .estatus-icon--warning { background: #FFFDE7; color: #F9A825; }
+    .estatus-icon--orange  { background: #FFF3E0; color: #FB8C00; }
+
+    .estatus-label { line-height: 1.2; text-align: center; }
+
+    /* Toggle de siguiente cita */
+    .siguiente-toggle-wrapper {
+        border: 1.5px solid #E0E7EF;
+        border-radius: 1rem;
+        padding: 1rem 1.25rem;
+        background: #F8FBFD;
+    }
+    .siguiente-switch { width: 3em; height: 1.5em; cursor: pointer; }
+    .siguiente-switch:checked { background-color: #26C6DA; border-color: #26C6DA; }
+
+    /* Panel colapsable siguiente cita */
+    .siguiente-panel {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.35s ease, padding 0.35s ease;
+    }
+    .siguiente-panel.abierto {
+        max-height: 400px;
+    }
+
+    /* Botón submit del modal */
+    .btn-checkout-submit {
+        background: linear-gradient(135deg, #26C6DA, #00ACC1);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        font-weight: 600;
+        padding: 0.6rem 1.5rem;
+        box-shadow: 0 4px 14px rgba(38,198,218,0.4);
+        transition: all 0.25s ease;
+    }
+    .btn-checkout-submit:hover {
+        background: linear-gradient(135deg, #00BCD4, #0097A7);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(38,198,218,0.5);
+    }
+    .btn-checkout-submit:disabled {
+        opacity: 0.6;
+        pointer-events: none;
     }
 </style>
+
+
+{% block scripts %}
+<script>
+(function () {
+    const modalEl       = document.getElementById('modalCheckout');
+    const form          = document.getElementById('formCheckout');
+    const inputEstatus  = document.getElementById('inputEstatus');
+    const errorEstatus  = document.getElementById('errorEstatus');
+    const estatusCards  = document.querySelectorAll('.estatus-card');
+    const toggleSwitch  = document.getElementById('toggleSiguiente');
+    const panelSiguiente = document.getElementById('seccionSiguiente');
+    const btnSubmit     = document.getElementById('btnGuardarCheckout');
+
+    // ── 1. Poblar modal al abrirse con los datos del botón clickeado ──
+    modalEl.addEventListener('show.bs.modal', function (e) {
+        const btn = e.relatedTarget;
+        const citaId     = btn.getAttribute('data-cita-id');
+        const paciente   = btn.getAttribute('data-paciente');
+        const hora       = btn.getAttribute('data-hora');
+        const servicio   = btn.getAttribute('data-servicio');
+        const consultorio = btn.getAttribute('data-consultorio');
+
+        // Actualizar form action con el ID de la cita
+        form.action = `/citas/${citaId}/checkout/`;
+
+        // Actualizar textos del header
+        document.getElementById('modalPacienteNombre').textContent = paciente;
+        document.getElementById('modalSubtitulo').textContent = `${hora} · ${servicio} · ${consultorio}`;
+    });
+
+    // ── 2. Resetear modal al cerrarse ──
+    modalEl.addEventListener('hidden.bs.modal', function () {
+        form.reset();
+        inputEstatus.value = '';
+        estatusCards.forEach(c => c.classList.remove('selected'));
+        errorEstatus.style.display = 'none';
+        panelSiguiente.classList.remove('abierto');
+        toggleSwitch.checked = false;
+    });
+
+    // ── 3. Selección de tarjeta de estatus ──
+    estatusCards.forEach(function (card) {
+        card.addEventListener('click', function () {
+            estatusCards.forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            inputEstatus.value = card.getAttribute('data-value');
+            errorEstatus.style.display = 'none';
+        });
+    });
+
+    // ── 4. Toggle panel de siguiente cita ──
+    toggleSwitch.addEventListener('change', function () {
+        if (this.checked) {
+            panelSiguiente.classList.add('abierto');
+        } else {
+            panelSiguiente.classList.remove('abierto');
+        }
+    });
+
+    // ── 5. Validación client-side antes de enviar ──
+    form.addEventListener('submit', function (e) {
+        if (!inputEstatus.value) {
+            e.preventDefault();
+            errorEstatus.style.display = 'block';
+            document.getElementById('estatusGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        // Deshabilitar botón para evitar doble envío
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+    });
+
+})();
+</script>
+{% endblock %}
+
 {% endblock %}

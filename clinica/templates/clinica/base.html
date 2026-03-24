@@ -176,6 +176,7 @@ $(document).ready(function() {
     const $fecha = $('#id_fecha');
     const $hora = $('#id_hora');
     const $consultorio = $('#id_consultorio');
+    const $terapeuta = $('#id_terapeuta');
     
     // Crear un pequeño div para mostrar el mensaje debajo de la hora
     $hora.after('<div id="availability-status" class="form-text fw-bold mt-1"></div>');
@@ -187,17 +188,19 @@ $(document).ready(function() {
         const fecha = $fecha.val();
         const hora = $hora.val();
         const consultorio = $consultorio.val();
+        const terapeuta = $terapeuta.length ? $terapeuta.val() : '';
 
         if (fecha && hora && consultorio) {
             $.get('/api/verificar-disponibilidad/', {
                 'fecha': fecha,
                 'hora': hora,
-                'consultorio': consultorio
+                'consultorio': consultorio,
+                'terapeuta': terapeuta
             }, function(data) {
                 if (data.available) {
                     $status.html('<span class="text-success">' + data.msg + '</span>');
                 } else {
-                    $status.html('<span class="text-muted">' + data.msg + '</span>');
+                    $status.html('<span class="text-danger">' + data.msg + '</span>');
                 }
             });
         }
@@ -212,6 +215,7 @@ $(document).ready(function() {
     $fecha.on('change', checkAvailability);
     $hora.on('change', checkAvailability);
     $consultorio.on('change', checkAvailability);
+    $terapeuta.on('change', checkAvailability);
 });
 
 // Script global: Desactivar validación HTML5 en TODOS los formularios
@@ -265,4 +269,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
+{% block after_body %}{% endblock %}
 </html>

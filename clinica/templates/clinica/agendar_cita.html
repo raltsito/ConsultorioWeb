@@ -58,6 +58,7 @@
                     <div class="col-md-6 mb-3">
                         <label>Terapeuta</label>
                         {{ form.terapeuta }}
+                        <div id="bloqueo-terapeuta-status" class="form-text fw-bold mt-1"></div>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label>Servicio</label>
@@ -104,6 +105,9 @@
             // Script defensivo - remover TODA validación
             const form = document.querySelector('form');
             const submitBtn = document.querySelector('button[type="submit"]');
+            const $fecha = $('#id_fecha');
+            const $terapeuta = $('#id_terapeuta');
+            const $status = $('#bloqueo-terapeuta-status');
             
             // Desactivar validación HTML5 nativa
             if (form) {
@@ -159,6 +163,29 @@
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('disabled');
             }, 200);
+
+            function revisarBloqueo() {
+                const fecha = $fecha.val();
+                const terapeuta = $terapeuta.val();
+                if (!fecha || !terapeuta) {
+                    $status.html('');
+                    return;
+                }
+
+                $.get('/api/disponibilidad-terapeuta/', { fecha: fecha, terapeuta: terapeuta }, function(data) {
+                    if (data.bloqueado) {
+                        $status.html('<span class="text-danger">' + data.mensaje + '</span>');
+                    } else {
+                        $status.html('');
+                    }
+                }).fail(function() {
+                    $status.html('');
+                });
+            }
+
+            $fecha.on('change', revisarBloqueo);
+            $terapeuta.on('change', revisarBloqueo);
+            revisarBloqueo();
         });
     </script>
 

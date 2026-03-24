@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Paciente, Cita, Terapeuta, Consultorio, Division, Servicio
+from .models import Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta
 from .models import Horario
 
 admin.site.register(Terapeuta)
@@ -22,3 +22,10 @@ admin.site.register(Cita, CitaAdmin)
 class HorarioAdmin(admin.ModelAdmin):
     list_display = ('terapeuta', 'dia', 'hora_inicio', 'hora_fin')
     list_filter = ('terapeuta', 'dia')
+
+
+@admin.register(BloqueoAgendaTerapeuta)
+class BloqueoAgendaTerapeutaAdmin(admin.ModelAdmin):
+    list_display = ('terapeuta', 'tipo_bloqueo', 'fecha_inicio', 'fecha_fin', 'activo')
+    list_filter = ('tipo_bloqueo', 'activo', 'terapeuta')
+    search_fields = ('terapeuta__nombre', 'motivo')

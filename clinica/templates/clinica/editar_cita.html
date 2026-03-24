@@ -52,6 +52,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">Terapeuta</label>
                                 {{ form.terapeuta }}
+                                <div id="bloqueo-terapeuta-status" class="form-text fw-bold mt-1"></div>
                             </div>
 
                             <div class="col-md-6">
@@ -120,6 +121,9 @@
         const $paciente = $('#id_paciente');
         const $servicio = $('#id_servicio');
         const $pacientesExtra = $('#id_pacientes_extra');
+        const $fecha = $('#id_fecha');
+        const $terapeuta = $('#id_terapeuta');
+        const $bloqueoStatus = $('#bloqueo-terapeuta-status');
 
         $paciente.select2({ width: '100%', placeholder: 'Paciente principal' });
         $pacientesExtra.select2({
@@ -152,6 +156,28 @@
         $paciente.on('change', cargarRelacionados);
         $servicio.on('change', cargarRelacionados);
         cargarRelacionados();
+
+        function revisarBloqueo() {
+            const fecha = $fecha.val();
+            const terapeuta = $terapeuta.val();
+            if (!fecha || !terapeuta) {
+                $bloqueoStatus.html('');
+                return;
+            }
+
+            $.get('/api/disponibilidad-terapeuta/', { fecha: fecha, terapeuta: terapeuta }, function(data) {
+                if (data.bloqueado) {
+                    $bloqueoStatus.html('<span class="text-danger">' + data.mensaje + '</span>');
+                } else {
+                    $bloqueoStatus.html('');
+                }
+            }).fail(function() {
+                $bloqueoStatus.html('');
+            });
+        }
+        $fecha.on('change', revisarBloqueo);
+        $terapeuta.on('change', revisarBloqueo);
+        revisarBloqueo();
         
         // Desactivar validación HTML5
         if (form) {

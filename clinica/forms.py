@@ -1,6 +1,76 @@
 from django import forms
+from django.core.exceptions import ValidationError
 
-from .models import Cita, Paciente
+from .models import (
+    BloqueoAgendaTerapeuta,
+    Cita,
+    Paciente,
+    ReglaTerapeuta,
+    TabuladorGeneral,
+    obtener_bloqueo_terapeuta_en_fecha,
+)
+
+
+class CheckoutCitaForm(forms.Form):
+    """
+    Formulario de cierre de sesión para el portal del terapeuta.
+    Actualiza la Cita (estatus, metodo_pago, costo) y opcionalmente
+    crea una SolicitudCita de seguimiento.
+    """
+    estatus = forms.ChoiceField(
+        choices=[
+            ('si_asistio',  'Sí asistió'),
+            ('no_asistio',  'No asistió'),
+            ('cancelo',     'Canceló'),
+            ('incidencia',  'Incidencia'),
+        ],
+        widget=forms.HiddenInput(),
+        label='Resultado de la sesión',
+    )
+    metodo_pago = forms.ChoiceField(
+        choices=[('', '— Sin pago —')] + Cita.PAGO_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Método de Pago',
+    )
+    costo = forms.DecimalField(
+        required=False,
+        min_value=0,
+        max_digits=10,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '0.00',
+            'step': '0.01',
+        }),
+        label='Monto cobrado al paciente ($)',
+    )
+    solicitar_siguiente = forms.BooleanField(required=False, label='Solicitar próxima cita')
+    siguiente_fecha = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        label='Fecha propuesta',
+    )
+    siguiente_hora = forms.TimeField(
+        required=False,
+        widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+        label='Hora propuesta',
+    )
+    notas_recepcion = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'Ej: Necesita consultorio 1, prefiere las mañanas...',
+        }),
+        label='Comentarios para Recepción',
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('solicitar_siguiente') and not cleaned_data.get('siguiente_fecha'):
+            self.add_error('siguiente_fecha', 'Indica la fecha propuesta para la próxima cita.')
+        return cleaned_data
 class PacienteForm(forms.ModelForm):
     class Meta:
         model = Paciente
@@ -80,16 +150,138 @@ class CitaForm(forms.ModelForm):
                 del field.widget.attrs['required']
 
     def clean_pacientes_extra(self):
+
         pacientes_extra = self.cleaned_data.get('pacientes_extra')
         paciente_principal = self.cleaned_data.get('paciente')
         if paciente_principal and pacientes_extra:
             pacientes_extra = pacientes_extra.exclude(pk=paciente_principal.pk)
         return pacientes_extra
 
-    ##def clean(self):
-        ##cleaned_data = super().clean()
-        
-        # Validaciones restrictivas eliminadas. 
-        # El sistema ahora permite agendar y empalmar citas sin bloqueos.
-        
-        ##return cleaned_data
+    def clean(self):
+        cleaned_data = super().clean()
+        terapeuta = cleaned_data.get('terapeuta')
+        fecha = cleaned_data.get('fecha')
+
+        if terapeuta and fecha:
+            bloqueo = obtener_bloqueo_terapeuta_en_fecha(terapeuta.id, fecha)
+            if bloqueo:
+                mensaje = bloqueo.mensaje_bloqueo()
+                self.add_error('fecha', mensaje)
+                self.add_error('terapeuta', 'Este terapeuta tiene esa fecha bloqueada.')
+                raise ValidationError(mensaje)
+
+        return cleaned_data
+
+
+class BloqueoAgendaTerapeutaForm(forms.ModelForm):
+    class Meta:
+        model = BloqueoAgendaTerapeuta
+        fields = ['tipo_bloqueo', 'fecha_inicio', 'fecha_fin', 'motivo']
+        widgets = {
+            'tipo_bloqueo': forms.Select(attrs={'class': 'form-select'}),
+            'fecha_inicio': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha_fin': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'motivo': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Ej. vacaciones, incapacidad, curso, bloqueo indefinido',
+                }
+            ),
+        }
+        labels = {
+            'tipo_bloqueo': 'Tipo de bloqueo',
+            'fecha_inicio': 'Fecha inicial',
+            'fecha_fin': 'Fecha final',
+            'motivo': 'Motivo',
+        }
+
+
+# =============================================================================
+# FORMULARIOS DE TABULADORES (Misión 2)
+# =============================================================================
+
+class TabuladorGeneralForm(forms.ModelForm):
+    class Meta:
+        model = TabuladorGeneral
+        fields = [
+            "descripcion",
+            "pago_base",
+            "pago_consultorio_propio",
+            "bono_monto",
+            "bono_umbral_pacientes",
+        ]
+        widgets = {
+            "descripcion": forms.Textarea(attrs={
+                "class": "form-control", "rows": 2,
+            }),
+            "pago_base": forms.NumberInput(attrs={
+                "class": "form-control", "step": "0.01", "min": "0",
+            }),
+            "pago_consultorio_propio": forms.NumberInput(attrs={
+                "class": "form-control", "step": "0.01", "min": "0",
+            }),
+            "bono_monto": forms.NumberInput(attrs={
+                "class": "form-control", "step": "0.01", "min": "0",
+            }),
+            "bono_umbral_pacientes": forms.NumberInput(attrs={
+                "class": "form-control", "min": "1", "step": "1",
+            }),
+        }
+        labels = {
+            "descripcion":             "Perfil / Descripción",
+            "pago_base":               "Pago Base (consultorio INTRA)",
+            "pago_consultorio_propio": "Pago Consultorio Propio",
+            "bono_monto":              "Monto del Bono",
+            "bono_umbral_pacientes":   "Meta de Pacientes para Bono",
+        }
+
+
+class ReglaTerapeutaForm(forms.ModelForm):
+    class Meta:
+        model = ReglaTerapeuta
+        fields = [
+            "pago_por_sesion",
+            "pago_individual",
+            "pago_pareja",
+            "pago_consultorio_propio",
+            "bono_umbral_monto",
+            "bono_umbral_pacientes",
+            "bono_por_paciente",
+            "notas",
+        ]
+        widgets = {
+            "pago_por_sesion": forms.NumberInput(attrs={
+                "class": "form-control", "step": "0.01", "min": "0",
+            }),
+            "pago_individual": forms.NumberInput(attrs={
+                "class": "form-control", "step": "0.01", "min": "0",
+            }),
+            "pago_pareja": forms.NumberInput(attrs={
+                "class": "form-control", "step": "0.01", "min": "0",
+            }),
+            "pago_consultorio_propio": forms.NumberInput(attrs={
+                "class": "form-control", "step": "0.01", "min": "0",
+            }),
+            "bono_umbral_monto": forms.NumberInput(attrs={
+                "class": "form-control", "step": "0.01", "min": "0",
+            }),
+            "bono_umbral_pacientes": forms.NumberInput(attrs={
+                "class": "form-control", "min": "1", "step": "1",
+            }),
+            "bono_por_paciente": forms.NumberInput(attrs={
+                "class": "form-control", "step": "0.01", "min": "0",
+            }),
+            "notas": forms.Textarea(attrs={
+                "class": "form-control", "rows": 2,
+            }),
+        }
+        labels = {
+            "pago_por_sesion":       "Pago por Sesión (tarifa plana)",
+            "pago_individual":       "Pago Sesión Individual",
+            "pago_pareja":           "Pago Sesión Pareja / Familiar",
+            "pago_consultorio_propio": "Pago Consultorio Propio",
+            "bono_umbral_monto":     "Monto del Bono (umbral)",
+            "bono_umbral_pacientes": "Meta de Pacientes para Bono",
+            "bono_por_paciente":     "Bono por Paciente (supervisor)",
+            "notas":                 "Notas Operativas",
+        }
