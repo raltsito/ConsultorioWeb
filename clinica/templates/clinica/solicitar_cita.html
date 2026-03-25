@@ -47,6 +47,16 @@
                             </select>
                         </div>
 
+                        <div class="mb-3">
+                            <label for="consultorio" class="form-label text-muted fw-semibold">Consultorio (Opcional)</label>
+                            <select class="form-select form-select-lg bg-light" id="consultorio" name="consultorio">
+                                <option value="">Sin preferencia</option>
+                                {% for c in consultorios %}
+                                    <option value="{{ c.id }}">{{ c.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
                         <div class="mb-4">
                             <label for="notas_paciente" class="form-label text-muted fw-semibold">Motivo de consulta o comentario</label>
                             <textarea class="form-control bg-light" id="notas_paciente" name="notas_paciente" rows="3" placeholder="Ej. Cita de seguimiento, etc."></textarea>

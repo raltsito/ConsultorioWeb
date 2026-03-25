@@ -1,0 +1,344 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <p class="reporte-eyebrow">Panel de Recepción</p>
+        <h2 class="reporte-title">
+            <i class="bi bi-bar-chart-line me-2"></i>Reporte General
+        </h2>
+        <p class="reporte-subtitle">
+            Historial de {{ fecha_inicio|date:"d/m/Y" }} al {{ fecha_fin|date:"d/m/Y" }}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'bitacora_diaria' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-journal-text me-1"></i>Bitácora Diaria
+        </a>
+    </div>
+</div>
+
+<div class="filtros-panel mb-4">
+    <form method="get" class="row g-3 align-items-end">
+
+        <div class="col-sm-6 col-lg-3">
+            <label class="form-label small fw-semibold text-secondary">Fecha inicio</label>
+            <input type="date" name="fecha_inicio" value="{{ fecha_inicio_iso }}"
+                   class="form-control form-control-sm">
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <label class="form-label small fw-semibold text-secondary">Fecha fin</label>
+            <input type="date" name="fecha_fin" value="{{ fecha_fin_iso }}"
+                   class="form-control form-control-sm">
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <label class="form-label small fw-semibold text-secondary">Terapeuta</label>
+            <select name="terapeuta_id" class="form-select form-select-sm">
+                <option value="">— Todos —</option>
+                {% for t in terapeutas %}
+                <option value="{{ t.id }}" {% if terapeuta_id_sel == t.id|stringformat:"s" %}selected{% endif %}>
+                    {{ t.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 flex-grow-1">
+                    <i class="bi bi-funnel me-1"></i>Filtrar
+                </button>
+                <a href="{% url 'reporte_general' %}" class="btn btn-light btn-sm border rounded-pill px-3" title="Limpiar filtros">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+
+    <div class="d-flex flex-wrap gap-3">
+        <div class="reporte-stat">
+            <span class="reporte-stat-val">{{ total }}</span>
+            <span class="reporte-stat-lbl">citas totales</span>
+        </div>
+        <div class="reporte-stat reporte-stat--success">
+            <span class="reporte-stat-val">{{ asistieron }}</span>
+            <span class="reporte-stat-lbl">asistieron</span>
+        </div>
+        <div class="reporte-stat reporte-stat--gold">
+            <span class="reporte-stat-val">${{ monto_total|floatformat:0 }}</span>
+            <span class="reporte-stat-lbl">ingreso total</span>
+        </div>
+    </div>
+
+    <a href="?fecha_inicio={{ fecha_inicio_iso }}&fecha_fin={{ fecha_fin_iso }}&terapeuta_id={{ terapeuta_id_sel }}&export=xlsx"
+       class="btn btn-exportar">
+        <i class="bi bi-file-earmark-excel me-2"></i>Exportar a Excel
+    </a>
+
+</div>
+
+<div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+    <div class="card-header bg-white border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-table me-2 text-primary"></i>Resultados del filtro
+        </h5>
+        <span class="badge bg-light text-dark border">{{ total }} registro{{ total|pluralize }}</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table id="tablaReporte" class="table table-hover align-middle mb-0 tabla-reporte">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        <th class="text-center">Tipo</th>
+                        <th>Paciente</th>
+                        <th>Terapeuta</th>
+                        <th>Servicio</th>
+                        <th>División</th>
+                        <th>Consultorio</th>
+                        <th>Estatus</th>
+                        <th>Método Pago</th>
+                        <th class="text-end">Costo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cita in citas %}
+                    <tr>
+                        <td style="white-space:nowrap;" class="text-secondary">{{ cita.fecha|date:"d/m/Y" }}</td>
+
+                        <td class="fw-bold text-primary" style="white-space:nowrap;">
+                            {{ cita.hora|time:"H:i" }}
+                        </td>
+
+                        <td class="text-center">
+                            {% if cita.tipo_paciente == 'N' %}
+                                <span class="badge bg-warning text-dark" title="Nuevo">N</span>
+                            {% elif cita.tipo_paciente == 'R' %}
+                                <span class="badge bg-primary" title="Referido">R</span>
+                            {% else %}
+                                <span class="badge bg-info text-dark" title="Seguimiento">S</span>
+                            {% endif %}
+                        </td>
+
+                        <td style="min-width:160px;">
+                            {% if cita.paciente_id %}
+                            <a href="{% url 'detalle_paciente' cita.paciente.id %}"
+                               class="fw-semibold text-dark text-decoration-none link-hover">
+                                {{ cita.titulo_cita }}
+                            </a>
+                            {% else %}
+                            <span class="text-muted">{{ cita.titulo_cita }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-secondary">{{ cita.terapeuta|default:"—" }}</td>
+
+                        <td><span class="small text-muted">{{ cita.servicio|default:"—" }}</span></td>
+
+                        <td><span class="small text-muted">{{ cita.division|default:"—" }}</span></td>
+
+                        <td>
+                            <span class="badge bg-light text-dark border small">{{ cita.consultorio|default:"—" }}</span>
+                        </td>
+
+                        <td style="white-space:nowrap;">
+                            {% if cita.estatus == 'si_asistio' %}
+                                <span class="estatus-pill estatus-pill--success">Asistió</span>
+                            {% elif cita.estatus == 'no_asistio' %}
+                                <span class="estatus-pill estatus-pill--danger">No asistió</span>
+                            {% elif cita.estatus == 'cancelo' %}
+                                <span class="estatus-pill estatus-pill--secondary">Canceló</span>
+                            {% elif cita.estatus == 'incidencia' %}
+                                <span class="estatus-pill estatus-pill--warning">Incidencia</span>
+                            {% elif cita.estatus == 'confirmada' %}
+                                <span class="estatus-pill estatus-pill--primary">Confirmada</span>
+                            {% elif cita.estatus == 'reagendo' %}
+                                <span class="estatus-pill estatus-pill--info">Reagendó</span>
+                            {% else %}
+                                <span class="estatus-pill estatus-pill--light">{{ cita.get_estatus_display }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td><span class="small text-secondary">{{ cita.metodo_pago|default:"—" }}</span></td>
+
+                        <td class="text-end fw-bold">
+                            {% if cita.costo is not None %}
+                                ${{ cita.costo|floatformat:0 }}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if total > 0 and citas %}
+                <tfoot>
+                    <tr class="table-light fw-bold">
+                        <td colspan="10" class="text-end px-4 text-secondary small">
+                            Ingreso total (sesiones completadas):
+                        </td>
+                        <td class="text-end text-success px-4">
+                            ${{ monto_total|floatformat:0 }}
+                        </td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* ── Header ── */
+    .reporte-eyebrow {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #26C6DA;
+        margin-bottom: 0.15rem;
+    }
+    .reporte-title {
+        font-family: 'Poppins', sans-serif;
+        font-weight: 700;
+        color: #263238;
+        font-size: 1.8rem;
+        margin-bottom: 0.1rem;
+    }
+    .reporte-subtitle { color: #78909C; font-size: 0.95rem; margin-bottom: 0; }
+
+    /* ── Panel de filtros ── */
+    .filtros-panel {
+        background: #fff;
+        border-radius: 1rem;
+        padding: 1.25rem 1.5rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+        border: 1px solid #F0F4F8;
+    }
+
+    /* ── Stats ── */
+    .reporte-stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: #F8FBFD;
+        border: 1px solid #E0E7EF;
+        border-radius: 0.75rem;
+        padding: 0.6rem 1.2rem;
+        min-width: 100px;
+    }
+    .reporte-stat--success { border-color: #C8E6C9; background: #F1F8E9; }
+    .reporte-stat--gold    { border-color: #FFE0B2; background: #FFF8F0; }
+    .reporte-stat-val {
+        font-family: 'Poppins', sans-serif;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #263238;
+        line-height: 1;
+    }
+    .reporte-stat-lbl { font-size: 0.72rem; color: #90A4AE; margin-top: 0.15rem; }
+
+    /* ── Botón exportar ── */
+    .btn-exportar {
+        background: linear-gradient(135deg, #43A047, #2E7D32);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        font-weight: 600;
+        padding: 0.55rem 1.4rem;
+        font-size: 0.9rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        box-shadow: 0 4px 14px rgba(67,160,71,0.35);
+        transition: all 0.25s;
+    }
+    .btn-exportar:hover {
+        color: white;
+        background: linear-gradient(135deg, #388E3C, #1B5E20);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(67,160,71,0.45);
+    }
+
+    /* ── Tabla ── */
+    .tabla-reporte thead th {
+        background: #F0F4F8;
+        color: #546E7A;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border-bottom: 2px solid #E0E7EF;
+        padding: 0.85rem 1rem;
+        white-space: nowrap;
+    }
+    .tabla-reporte tbody td {
+        padding: 0.7rem 1rem;
+        border-bottom: 1px solid #F0F4F8;
+        font-size: 0.88rem;
+        vertical-align: middle;
+    }
+    .tabla-reporte tbody tr:hover { background: #FAFCFF; }
+    .tabla-reporte tfoot td { padding: 0.75rem 1rem; border-top: 2px solid #E0E7EF; }
+
+    /* Estatus pills (reutilizadas de bitácora) */
+    .estatus-pill {
+        display: inline-flex; align-items: center;
+        padding: 0.2rem 0.6rem;
+        border-radius: 50px; font-size: 0.75rem; font-weight: 600;
+    }
+    .estatus-pill--success  { background: #E8F5E9; color: #2E7D32; }
+    .estatus-pill--danger   { background: #FFEBEE; color: #C62828; }
+    .estatus-pill--warning  { background: #FFF8E1; color: #E65100; }
+    .estatus-pill--secondary{ background: #ECEFF1; color: #546E7A; }
+    .estatus-pill--primary  { background: #E3F2FD; color: #1565C0; }
+    .estatus-pill--info     { background: #E0F7FA; color: #006064; }
+    .estatus-pill--light    { background: #F5F5F5; color: #757575; }
+
+    .link-hover:hover { color: #26C6DA !important; }
+
+    /* DataTables overrides */
+    div.dataTables_wrapper div.dataTables_filter input { border-radius: 50px; padding: 0.3rem 0.8rem; }
+    div.dataTables_wrapper div.dataTables_length select { border-radius: 8px; }
+    div.dataTables_info { font-size: 0.82rem; color: #90A4AE; }
+    div.dataTables_paginate .paginate_button { border-radius: 8px !important; }
+    div.dataTables_paginate .paginate_button.current {
+        background: #26C6DA !important;
+        color: white !important;
+        border-color: #26C6DA !important;
+    }
+</style>
+
+{% endblock %}
+
+
+{% block after_body %}
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script>
+$(document).ready(function () {
+    $('#tablaReporte').DataTable({
+        language: {
+            url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+            emptyTable: 'No hay citas para el rango y filtros seleccionados.',
+        },
+        pageLength: 50,
+        order: [[0, 'desc'], [1, 'asc']],   // Más reciente primero
+        columnDefs: [
+            { type: 'date-eu', targets: 0 },   // Columna fecha — orden correcto dd/mm/yyyy
+        ],
+        dom: '<"d-flex justify-content-between align-items-center px-4 py-3 flex-wrap gap-2"lf>t<"d-flex justify-content-between align-items-center px-4 py-2 flex-wrap"ip>',
+    });
+});
+</script>
+{% endblock %}

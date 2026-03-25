@@ -14,3 +14,6 @@ staticfiles/
 # OS/editor
 .DS_Store
 Thumbs.db
+
+# Respaldos de base de datos
+*.dump

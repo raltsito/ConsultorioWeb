@@ -1,0 +1,646 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+
+<!-- MENSAJES -->
+{% if messages %}
+<div class="mb-3">
+    {% for msg in messages %}
+    <div class="alert alert-{% if msg.tags == 'success' %}success{% elif msg.tags == 'error' %}danger{% else %}info{% endif %} alert-dismissible fade show border-0 rounded-3 d-flex align-items-center gap-2" role="alert">
+        <i class="bi bi-{% if msg.tags == 'success' %}check-circle-fill{% elif msg.tags == 'error' %}x-circle-fill{% else %}info-circle-fill{% endif %}"></i>
+        <span>{{ msg }}</span>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- HEADER -->
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <a href="{% url 'nomina_lista' %}"
+           class="text-decoration-none text-muted small d-inline-flex align-items-center gap-1 mb-2">
+            <i class="bi bi-arrow-left"></i> Volver a Nómina
+        </a>
+        <p class="nom-eyebrow">Administración · Control Financiero</p>
+        <h2 class="nom-title"><i class="bi bi-sliders me-2"></i>Configurar Tabuladores</h2>
+        <p class="text-muted small mb-0">
+            Reglas de pago oficiales extraídas del documento
+            <strong>Relacionserviciosytabuladores.docx</strong>.
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2 mt-2">
+        <span class="badge-resumen">
+            <i class="bi bi-grid-3x3-gap me-1"></i>{{ categorias|length }} categorías
+        </span>
+        <span class="badge-resumen badge-resumen--teal">
+            <i class="bi bi-person-badge me-1"></i>{{ reglas|length }} profesionales
+        </span>
+    </div>
+</div>
+
+<!-- TABS -->
+<ul class="nav nav-tabs tab-nomina mb-0" id="tabsTabulador" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active fw-semibold" id="tab-general-btn"
+                data-bs-toggle="tab" data-bs-target="#tabGeneral"
+                type="button" role="tab">
+            <i class="bi bi-grid-3x3-gap me-1"></i>Tabulador General
+            <span class="tab-count">{{ categorias|length }}</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link fw-semibold" id="tab-individual-btn"
+                data-bs-toggle="tab" data-bs-target="#tabIndividual"
+                type="button" role="tab">
+            <i class="bi bi-person-badge me-1"></i>Tabuladores Individuales
+            <span class="tab-count tab-count--teal">{{ reglas|length }}</span>
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="tabsTabuladorContent">
+
+    <!-- TAB 1: TABULADOR GENERAL -->
+    <div class="tab-pane fade show active" id="tabGeneral" role="tabpanel">
+        <div class="card shadow-sm border-0 rounded-bottom-4 overflow-hidden">
+            <div class="card-header bg-white border-bottom px-4 py-3">
+                <p class="text-muted small mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Categorías base del tabulador. Aplican a terapeutas que <strong>no</strong> tienen
+                    una regla individual definida, o sirven como referencia categórica.
+                </p>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 tabla-tabulador">
+                        <thead>
+                            <tr>
+                                <th style="width:56px">Cat.</th>
+                                <th>Perfil de formación</th>
+                                <th class="text-end">Pago Base<br><small class="fw-normal text-muted">INTRA</small></th>
+                                <th class="text-end">C. Propio</th>
+                                <th class="text-end">Bono</th>
+                                <th class="text-center">Meta pac.</th>
+                                <th class="text-center" style="width:100px">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cat in categorias %}
+                            <tr>
+                                <td class="text-center">
+                                    <span class="cat-badge">{{ cat.numero }}</span>
+                                </td>
+                                <td class="text-muted small" style="max-width:340px">
+                                    {{ cat.descripcion }}
+                                </td>
+                                <td class="text-end font-monospace fw-bold text-dark">
+                                    ${{ cat.pago_base|floatformat:0 }}
+                                </td>
+                                <td class="text-end font-monospace text-secondary">
+                                    {% if cat.pago_consultorio_propio %}
+                                        ${{ cat.pago_consultorio_propio|floatformat:0 }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end font-monospace">
+                                    {% if cat.bono_monto %}
+                                        <span class="text-info fw-semibold">${{ cat.bono_monto|floatformat:0 }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if cat.bono_umbral_pacientes %}
+                                        <span class="badge bg-light text-dark border rounded-pill px-2">
+                                            c/{{ cat.bono_umbral_pacientes }} pac.
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-primary rounded-pill btn-editar-cat"
+                                        data-id="{{ cat.id }}"
+                                        data-numero="{{ cat.numero }}"
+                                        data-descripcion="{{ cat.descripcion|escapejs }}"
+                                        data-pago_base="{{ cat.pago_base }}"
+                                        data-pago_consultorio_propio="{{ cat.pago_consultorio_propio|default:'' }}"
+                                        data-bono_monto="{{ cat.bono_monto|default:'' }}"
+                                        data-bono_umbral_pacientes="{{ cat.bono_umbral_pacientes|default:'' }}"
+                                        data-url="{% url 'tabuladores_editar_categoria' cat.id %}"
+                                        data-bs-toggle="modal" data-bs-target="#modalCategoria">
+                                        <i class="bi bi-pencil me-1"></i>Editar
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: TABULADORES INDIVIDUALES -->
+    <div class="tab-pane fade" id="tabIndividual" role="tabpanel">
+        <div class="card shadow-sm border-0 rounded-bottom-4 overflow-hidden">
+            <div class="card-header bg-white border-bottom px-4 py-3">
+                <p class="text-muted small mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Reglas individuales. Sus valores <strong>reemplazan</strong> al tabulador general
+                    para ese terapeuta. La prioridad es: Pareja → Individual → Por Sesión → Tabulador Base.
+                </p>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 tabla-tabulador">
+                        <thead>
+                            <tr>
+                                <th>Terapeuta</th>
+                                <th class="text-end">Por Sesión</th>
+                                <th class="text-end">Individual</th>
+                                <th class="text-end">Pareja</th>
+                                <th class="text-end">Bono Umbral</th>
+                                <th class="text-center">Meta pac.</th>
+                                <th class="text-end">Bono/Pac.<br><small class="fw-normal text-muted">supervisor</small></th>
+                                <th class="text-center" style="width:100px">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for regla in reglas %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="terapeuta-avatar">
+                                            {{ regla.terapeuta.nombre|slice:":1"|upper }}
+                                        </div>
+                                        <div>
+                                            <span class="fw-semibold text-dark">
+                                                {{ regla.terapeuta.nombre }}
+                                            </span>
+                                            {% if regla.notas %}
+                                            <div class="nota-truncada" title="{{ regla.notas }}">
+                                                {{ regla.notas }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-end font-monospace">
+                                    {% if regla.pago_por_sesion %}
+                                        <span class="fw-bold text-dark">${{ regla.pago_por_sesion|floatformat:0 }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end font-monospace">
+                                    {% if regla.pago_individual %}
+                                        <span class="text-success fw-semibold">${{ regla.pago_individual|floatformat:0 }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end font-monospace">
+                                    {% if regla.pago_pareja %}
+                                        <span class="text-success fw-semibold">${{ regla.pago_pareja|floatformat:0 }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end font-monospace">
+                                    {% if regla.bono_umbral_monto %}
+                                        <span class="text-info fw-semibold">${{ regla.bono_umbral_monto|floatformat:0 }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if regla.bono_umbral_pacientes %}
+                                        <span class="badge bg-light text-dark border rounded-pill px-2">
+                                            c/{{ regla.bono_umbral_pacientes }} pac.
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end font-monospace">
+                                    {% if regla.bono_por_paciente %}
+                                        <span class="text-warning fw-bold">${{ regla.bono_por_paciente|floatformat:0 }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-primary rounded-pill btn-editar-regla"
+                                        data-nombre="{{ regla.terapeuta.nombre|escapejs }}"
+                                        data-pago_por_sesion="{{ regla.pago_por_sesion|default:'' }}"
+                                        data-pago_individual="{{ regla.pago_individual|default:'' }}"
+                                        data-pago_pareja="{{ regla.pago_pareja|default:'' }}"
+                                        data-pago_consultorio_propio="{{ regla.pago_consultorio_propio|default:'' }}"
+                                        data-bono_umbral_monto="{{ regla.bono_umbral_monto|default:'' }}"
+                                        data-bono_umbral_pacientes="{{ regla.bono_umbral_pacientes|default:'' }}"
+                                        data-bono_por_paciente="{{ regla.bono_por_paciente|default:'' }}"
+                                        data-notas="{{ regla.notas|default:''|escapejs }}"
+                                        data-url="{% url 'tabuladores_editar_regla' regla.id %}"
+                                        data-bs-toggle="modal" data-bs-target="#modalRegla">
+                                        <i class="bi bi-pencil me-1"></i>Editar
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /tab-content -->
+
+
+<!-- MODAL: EDITAR CATEGORIA GENERAL -->
+<div class="modal fade" id="modalCategoria" tabindex="-1"
+     aria-labelledby="modalCategoriaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form method="post" id="formCategoria" action="#">
+                {% csrf_token %}
+
+                <div class="modal-header modal-header--blue">
+                    <div>
+                        <p class="modal-eyebrow mb-0">Tabulador General</p>
+                        <h5 class="modal-title fw-bold" id="modalCategoriaLabel">
+                            <i class="bi bi-grid-3x3-gap me-2"></i>
+                            Categoría <span id="cat-num-display"></span>
+                        </h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body px-4 py-4">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Perfil / Descripción
+                        </label>
+                        <textarea class="form-control" name="descripcion"
+                                  id="cat-descripcion" rows="2" required></textarea>
+                    </div>
+
+                    <div class="modal-section-label">
+                        <i class="bi bi-currency-dollar me-1"></i>Pagos
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                Pago Base (consultorio INTRA)
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control"
+                                       name="pago_base" id="cat-pago_base"
+                                       step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                Pago Consultorio Propio
+                                <small class="text-muted fw-normal">(opcional)</small>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control"
+                                       name="pago_consultorio_propio"
+                                       id="cat-pago_consultorio_propio"
+                                       step="0.01" min="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-section-label">
+                        <i class="bi bi-star me-1"></i>Bono de Volumen
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                Monto del Bono
+                                <small class="text-muted fw-normal">(opcional)</small>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control"
+                                       name="bono_monto" id="cat-bono_monto"
+                                       step="0.01" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                Meta de Pacientes
+                                <small class="text-muted fw-normal">(opcional)</small>
+                            </label>
+                            <input type="number" class="form-control"
+                                   name="bono_umbral_pacientes"
+                                   id="cat-bono_umbral_pacientes"
+                                   min="1" step="1">
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer border-0 px-4 py-3 bg-light">
+                    <button type="button"
+                            class="btn btn-outline-secondary rounded-pill px-4"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-check2 me-1"></i>Guardar cambios
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- MODAL: EDITAR REGLA INDIVIDUAL -->
+<div class="modal fade" id="modalRegla" tabindex="-1"
+     aria-labelledby="modalReglaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form method="post" id="formRegla" action="#">
+                {% csrf_token %}
+
+                <div class="modal-header modal-header--teal">
+                    <div>
+                        <p class="modal-eyebrow mb-0">Tabulador Individual</p>
+                        <h5 class="modal-title fw-bold" id="modalReglaLabel">
+                            <i class="bi bi-person-badge me-2"></i>
+                            <span id="regla-nombre-display"></span>
+                        </h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body px-4 py-4">
+
+                    <div class="modal-section-label">
+                        <i class="bi bi-currency-dollar me-1"></i>Tarifas por Sesión
+                    </div>
+                    <div class="row g-3 mb-1">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Por Sesión
+                                <small class="text-muted fw-normal">(tarifa plana)</small>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control"
+                                       name="pago_por_sesion"
+                                       id="regla-pago_por_sesion"
+                                       step="0.01" min="0" placeholder="—">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Sesión Individual</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control"
+                                       name="pago_individual"
+                                       id="regla-pago_individual"
+                                       step="0.01" min="0" placeholder="—">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Sesión Pareja/Familiar</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control"
+                                       name="pago_pareja"
+                                       id="regla-pago_pareja"
+                                       step="0.01" min="0" placeholder="—">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Consultorio Propio</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control"
+                                       name="pago_consultorio_propio"
+                                       id="regla-pago_consultorio_propio"
+                                       step="0.01" min="0" placeholder="—">
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-muted" style="font-size:0.72rem; margin-top:0.4rem">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Prioridad de resolución:
+                        <strong>Pareja</strong> (si hay paciente adicional) →
+                        <strong>Individual</strong> →
+                        <strong>Por Sesión</strong> →
+                        Tabulador Base.
+                    </p>
+
+                    <div class="modal-section-label mt-3">
+                        <i class="bi bi-star me-1"></i>Bonos Automáticos
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Monto Bono (umbral)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control"
+                                       name="bono_umbral_monto"
+                                       id="regla-bono_umbral_monto"
+                                       step="0.01" min="0" placeholder="—">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Meta Pacientes (umbral)</label>
+                            <input type="number" class="form-control"
+                                   name="bono_umbral_pacientes"
+                                   id="regla-bono_umbral_pacientes"
+                                   min="1" step="1" placeholder="—">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Bono/Paciente
+                                <small class="text-muted fw-normal">(supervisor)</small>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control"
+                                       name="bono_por_paciente"
+                                       id="regla-bono_por_paciente"
+                                       step="0.01" min="0" placeholder="—">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-section-label">
+                        <i class="bi bi-journal-text me-1"></i>Notas Operativas
+                    </div>
+                    <textarea class="form-control" name="notas" id="regla-notas"
+                              rows="2"
+                              placeholder="Observaciones internas (visibles solo para administración)..."></textarea>
+
+                </div>
+
+                <div class="modal-footer border-0 px-4 py-3 bg-light">
+                    <button type="button"
+                            class="btn btn-outline-secondary rounded-pill px-4"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-check2 me-1"></i>Guardar cambios
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- ESTILOS -->
+<style>
+    /* ── Header ── */
+    .nom-eyebrow {
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em;
+        text-transform: uppercase; color: #26C6DA; margin-bottom: 0.1rem;
+    }
+    .nom-title {
+        font-family: 'Poppins', sans-serif; font-weight: 700;
+        color: #1A237E; font-size: 1.9rem; margin-bottom: 0;
+    }
+    .badge-resumen {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        padding: 0.4rem 0.9rem; border-radius: 50px;
+        background: #E3F2FD; color: #1565C0;
+        font-size: 0.8rem; font-weight: 600;
+    }
+    .badge-resumen--teal { background: #E0F7FA; color: #00838F; }
+
+    /* ── Tabs ── */
+    .tab-nomina { border-bottom: 2px solid #E0E7EF; }
+    .tab-nomina .nav-link {
+        color: #78909C; border: none; border-radius: 0;
+        padding: 0.75rem 1.25rem;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s;
+        display: flex; align-items: center; gap: 0.4rem;
+    }
+    .tab-nomina .nav-link:hover { color: #1A237E; background: #F8FAFC; }
+    .tab-nomina .nav-link.active {
+        color: #1A237E; border-bottom-color: #1A237E;
+        background: transparent; font-weight: 700;
+    }
+    .tab-count {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 22px; height: 22px; padding: 0 6px;
+        border-radius: 50px; font-size: 0.72rem; font-weight: 700;
+        background: #E3F2FD; color: #1565C0;
+    }
+    .tab-count--teal { background: #E0F7FA; color: #00838F; }
+
+    /* ── Tabla ── */
+    .tabla-tabulador thead th {
+        background: #F0F4F8; color: #546E7A;
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; border-bottom: 2px solid #E0E7EF;
+        padding: 0.85rem 1rem; white-space: nowrap;
+    }
+    .tabla-tabulador tbody td {
+        padding: 0.8rem 1rem;
+        border-bottom: 1px solid #F5F7FA;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+    .tabla-tabulador tbody tr:hover { background: #FAFCFF; }
+
+    /* ── Avatar + nota truncada ── */
+    .terapeuta-avatar {
+        width: 36px; height: 36px; border-radius: 10px;
+        background: linear-gradient(135deg, #26C6DA, #00ACC1);
+        color: white; font-family: 'Poppins', sans-serif; font-weight: 700;
+        font-size: 1rem; display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .nota-truncada {
+        font-size: 0.7rem; color: #90A4AE;
+        max-width: 220px; white-space: nowrap;
+        overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* ── Cat badge ── */
+    .cat-badge {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 32px; height: 32px; border-radius: 8px;
+        background: #E3F2FD; color: #1565C0;
+        font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 0.9rem;
+    }
+
+    /* ── Modales ── */
+    .modal-header--blue {
+        background: linear-gradient(135deg, #1A237E, #283593);
+        color: white; border: 0; padding: 1.25rem 1.5rem;
+    }
+    .modal-header--teal {
+        background: linear-gradient(135deg, #00838F, #26C6DA);
+        color: white; border: 0; padding: 1.25rem 1.5rem;
+    }
+    .modal-eyebrow {
+        font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em;
+        text-transform: uppercase; opacity: 0.75;
+    }
+    .modal-section-label {
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em;
+        text-transform: uppercase; color: #78909C;
+        border-bottom: 1px solid #E0E7EF;
+        padding-bottom: 0.35rem; margin-bottom: 0.85rem;
+    }
+    .input-group-text { background: #F8FAFC; border-color: #DEE2E6; }
+</style>
+
+{% endblock %}
+
+
+{% block after_body %}
+<script>
+// ── Populate modal Categoría ──────────────────────────────────────────────
+document.getElementById('modalCategoria').addEventListener('show.bs.modal', function (e) {
+    const btn = e.relatedTarget;
+    document.getElementById('cat-num-display').textContent   = btn.dataset.numero;
+    document.getElementById('formCategoria').action          = btn.dataset.url;
+    document.getElementById('cat-descripcion').value         = btn.dataset.descripcion;
+    document.getElementById('cat-pago_base').value           = btn.dataset.pago_base;
+    document.getElementById('cat-pago_consultorio_propio').value = btn.dataset.pago_consultorio_propio;
+    document.getElementById('cat-bono_monto').value          = btn.dataset.bono_monto;
+    document.getElementById('cat-bono_umbral_pacientes').value   = btn.dataset.bono_umbral_pacientes;
+});
+
+// ── Populate modal Regla Individual ──────────────────────────────────────
+document.getElementById('modalRegla').addEventListener('show.bs.modal', function (e) {
+    const btn = e.relatedTarget;
+    document.getElementById('regla-nombre-display').textContent       = btn.dataset.nombre;
+    document.getElementById('formRegla').action                       = btn.dataset.url;
+    document.getElementById('regla-pago_por_sesion').value            = btn.dataset.pago_por_sesion;
+    document.getElementById('regla-pago_individual').value            = btn.dataset.pago_individual;
+    document.getElementById('regla-pago_pareja').value                = btn.dataset.pago_pareja;
+    document.getElementById('regla-pago_consultorio_propio').value    = btn.dataset.pago_consultorio_propio;
+    document.getElementById('regla-bono_umbral_monto').value          = btn.dataset.bono_umbral_monto;
+    document.getElementById('regla-bono_umbral_pacientes').value      = btn.dataset.bono_umbral_pacientes;
+    document.getElementById('regla-bono_por_paciente').value          = btn.dataset.bono_por_paciente;
+    document.getElementById('regla-notas').value                      = btn.dataset.notas;
+});
+</script>
+{% endblock %}

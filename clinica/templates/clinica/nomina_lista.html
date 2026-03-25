@@ -1,0 +1,296 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+
+{# ═══════════════════════════════ HEADER ═══════════════════════════════ #}
+<div class="nomina-header mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+            <p class="nom-eyebrow">Administración · Control Financiero</p>
+            <h2 class="nom-title"><i class="bi bi-cash-coin me-2"></i>Nómina Semanal</h2>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'tabuladores_config' %}" class="btn btn-outline-primary btn-sm rounded-pill px-3 mt-1">
+                <i class="bi bi-sliders me-1"></i>Configurar Tabuladores
+            </a>
+            <a href="{% url 'reporte_general' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 mt-1">
+                <i class="bi bi-bar-chart-line me-1"></i>Reporte General
+            </a>
+        </div>
+    </div>
+
+    {# ── Navegador de semana ── #}
+    <div class="semana-nav mt-3">
+        <a href="{% url 'nomina_lista' %}?fecha_inicio={{ prev_inicio_iso }}&fecha_fin={{ prev_fin_iso }}"
+           class="semana-arrow" title="Semana anterior">
+            <i class="bi bi-chevron-left"></i>
+        </a>
+        <div class="semana-label-wrap">
+            <span class="semana-label">{{ semana_label }}</span>
+            <form method="get" class="d-inline-flex align-items-center gap-2 ms-3">
+                <input type="date" name="fecha_inicio" value="{{ fecha_inicio_iso }}"
+                       class="form-control form-control-sm" style="width:155px;"
+                       onchange="this.form.submit()">
+                <span class="text-muted small">al</span>
+                <input type="date" name="fecha_fin" value="{{ fecha_fin_iso }}"
+                       class="form-control form-control-sm" style="width:155px;"
+                       onchange="this.form.submit()">
+            </form>
+        </div>
+        <a href="{% url 'nomina_lista' %}?fecha_inicio={{ next_inicio_iso }}&fecha_fin={{ next_fin_iso }}"
+           class="semana-arrow" title="Semana siguiente">
+            <i class="bi bi-chevron-right"></i>
+        </a>
+    </div>
+</div>
+
+{# ═══════════════════════════════ STAT CARDS ═══════════════════════════════ #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="nom-stat">
+            <div class="nom-stat-icon nom-ic-blue"><i class="bi bi-people"></i></div>
+            <div>
+                <div class="nom-stat-val">{{ filas|length }}</div>
+                <div class="nom-stat-lbl">Terapeutas activos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="nom-stat">
+            <div class="nom-stat-icon nom-ic-teal"><i class="bi bi-bank"></i></div>
+            <div>
+                <div class="nom-stat-val">${{ total_clinica_global|floatformat:0 }}</div>
+                <div class="nom-stat-lbl">Ingreso clínica</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="nom-stat">
+            <div class="nom-stat-icon nom-ic-gold"><i class="bi bi-cash-stack"></i></div>
+            <div>
+                <div class="nom-stat-val">${{ total_terapeutas_global|floatformat:0 }}</div>
+                <div class="nom-stat-lbl">Total a pagar</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="nom-stat">
+            <div class="nom-stat-icon {% if aprobados == filas|length and filas %}nom-ic-green{% else %}nom-ic-amber{% endif %}">
+                <i class="bi bi-{% if aprobados == filas|length and filas %}shield-check{% else %}hourglass-split{% endif %}"></i>
+            </div>
+            <div>
+                <div class="nom-stat-val">{{ aprobados }}/{{ filas|length }}</div>
+                <div class="nom-stat-lbl">Cortes aprobados</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ═══════════════════════════════ TABLA ═══════════════════════════════ #}
+<div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+    <div class="card-header bg-white border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-table me-2 text-primary"></i>Resumen por Terapeuta
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table id="tablaNomina" class="table table-hover align-middle mb-0 tabla-nomina">
+                <thead>
+                    <tr>
+                        <th>Terapeuta</th>
+                        <th class="text-center">Citas atendidas</th>
+                        <th class="text-end">Ingreso Clínica</th>
+                        <th class="text-end">Total a Pagar</th>
+                        <th class="text-center">Estado Corte</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fila in filas %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="terapeuta-avatar">
+                                    {{ fila.terapeuta.nombre|slice:":1"|upper }}
+                                </div>
+                                <span class="fw-semibold text-dark">{{ fila.terapeuta.nombre }}</span>
+                            </div>
+                        </td>
+
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark border fs-6 px-3">{{ fila.citas_count }}</span>
+                        </td>
+
+                        <td class="text-end font-monospace fw-semibold text-secondary">
+                            ${{ fila.ingreso_clinica|floatformat:0 }}
+                        </td>
+
+                        <td class="text-end">
+                            {% if fila.total_pago is not None %}
+                                <span class="font-monospace fw-bold text-dark fs-6">${{ fila.total_pago|floatformat:2 }}</span>
+                            {% else %}
+                                <span class="text-muted small fst-italic">Sin calcular</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">
+                            {% if not fila.corte %}
+                                <span class="corte-badge corte-badge--none">
+                                    <i class="bi bi-dash-circle me-1"></i>Sin corte
+                                </span>
+                            {% elif fila.corte.estatus == 'borrador' %}
+                                <span class="corte-badge corte-badge--borrador">
+                                    <i class="bi bi-pencil me-1"></i>Borrador
+                                </span>
+                            {% elif fila.corte.estatus == 'aprobado' %}
+                                <span class="corte-badge corte-badge--aprobado">
+                                    <i class="bi bi-shield-check me-1"></i>Aprobado
+                                </span>
+                            {% elif fila.corte.estatus == 'pagado' %}
+                                <span class="corte-badge corte-badge--pagado">
+                                    <i class="bi bi-check2-all me-1"></i>Pagado
+                                </span>
+                            {% else %}
+                                <span class="corte-badge corte-badge--none">—</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">
+                            <a href="{% url 'nomina_detalle' fila.terapeuta.id %}?fecha_inicio={{ fecha_inicio_iso }}&fecha_fin={{ fecha_fin_iso }}"
+                               class="btn btn-sm btn-primary rounded-pill px-3 fw-semibold">
+                                <i class="bi bi-eye me-1"></i>Ver detalle
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if filas %}
+                <tfoot>
+                    <tr class="table-light fw-bold">
+                        <td class="px-4 text-secondary small">TOTALES</td>
+                        <td class="text-center font-monospace text-secondary small">{{ total_citas_global }}</td>
+                        <td class="text-end font-monospace text-secondary">${{ total_clinica_global|floatformat:0 }}</td>
+                        <td class="text-end font-monospace text-success">${{ total_terapeutas_global|floatformat:2 }}</td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<style>
+    /* ── Header ── */
+    .nom-eyebrow {
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em;
+        text-transform: uppercase; color: #26C6DA; margin-bottom: 0.1rem;
+    }
+    .nom-title {
+        font-family: 'Poppins', sans-serif; font-weight: 700;
+        color: #1A237E; font-size: 1.9rem; margin-bottom: 0;
+    }
+
+    /* ── Semana nav ── */
+    .semana-nav {
+        display: flex; align-items: center; gap: 1rem;
+        background: #fff; border-radius: 1rem;
+        padding: 0.75rem 1.25rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+        border: 1px solid #E8EEF4;
+        flex-wrap: wrap;
+    }
+    .semana-arrow {
+        width: 36px; height: 36px; border-radius: 50%;
+        background: #F0F4F8; color: #546E7A;
+        display: flex; align-items: center; justify-content: center;
+        text-decoration: none; transition: all 0.2s; flex-shrink: 0;
+    }
+    .semana-arrow:hover { background: #26C6DA; color: white; }
+    .semana-label-wrap { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+    .semana-label {
+        font-family: 'Poppins', sans-serif; font-weight: 600;
+        color: #263238; font-size: 1rem;
+    }
+
+    /* ── Stat cards ── */
+    .nom-stat {
+        background: #fff; border-radius: 1rem; padding: 1rem 1.25rem;
+        display: flex; align-items: center; gap: 1rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.05); border: 1px solid #F0F4F8;
+    }
+    .nom-stat-icon {
+        width: 46px; height: 46px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.3rem; flex-shrink: 0;
+    }
+    .nom-ic-blue  { background: #E3F2FD; color: #1565C0; }
+    .nom-ic-teal  { background: #E0F7FA; color: #00838F; }
+    .nom-ic-gold  { background: #FFF8E1; color: #F57F17; }
+    .nom-ic-green { background: #E8F5E9; color: #2E7D32; }
+    .nom-ic-amber { background: #FFF3E0; color: #E65100; }
+    .nom-stat-val { font-family: 'Poppins', sans-serif; font-size: 1.5rem; font-weight: 700; line-height: 1; }
+    .nom-stat-lbl { font-size: 0.72rem; color: #90A4AE; margin-top: 0.15rem; }
+
+    /* ── Tabla ── */
+    .tabla-nomina thead th {
+        background: #F0F4F8; color: #546E7A;
+        font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; border-bottom: 2px solid #E0E7EF;
+        padding: 0.9rem 1rem; white-space: nowrap;
+    }
+    .tabla-nomina tbody td { padding: 0.85rem 1rem; border-bottom: 1px solid #F5F7FA; vertical-align: middle; }
+    .tabla-nomina tbody tr:hover { background: #FAFCFF; }
+    .tabla-nomina tfoot td { padding: 0.75rem 1rem; border-top: 2px solid #E0E7EF; font-size: 0.85rem; }
+
+    /* Terapeuta avatar */
+    .terapeuta-avatar {
+        width: 36px; height: 36px; border-radius: 10px;
+        background: linear-gradient(135deg, #26C6DA, #00ACC1);
+        color: white; font-family: 'Poppins', sans-serif; font-weight: 700;
+        font-size: 1rem; display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+
+    /* Corte badges */
+    .corte-badge {
+        display: inline-flex; align-items: center;
+        padding: 0.3rem 0.8rem; border-radius: 50px;
+        font-size: 0.78rem; font-weight: 600;
+    }
+    .corte-badge--none     { background: #F5F5F5; color: #9E9E9E; }
+    .corte-badge--borrador { background: #FFF8E1; color: #F57F17; border: 1px solid #FFE0B2; }
+    .corte-badge--aprobado { background: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9; }
+    .corte-badge--pagado   { background: #E3F2FD; color: #1565C0; border: 1px solid #BBDEFB; }
+
+    /* DataTables */
+    div.dataTables_wrapper div.dataTables_filter input { border-radius: 50px; }
+    div.dataTables_paginate .paginate_button.current {
+        background: #26C6DA !important; color: white !important; border-color: #26C6DA !important;
+    }
+</style>
+
+{% endblock %}
+
+{% block after_body %}
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script>
+$(document).ready(function () {
+    $('#tablaNomina').DataTable({
+        language: {
+            url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+            emptyTable: 'No hay terapeutas con actividad registrada para esta semana.',
+        },
+        pageLength: 25,
+        order: [[0, 'asc']],
+        columnDefs: [{ orderable: false, targets: [5] }],
+        dom: '<"d-flex justify-content-between align-items-center px-4 py-3 flex-wrap gap-2"lf>t<"d-flex justify-content-between px-4 py-2"ip>',
+    });
+});
+</script>
+{% endblock %}

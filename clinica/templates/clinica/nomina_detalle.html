@@ -1,0 +1,432 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+
+{# ═══════════════════════════════ HEADER ═══════════════════════════════ #}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <a href="{% url 'nomina_lista' %}?fecha_inicio={{ fecha_inicio_iso }}&fecha_fin={{ fecha_fin_iso }}"
+           class="text-decoration-none text-muted small d-inline-flex align-items-center gap-1 mb-2">
+            <i class="bi bi-arrow-left"></i> Volver a Nómina Semanal
+        </a>
+        <p class="nom-eyebrow">Desglose de Pago</p>
+        <h2 class="nom-title">{{ terapeuta.nombre }}</h2>
+        <p class="nom-subtitle">{{ semana_label }}</p>
+    </div>
+
+    <div class="d-flex flex-column align-items-end gap-2 mt-2">
+        {# Badge de estatus del corte #}
+        {% if not corte %}
+            <span class="estatus-corte estatus-corte--preview">
+                <i class="bi bi-eye me-1"></i>Vista Previa
+            </span>
+        {% elif corte.estatus == 'borrador' %}
+            <span class="estatus-corte estatus-corte--borrador">
+                <i class="bi bi-pencil-fill me-1"></i>Borrador
+            </span>
+        {% elif corte.estatus == 'aprobado' %}
+            <span class="estatus-corte estatus-corte--aprobado">
+                <i class="bi bi-shield-check-fill me-1"></i>Aprobado
+            </span>
+        {% elif corte.estatus == 'pagado' %}
+            <span class="estatus-corte estatus-corte--pagado">
+                <i class="bi bi-check2-all me-1"></i>Pagado
+            </span>
+        {% endif %}
+
+        {% if corte and corte.estatus == 'aprobado' %}
+        <small class="text-muted">
+            Aprobado el {{ corte.aprobado_en|date:"d/m/Y H:i" }}
+            {% if corte.aprobado_por %}por <strong>{{ corte.aprobado_por.username }}</strong>{% endif %}
+        </small>
+        {% endif %}
+    </div>
+</div>
+
+{# ── Error si no hay ReglaTerapeuta ── #}
+{% if error_preview %}
+<div class="alert alert-warning border-0 rounded-3 d-flex align-items-start gap-3 mb-4">
+    <i class="bi bi-exclamation-triangle-fill fs-4 text-warning flex-shrink-0 mt-1"></i>
+    <div>
+        <strong>No se puede generar el cálculo.</strong><br>
+        {{ error_preview }}<br>
+        <small class="text-muted">Configura la ReglaTerapeuta en el panel de administración Django antes de continuar.</small>
+    </div>
+</div>
+{% endif %}
+
+{# ═══════════════════════════════ ACCIONES PRINCIPALES ═══════════════════════════════ #}
+{% if not corte or corte.estatus == 'borrador' %}
+<div class="accion-bar mb-4">
+
+    {# Botón Generar / Recalcular #}
+    <form method="post" action="{% url 'nomina_calcular' terapeuta.id %}" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="fecha_inicio" value="{{ fecha_inicio_iso }}">
+        <input type="hidden" name="fecha_fin"    value="{{ fecha_fin_iso }}">
+        <button type="submit" class="btn btn-accion-calcular">
+            {% if corte %}
+                <i class="bi bi-arrow-clockwise me-2"></i>Recalcular Corte
+            {% else %}
+                <i class="bi bi-calculator me-2"></i>Generar Borrador
+            {% endif %}
+        </button>
+    </form>
+
+    {# Botón Aprobar — solo si el corte ya existe en borrador #}
+    {% if puede_aprobar %}
+    <button type="button" class="btn btn-accion-aprobar ms-2" data-bs-toggle="modal" data-bs-target="#modalAprobar">
+        <i class="bi bi-shield-check me-2"></i>Aprobar y Sellar Nómina
+    </button>
+    {% endif %}
+
+    {# Exportar Excel — disponible siempre que no haya error de preview #}
+    {% if not error_preview %}
+    <a href="?fecha_inicio={{ fecha_inicio_iso }}&fecha_fin={{ fecha_fin_iso }}&export=xlsx"
+       class="btn btn-accion-excel ms-2">
+        <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
+    </a>
+    {% endif %}
+
+</div>
+{% endif %}
+
+{# ═══════════════════════════════ LAYOUT PRINCIPAL (2 columnas) ═══════════════════════════════ #}
+<div class="row g-4">
+
+    {# ── COLUMNA IZQUIERDA: Detalle de sesiones ── #}
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden h-100">
+            <div class="card-header detalle-header px-4 py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">
+                        <i class="bi bi-list-check me-2"></i>Sesiones Atendidas
+                    </h5>
+                    <span class="badge bg-white text-primary border border-primary-subtle px-3">
+                        {{ lineas_sesion|length }} sesión{{ lineas_sesion|length|pluralize:"es" }}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if lineas_sesion %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 tabla-detalle">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Paciente / Concepto</th>
+                                <th>Servicio</th>
+                                <th class="text-end">Pago Terapeuta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for linea in lineas_sesion %}
+                            <tr>
+                                <td class="text-muted small" style="white-space:nowrap;">
+                                    {% if linea.cita %}
+                                        {{ linea.cita.fecha|date:"d/m" }}
+                                    {% else %}—{% endif %}
+                                </td>
+                                <td class="fw-semibold" style="max-width:200px;">
+                                    {% if linea.cita %}
+                                        {% if linea.cita.paciente %}
+                                            {{ linea.cita.paciente.nombre }}
+                                        {% else %}
+                                            {{ linea.concepto }}
+                                        {% endif %}
+                                    {% else %}
+                                        {{ linea.concepto }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if linea.cita and linea.cita.servicio %}
+                                        <span class="small text-muted">{{ linea.cita.servicio }}</span>
+                                    {% else %}
+                                        <span class="small text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end font-monospace fw-bold text-success">
+                                    ${{ linea.monto|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light">
+                                <td colspan="3" class="text-end fw-semibold text-secondary small px-3">
+                                    Subtotal sesiones:
+                                </td>
+                                <td class="text-end font-monospace fw-bold text-dark px-3">
+                                    ${{ subtotal|floatformat:2 }}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% elif error_preview %}
+                    {# ya mostramos el error arriba #}
+                {% else %}
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-calendar-x fs-1 d-block mb-3 opacity-25"></i>
+                    <p class="mb-0">No hay sesiones atendidas en este periodo.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ── COLUMNA DERECHA: Bonos + BonoExtra form ── #}
+    <div class="col-lg-5">
+
+        {# Card Bonos automáticos #}
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header bonos-header px-4 py-3">
+                <h5 class="fw-bold mb-0 text-warning-emphasis">
+                    <i class="bi bi-star-fill me-2 text-warning"></i>Bonos y Ajustes
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if lineas_bono or bonos_extra %}
+                <ul class="list-group list-group-flush">
+                    {# Bonos automáticos (del motor) #}
+                    {% for bono in lineas_bono %}
+                    <li class="list-group-item px-4 py-3 d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle me-2 small">Auto</span>
+                            <span class="text-dark small">{{ bono.concepto }}</span>
+                        </div>
+                        <span class="font-monospace fw-bold text-warning-emphasis ms-3">+${{ bono.monto|floatformat:2 }}</span>
+                    </li>
+                    {% endfor %}
+                    {# Bonos manuales (BonoExtra) #}
+                    {% for bono in bonos_extra %}
+                    <li class="list-group-item px-4 py-3 d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle me-2 small">Manual</span>
+                            <span class="text-dark small">{{ bono.concepto }}</span>
+                            {% if bono.registrado_por %}
+                            <br><span class="text-muted" style="font-size:0.72rem;">por {{ bono.registrado_por.username }}</span>
+                            {% endif %}
+                        </div>
+                        <span class="font-monospace fw-bold text-info-emphasis ms-3">+${{ bono.monto|floatformat:2 }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="p-4 text-center text-muted small">
+                    <i class="bi bi-dash-circle me-1"></i>Sin bonos para este periodo.
+                </div>
+                {% endif %}
+            </div>
+            {% if total_bonos > 0 %}
+            <div class="card-footer bg-warning-subtle border-0 px-4 py-2 d-flex justify-content-between">
+                <span class="fw-semibold small text-warning-emphasis">Total bonos:</span>
+                <span class="font-monospace fw-bold text-warning-emphasis">+${{ total_bonos|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {# Formulario Agregar Bono Manual — solo si corte en borrador #}
+        {% if puede_editar %}
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-white border-bottom px-4 py-3">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-plus-circle me-2 text-info"></i>Agregar Bono Manual
+                </h6>
+            </div>
+            <div class="card-body px-4 py-3">
+                <form method="post" action="{% url 'nomina_agregar_bono' corte.id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Concepto</label>
+                        <input type="text" name="concepto" class="form-control form-control-sm"
+                               placeholder="Ej: Hora de elaboración de informe" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Monto ($)</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light">$</span>
+                            <input type="number" name="monto" class="form-control"
+                                   placeholder="0.00" step="0.01" min="0.01" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-outline-info rounded-pill px-4 w-100">
+                        <i class="bi bi-plus-lg me-1"></i>Agregar bono
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Card resumen total #}
+        <div class="total-card">
+            <div class="total-card-row">
+                <span class="total-card-label">Subtotal sesiones</span>
+                <span class="total-card-amount">${{ subtotal|floatformat:2 }}</span>
+            </div>
+            <div class="total-card-row">
+                <span class="total-card-label">Total bonos</span>
+                <span class="total-card-amount text-warning-emphasis">+${{ total_bonos|floatformat:2 }}</span>
+            </div>
+            <div class="total-card-divider"></div>
+            <div class="total-card-row total-card-row--total">
+                <span>TOTAL A PAGAR</span>
+                <span class="total-card-total-amount">${{ total_pago|floatformat:2 }}</span>
+            </div>
+            {% if not corte %}
+            <p class="text-muted small text-center mt-2 mb-0 fst-italic">
+                <i class="bi bi-info-circle me-1"></i>Vista previa — haz clic en "Generar Borrador" para guardar.
+            </p>
+            {% endif %}
+        </div>
+
+    </div>{# /col-lg-5 #}
+
+</div>{# /row #}
+
+
+{# ═══════════════════════════════ MODAL CONFIRMAR APROBACIÓN ═══════════════════════════════ #}
+{% if puede_aprobar %}
+<div class="modal fade" id="modalAprobar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header aprobar-header">
+                <div class="text-center w-100">
+                    <div class="aprobar-icon"><i class="bi bi-shield-check"></i></div>
+                    <h4 class="fw-bold mt-3 mb-1">Confirmar Aprobación</h4>
+                    <p class="mb-0 opacity-75 small">Esta acción no se puede deshacer</p>
+                </div>
+            </div>
+            <div class="modal-body text-center px-4 py-4">
+                <p class="text-secondary mb-3">
+                    Estás a punto de <strong>sellar definitivamente</strong> la nómina de
+                    <strong class="text-dark">{{ terapeuta.nombre }}</strong>
+                    por el periodo <strong>{{ semana_label }}</strong>.
+                </p>
+                <div class="total-confirmacion">
+                    <span class="small text-muted d-block">Total aprobado</span>
+                    <span class="fs-2 fw-bold text-success font-monospace">${{ total_pago|floatformat:2 }}</span>
+                </div>
+                <p class="text-muted small mt-3 mb-0">
+                    Una vez aprobado, el corte no puede modificarse.
+                    Solo se puede pasar a estado <em>Pagado</em>.
+                </p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center gap-2 pb-4">
+                <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <form method="post" action="{% url 'nomina_aprobar' corte.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-aprobar-confirmar px-5">
+                        <i class="bi bi-shield-check me-2"></i>Sí, Aprobar y Sellar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
+<style>
+    /* ── Header ── */
+    .nom-eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #26C6DA; margin-bottom: 0.1rem; }
+    .nom-title   { font-family: 'Poppins', sans-serif; font-weight: 700; color: #1A237E; font-size: 1.9rem; margin-bottom: 0.1rem; }
+    .nom-subtitle{ color: #78909C; font-size: 0.95rem; }
+
+    /* Estatus badge grande */
+    .estatus-corte {
+        display: inline-flex; align-items: center;
+        padding: 0.45rem 1.1rem; border-radius: 50px;
+        font-weight: 700; font-size: 0.85rem;
+        font-family: 'Poppins', sans-serif;
+    }
+    .estatus-corte--preview  { background: #E3F2FD; color: #1565C0; border: 1.5px solid #BBDEFB; }
+    .estatus-corte--borrador { background: #FFF8E1; color: #E65100; border: 1.5px solid #FFCC80; }
+    .estatus-corte--aprobado { background: #E8F5E9; color: #1B5E20; border: 1.5px solid #A5D6A7; }
+    .estatus-corte--pagado   { background: #E8EAF6; color: #283593; border: 1.5px solid #9FA8DA; }
+
+    /* Botones de acción */
+    .accion-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+    .btn-accion-calcular {
+        background: #F0F4F8; color: #37474F; border: 1.5px solid #CFD8DC;
+        border-radius: 50px; font-weight: 600; padding: 0.55rem 1.4rem;
+        transition: all 0.2s;
+    }
+    .btn-accion-calcular:hover { background: #CFD8DC; }
+    .btn-accion-aprobar {
+        background: linear-gradient(135deg, #43A047, #1B5E20);
+        color: white; border: none; border-radius: 50px;
+        font-weight: 700; padding: 0.6rem 1.6rem; font-size: 0.95rem;
+        box-shadow: 0 4px 18px rgba(67,160,71,0.4); transition: all 0.25s;
+    }
+    .btn-accion-aprobar:hover {
+        color: white; transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(67,160,71,0.5);
+    }
+    .btn-accion-excel {
+        background: linear-gradient(135deg, #1B8A3A, #145C28);
+        color: white; border: none; border-radius: 50px;
+        font-weight: 600; padding: 0.55rem 1.4rem; font-size: 0.9rem;
+        box-shadow: 0 4px 14px rgba(27,138,58,0.35); transition: all 0.25s;
+    }
+    .btn-accion-excel:hover {
+        color: white; transform: translateY(-2px);
+        box-shadow: 0 8px 22px rgba(27,138,58,0.5);
+    }
+
+    /* Card headers */
+    .detalle-header { background: linear-gradient(135deg, #F0F4F8, #E8EEF5); border-bottom: 1px solid #E0E7EF; }
+    .bonos-header   { background: linear-gradient(135deg, #FFF8E1, #FFFDE7); border-bottom: 1px solid #FFE0B2; }
+
+    /* Tablas internas */
+    .tabla-detalle thead th {
+        background: #F8FBFD; color: #78909C;
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+        border-bottom: 1px solid #E0E7EF; padding: 0.75rem 1rem; white-space: nowrap;
+    }
+    .tabla-detalle tbody td { padding: 0.65rem 1rem; border-bottom: 1px solid #F5F7FA; font-size: 0.88rem; }
+    .tabla-detalle tfoot td { padding: 0.7rem 1rem; border-top: 2px solid #E0E7EF; font-size: 0.85rem; }
+
+    /* Total card */
+    .total-card {
+        background: #1A237E;
+        border-radius: 1.25rem; padding: 1.5rem;
+        color: white; box-shadow: 0 8px 32px rgba(26,35,126,0.25);
+    }
+    .total-card-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; }
+    .total-card-label  { font-size: 0.85rem; opacity: 0.75; }
+    .total-card-amount { font-family: 'Courier New', monospace; font-weight: 600; font-size: 1.05rem; }
+    .total-card-divider{ height: 1px; background: rgba(255,255,255,0.2); margin: 0.75rem 0; }
+    .total-card-row--total { margin-bottom: 0; font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 0.9rem; letter-spacing: 0.05em; }
+    .total-card-total-amount { font-family: 'Courier New', monospace; font-size: 1.6rem; font-weight: 900; }
+
+    /* Modal aprobar */
+    .aprobar-header {
+        background: linear-gradient(135deg, #43A047, #1B5E20);
+        color: white; padding: 2rem 2rem 1.5rem; border: none;
+        display: flex; justify-content: center;
+    }
+    .aprobar-icon {
+        width: 60px; height: 60px; border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 2rem; margin: 0 auto;
+    }
+    .total-confirmacion {
+        background: #F1F8E9; border-radius: 1rem;
+        padding: 1rem 1.5rem; display: inline-block;
+        border: 1.5px solid #C8E6C9;
+    }
+    .btn-aprobar-confirmar {
+        background: linear-gradient(135deg, #43A047, #1B5E20);
+        color: white; border: none; border-radius: 50px;
+        font-weight: 700; padding: 0.65rem 2rem;
+        box-shadow: 0 4px 16px rgba(67,160,71,0.35);
+        transition: all 0.25s;
+    }
+    .btn-aprobar-confirmar:hover { color: white; transform: translateY(-1px); }
+</style>
+
+{% endblock %}

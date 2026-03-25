@@ -471,6 +471,7 @@ class SolicitudCita(models.Model):
     fecha_deseada = models.DateField()
     hora_deseada = models.TimeField(null=True, blank=True)
     terapeuta = models.ForeignKey('Terapeuta', on_delete=models.SET_NULL, null=True, blank=True)
+    consultorio = models.ForeignKey('Consultorio', on_delete=models.SET_NULL, null=True, blank=True)
     notas_paciente = models.TextField(blank=True, null=True, help_text="Mensaje original del paciente")
 
     estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')

@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/carlo/Downloads/**)",
+      "Bash(python3 -c \":*)",
+      "Bash(py --version)",
+      "Bash(python -c \":*)",
+      "Bash(python:*)",
+      "Bash(echo:*)",
+      "Bash(railway status:*)",
+      "Bash(railway run python manage.py shell -c \":*)",
+      "Bash(railway run:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:8000/nomina/tabuladores/ -L)",
+      "Bash(pg_dump \"postgresql://postgres:NyfwbgSOscnHNdZqSymGpITSWbHLqQlf@maglev.proxy.rlwy.net:14560/railway\" -Fc -f \"C:/Users/carlo/Documents/Freelancer/ConsultorioWeb/respaldo_produccion_2026-03-24.dump\")",
+      "Bash(\"/c/Program Files/PostgreSQL/18/bin/pg_dump.exe\" \"postgresql://postgres:NyfwbgSOscnHNdZqSymGpITSWbHLqQlf@maglev.proxy.rlwy.net:14560/railway\" -Fc -f \"C:/Users/carlo/Documents/Freelancer/ConsultorioWeb/respaldo_produccion_2026-03-24.dump\")",
+      "Bash(\"/c/Program Files/PostgreSQL/18/bin/createdb.exe\" -U postgres consultorio_test)",
+      "Bash(PGPASSWORD=carl32928 \"/c/Program Files/PostgreSQL/18/bin/createdb.exe\" -U postgres consultorio_test 2>&1)",
+      "Bash(PGPASSWORD=carl32928 \"/c/Program Files/PostgreSQL/18/bin/pg_restore.exe\" -U postgres -d consultorio_test \"C:/Users/carlo/Documents/Freelancer/ConsultorioWeb/respaldo_produccion_2026-03-24.dump\" 2>&1)",
+      "Bash(source venv/Scripts/activate)",
+      "Bash(echo \"from django.db import connection:*)",
+      "Bash(pip show:*)",
+      "Bash(pip install:*)",
+      "Bash(pip freeze:*)",
+      "Bash(echo \"import os; print\\(''''CLOUD_NAME:'''', os.environ.get\\(''''CLOUDINARY_CLOUD_NAME'''', ''''NO CONFIGURADO''''\\)\\)\")",
+      "Bash(venv/Scripts/python manage.py shell -c \":*)"
+    ]
+  }
+}

@@ -608,9 +608,12 @@ def crear_cita(request):
                     
                 if solicitud.terapeuta:
                     datos_iniciales['terapeuta'] = solicitud.terapeuta.id
-                    
-                    from .models import Paciente 
-                
+
+                if solicitud.consultorio:
+                    datos_iniciales['consultorio'] = solicitud.consultorio.id
+
+                    from .models import Paciente
+
                 # Buscamos si hay algún paciente en la BD que se llame igual
                 paciente_match = Paciente.objects.filter(nombre__icontains=solicitud.paciente_nombre).first()
                 if paciente_match:
@@ -943,6 +946,8 @@ def solicitar_cita_paciente(request):
         terapeuta_id = request.POST.get('terapeuta')
         notas = request.POST.get('notas_paciente')
         
+        consultorio_id = request.POST.get('consultorio')
+
         # Creamos el ticket en nuestra "Sala de Espera" (SolicitudCita)
         SolicitudCita.objects.create(
             paciente_nombre=mi_perfil.nombre,
@@ -950,6 +955,7 @@ def solicitar_cita_paciente(request):
             fecha_deseada=fecha,
             hora_deseada=hora if hora else None,
             terapeuta_id=terapeuta_id if terapeuta_id else None,
+            consultorio_id=consultorio_id if consultorio_id else None,
             notas_paciente=notas,
             estado='pendiente'
         )
@@ -958,9 +964,11 @@ def solicitar_cita_paciente(request):
         messages.success(request, '¡Tu solicitud ha sido enviada! Recepción la revisará y te confirmará pronto.')
         return redirect('portal_paciente')
         
-    # Si apenas va a abrir la pagina (GET), le mandamos la lista de terapeutas activos
+    # Si apenas va a abrir la pagina (GET), le mandamos la lista de terapeutas y consultorios
     terapeutas = Terapeuta.objects.filter(activo=True)
-    return render(request, 'clinica/solicitar_cita.html', {'terapeutas': terapeutas})
+    from .models import Consultorio
+    consultorios = Consultorio.objects.all()
+    return render(request, 'clinica/solicitar_cita.html', {'terapeutas': terapeutas, 'consultorios': consultorios})
 
 @login_required
 def rechazar_solicitud(request, solicitud_id):
@@ -994,19 +1002,21 @@ def solicitar_cita_terapeuta(request):
     
     if request.method == 'POST':
         # Ahora este dato vendra del menu desplegable (exactamente como esta escrito en la BD)
-        paciente = request.POST.get('paciente_nombre') 
+        paciente = request.POST.get('paciente_nombre')
         telefono = request.POST.get('telefono', '')
         fecha = request.POST.get('fecha_deseada')
         hora = request.POST.get('hora_deseada')
         notas = request.POST.get('notas_terapeuta', '')
-        
+        consultorio_id = request.POST.get('consultorio')
+
         SolicitudCita.objects.create(
             paciente_nombre=paciente,
             telefono=telefono,
             fecha_deseada=fecha,
             hora_deseada=hora if hora else None,
-            terapeuta=mi_perfil, 
-            notas_paciente=f"SOLICITADO POR TERAPEUTA: {notas}", 
+            terapeuta=mi_perfil,
+            consultorio_id=consultorio_id if consultorio_id else None,
+            notas_paciente=f"SOLICITADO POR TERAPEUTA: {notas}",
             estado='pendiente'
         )
         
@@ -1015,10 +1025,12 @@ def solicitar_cita_terapeuta(request):
         
     # --- NUEVO: Traemos la lista de pacientes ordenados alfabeticamente ---
     pacientes = Paciente.objects.all().order_by('nombre')
-    
-    # Pasamos los pacientes al contexto del HTML
+    from .models import Consultorio
+    consultorios = Consultorio.objects.all()
+
     return render(request, 'clinica/solicitar_cita_terapeuta.html', {
-        'pacientes': pacientes
+        'pacientes': pacientes,
+        'consultorios': consultorios,
     })
 
 def api_disponibilidad_terapeuta(request):
@@ -1167,9 +1179,9 @@ def bitacora_diaria(request):
     """
     Bitácora de citas de un día concreto para el staff.
     GET ?fecha=YYYY-MM-DD  → muestra ese día (default: hoy).
-    Acceso exclusivo a is_staff.
+    Acceso exclusivo a is_superuser.
     """
-    if not request.user.is_staff:
+    if not request.user.is_superuser:
         return redirect('home')
 
     from datetime import date as date_type
@@ -1263,9 +1275,9 @@ def reporte_general(request):
     """
     Reporte histórico de citas con filtros por rango de fechas y terapeuta.
     GET ?fecha_inicio=&fecha_fin=&terapeuta_id=&export=csv
-    Acceso exclusivo a is_staff.
+    Acceso exclusivo a is_superuser.
     """
-    if not request.user.is_staff:
+    if not request.user.is_superuser:
         return redirect('home')
 
     from datetime import date as date_type
@@ -1391,7 +1403,7 @@ def nomina_lista(request):
     Panel de nómina semanal: muestra todos los terapeutas activos con
     sus sesiones, ingreso clínica, pago calculado y estado del corte.
     """
-    if not request.user.is_staff:
+    if not request.user.is_superuser:
         return redirect('home')
 
     fecha_inicio, fecha_fin = _parse_fechas_semana(request)
@@ -1483,7 +1495,7 @@ def nomina_detalle(request, terapeuta_id):
     Si el CorteSemanal aún no existe, muestra un preview sin persistir.
     Si existe en borrador, permite agregar BonoExtra y aprobarlo.
     """
-    if not request.user.is_staff:
+    if not request.user.is_superuser:
         return redirect('home')
 
     terapeuta    = get_object_or_404(Terapeuta, id=terapeuta_id)
@@ -1585,7 +1597,7 @@ def nomina_detalle(request, terapeuta_id):
 @login_required
 def nomina_calcular(request, terapeuta_id):
     """POST: genera o recalcula el CorteSemanal en borrador."""
-    if not request.user.is_staff or request.method != 'POST':
+    if not request.user.is_superuser or request.method != 'POST':
         return redirect('nomina_lista')
 
     terapeuta = get_object_or_404(Terapeuta, id=terapeuta_id)
@@ -1616,7 +1628,7 @@ def nomina_calcular(request, terapeuta_id):
 @login_required
 def nomina_aprobar(request, corte_id):
     """POST: aprueba y sella un CorteSemanal."""
-    if not request.user.is_staff or request.method != 'POST':
+    if not request.user.is_superuser or request.method != 'POST':
         return redirect('nomina_lista')
 
     corte = get_object_or_404(CorteSemanal, id=corte_id)
@@ -1640,7 +1652,7 @@ def nomina_aprobar(request, corte_id):
 @login_required
 def nomina_agregar_bono(request, corte_id):
     """POST: agrega un BonoExtra a un CorteSemanal en borrador y recalcula totales."""
-    if not request.user.is_staff or request.method != 'POST':
+    if not request.user.is_superuser or request.method != 'POST':
         return redirect('nomina_lista')
 
     corte = get_object_or_404(CorteSemanal, id=corte_id)
