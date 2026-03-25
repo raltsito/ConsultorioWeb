@@ -212,7 +212,9 @@ class DocumentoPaciente(models.Model):
         related_name='documentos_pacientes_subidos',
     )
     tipo_documento = models.CharField(max_length=20, choices=TIPO_CHOICES, default='otro')
-    archivo = models.FileField(upload_to='documentos_pacientes_historial/')
+    nombre_archivo = models.CharField(max_length=255, blank=True)
+    tipo_mime = models.CharField(max_length=100, blank=True)
+    contenido = models.BinaryField(blank=True)
     descripcion = models.CharField(max_length=255, blank=True)
     creado_en = models.DateTimeField(auto_now_add=True)
 

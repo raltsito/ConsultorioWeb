@@ -375,10 +375,14 @@ def expediente_terapeuta_detalle(request, paciente_id):
             form_documento = DocumentoPacienteForm(request.POST, request.FILES)
             form = NotaTerapeutaPacienteForm()
             if form_documento.is_valid():
+                archivo = request.FILES['archivo']
                 documento = form_documento.save(commit=False)
                 documento.paciente = paciente
                 documento.terapeuta = terapeuta
                 documento.subido_por = request.user
+                documento.nombre_archivo = archivo.name
+                documento.tipo_mime = archivo.content_type
+                documento.contenido = archivo.read()
                 documento.save()
                 messages.success(request, 'Documento agregado correctamente.')
                 return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
@@ -405,6 +409,14 @@ def expediente_terapeuta_detalle(request, paciente_id):
         'form_documento': form_documento,
         'documentos_historial': documentos_historial,
     })
+
+@login_required
+def descargar_documento(request, doc_id):
+    documento = get_object_or_404(DocumentoPaciente, id=doc_id)
+    response = HttpResponse(bytes(documento.contenido), content_type=documento.tipo_mime or 'application/octet-stream')
+    response['Content-Disposition'] = f'inline; filename="{documento.nombre_archivo}"'
+    return response
+
 @login_required
 def agendar_cita(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)

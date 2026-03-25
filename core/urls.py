@@ -30,6 +30,7 @@ urlpatterns = [
     path('portal-medico/', clinica_views.portal_terapeuta, name='portal_terapeuta'),
     path('portal-medico/expedientes/', clinica_views.expedientes_terapeuta, name='expedientes_terapeuta'),
     path('portal-medico/expedientes/<int:paciente_id>/', clinica_views.expediente_terapeuta_detalle, name='expediente_terapeuta_detalle'),
+    path('portal-medico/documentos/<int:doc_id>/', clinica_views.descargar_documento, name='descargar_documento'),
     path('portal-medico/bloqueos/nuevo/', clinica_views.crear_bloqueo_terapeuta, name='crear_bloqueo_terapeuta'),
     path('portal-medico/bloqueos/<int:bloqueo_id>/eliminar/', clinica_views.eliminar_bloqueo_terapeuta, name='eliminar_bloqueo_terapeuta'),
     path('mi-portal/', clinica_views.portal_paciente, name='portal_paciente'),

@@ -170,7 +170,7 @@
                                     <small class="text-muted d-block">{{ documento.descripcion }}</small>
                                     {% endif %}
                                 </div>
-                                <a href="{{ documento.archivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">Ver</a>
+                                <a href="{% url 'descargar_documento' documento.id %}" target="_blank" class="btn btn-sm btn-outline-secondary">Ver</a>
                             </div>
                         </div>
                         {% endfor %}

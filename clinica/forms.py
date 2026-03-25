@@ -228,12 +228,16 @@ class NotaTerapeutaPacienteForm(forms.ModelForm):
 
 
 class DocumentoPacienteForm(forms.ModelForm):
+    archivo = forms.FileField(
+        label='Archivo',
+        widget=forms.FileInput(attrs={'class': 'form-control'}),
+    )
+
     class Meta:
         model = DocumentoPaciente
-        fields = ['tipo_documento', 'archivo', 'descripcion']
+        fields = ['tipo_documento', 'descripcion']
         widgets = {
             'tipo_documento': forms.Select(attrs={'class': 'form-select'}),
-            'archivo': forms.FileInput(attrs={'class': 'form-control'}),
             'descripcion': forms.TextInput(
                 attrs={
                     'class': 'form-control',
@@ -243,7 +247,6 @@ class DocumentoPacienteForm(forms.ModelForm):
         }
         labels = {
             'tipo_documento': 'Tipo de documento',
-            'archivo': 'Archivo',
             'descripcion': 'Descripcion',
         }
 
