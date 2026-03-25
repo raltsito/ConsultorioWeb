@@ -13,7 +13,8 @@ class Migration(migrations.Migration):
                 migrations.RunSQL(
                     sql=[
                         "ALTER TABLE clinica_notaterapeutapaciente RENAME COLUMN actualizado_en TO creado_en;",
-                        "DROP INDEX IF EXISTS clinica_notaterapeutapaciente_terapeuta_id_paciente_id_ec79bb89_uniq;",
+                        "ALTER TABLE clinica_notaterapeutapaciente DROP CONSTRAINT IF EXISTS clinica_notaterapeutapaciente_terapeuta_id_paciente_id_ec79bb89_uniq;",
+                        "ALTER TABLE clinica_notaterapeutapaciente DROP CONSTRAINT IF EXISTS clinica_notaterapeutapac_terapeuta_id_paciente_id_ec79bb89_uniq;",
                     ],
                     reverse_sql=[
                         "CREATE UNIQUE INDEX IF NOT EXISTS clinica_notaterapeutapaciente_terapeuta_id_paciente_id_ec79bb89_uniq ON clinica_notaterapeutapaciente (terapeuta_id, paciente_id);",
