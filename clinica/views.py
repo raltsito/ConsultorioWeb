@@ -221,7 +221,6 @@ def home(request):
     proximas_citas = Cita.objects.filter(
         fecha__gte=hoy,
         estatus__in=Cita.ESTATUS_ACTIVOS,
-        paciente__isnull=False,
     ).order_by('fecha', 'hora')
 
     dia_tablero = request.GET.get('dia', 'hoy')
@@ -233,7 +232,6 @@ def home(request):
 
     citas_tablero = Cita.objects.filter(
         fecha=fecha_tablero,
-        paciente__isnull=False,
     ).select_related(
         'division', 'servicio', 'terapeuta', 'consultorio', 'paciente'
     ).prefetch_related(
@@ -612,10 +610,13 @@ def crear_cita(request):
                 if solicitud.consultorio:
                     datos_iniciales['consultorio'] = solicitud.consultorio.id
 
-                    from .models import Paciente
-
                 # Buscamos si hay algún paciente en la BD que se llame igual
-                paciente_match = Paciente.objects.filter(nombre__icontains=solicitud.paciente_nombre).first()
+                from .models import Paciente
+                paciente_match = Paciente.objects.filter(
+                    nombre_normalizado__icontains=solicitud.paciente_nombre.lower()
+                        .replace('á','a').replace('é','e').replace('í','i')
+                        .replace('ó','o').replace('ú','u').replace('ü','u').replace('ñ','n')
+                ).first()
                 if paciente_match:
                     datos_iniciales['paciente'] = paciente_match.id
             except SolicitudCita.DoesNotExist:
@@ -824,15 +825,13 @@ def portal_terapeuta(request):
     fecha_bonita = f"{hoy.day} de {meses[hoy.month - 1]} del {hoy.year}"
     
     citas_hoy = Cita.objects.filter(
-        terapeuta=mi_perfil, 
+        terapeuta=mi_perfil,
         fecha=hoy,
-        paciente__isnull=False,
     ).order_by('hora')
-    
+
     citas_proximas = Cita.objects.filter(
-        terapeuta=mi_perfil, 
+        terapeuta=mi_perfil,
         fecha__gt=hoy,
-        paciente__isnull=False,
     ).order_by('fecha', 'hora')[:10] 
     
     mis_solicitudes = SolicitudCita.objects.filter(
