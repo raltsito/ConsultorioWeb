@@ -2,331 +2,730 @@
 
 {% block content %}
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 
-<div class="bitacora-header mb-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <div>
-            <p class="bitacora-eyebrow">Panel de Recepción</p>
-            <h2 class="bitacora-title">
-                <i class="bi bi-journal-text me-2"></i>Bitácora Diaria
-            </h2>
-            <p class="bitacora-subtitle">{{ fecha_bonita }}</p>
+<!-- ═══════════════════════════════════════════════════
+     HEADER BANNER
+════════════════════════════════════════════════════ -->
+<div class="bita-banner mb-4">
+    <div class="bita-banner__inner">
+        <div class="bita-banner__left">
+            <span class="bita-eyebrow">
+                <span class="bita-eyebrow__dot"></span>
+                Panel de Recepción
+            </span>
+            <h1 class="bita-title">Bitácora <span class="bita-title__accent">Diaria</span></h1>
+            <p class="bita-date">
+                <i class="bi bi-calendar3 me-2"></i>{{ fecha_bonita }}
+            </p>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="bita-banner__right">
             {% if solicitudes_pendientes_count > 0 %}
-            <a href="{% url 'home' %}" class="solicitudes-badge">
+            <a href="{% url 'home' %}" class="bita-alert-badge">
+                <span class="bita-alert-badge__pulse"></span>
                 <i class="bi bi-bell-fill me-1"></i>
-                {{ solicitudes_pendientes_count }} solicitud{{ solicitudes_pendientes_count|pluralize:",es" }} pendiente{{ solicitudes_pendientes_count|pluralize }}
+                {{ solicitudes_pendientes_count }} pendiente{{ solicitudes_pendientes_count|pluralize }}
             </a>
             {% endif %}
-            <a href="?fecha={{ fecha_iso }}&export=xlsx"
-               class="btn btn-outline-success btn-sm rounded-pill px-3">
-                <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel
+            <a href="?fecha={{ fecha_iso }}&export=xlsx" class="bita-btn bita-btn--excel">
+                <i class="bi bi-file-earmark-excel me-1"></i>Excel
             </a>
-            <a href="{% url 'reporte_general' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                <i class="bi bi-bar-chart-line me-1"></i>Reporte General
+            <a href="{% url 'reporte_general' %}" class="bita-btn bita-btn--ghost">
+                <i class="bi bi-bar-chart-line me-1"></i>Reporte
             </a>
         </div>
     </div>
 
-    <form method="get" class="fecha-selector mt-3">
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <label class="fw-semibold text-secondary small me-1">Ver fecha:</label>
+    <!-- Selector de fecha -->
+    <div class="bita-date-nav">
+        <form method="get" class="d-flex align-items-center gap-2">
+            <span class="bita-date-nav__label"><i class="bi bi-search me-1"></i>Ver fecha</span>
             <input type="date" name="fecha" value="{{ fecha_iso }}"
-                   class="form-control form-control-sm" style="width:170px;"
+                   class="bita-date-input"
                    onchange="this.form.submit()">
-            <a href="{% url 'bitacora_diaria' %}" class="btn btn-sm btn-light border rounded-pill px-3">
-                Hoy
+            <a href="{% url 'bitacora_diaria' %}" class="bita-btn-hoy">
+                <i class="bi bi-dot me-1"></i>Hoy
             </a>
-        </div>
-    </form>
-</div>
-
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon-wrap stat-teal">
-                <i class="bi bi-calendar-day"></i>
-            </div>
-            <div>
-                <div class="stat-value">{{ total }}</div>
-                <div class="stat-label">Total del día</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon-wrap stat-green">
-                <i class="bi bi-check-circle"></i>
-            </div>
-            <div>
-                <div class="stat-value text-success">{{ asistieron }}</div>
-                <div class="stat-label">Asistieron</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon-wrap stat-red">
-                <i class="bi bi-x-circle"></i>
-            </div>
-            <div>
-                <div class="stat-value text-danger">{{ no_asistieron }}</div>
-                <div class="stat-label">No asistieron / Cancelaron</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon-wrap stat-gold">
-                <i class="bi bi-cash-stack"></i>
-            </div>
-            <div>
-                <div class="stat-value">${{ monto_dia|floatformat:0 }}</div>
-                <div class="stat-label">Ingreso del día</div>
-            </div>
-        </div>
+        </form>
     </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════
+     STAT CARDS
+════════════════════════════════════════════════════ -->
+<div class="bita-stats mb-4">
+
+    <div class="bita-stat bita-stat--teal">
+        <div class="bita-stat__icon">
+            <i class="bi bi-calendar-day"></i>
+        </div>
+        <div class="bita-stat__body">
+            <span class="bita-stat__num">{{ total }}</span>
+            <span class="bita-stat__lbl">Total del día</span>
+        </div>
+        <div class="bita-stat__bar" style="--pct:100%"></div>
+    </div>
+
+    <div class="bita-stat bita-stat--green">
+        <div class="bita-stat__icon">
+            <i class="bi bi-check-circle-fill"></i>
+        </div>
+        <div class="bita-stat__body">
+            <span class="bita-stat__num">{{ asistieron }}</span>
+            <span class="bita-stat__lbl">Asistieron</span>
+        </div>
+        {% if total > 0 %}
+        <div class="bita-stat__bar" style="--pct:{{ asistieron|floatformat:0 }}00%"></div>
+        {% endif %}
+    </div>
+
+    <div class="bita-stat bita-stat--red">
+        <div class="bita-stat__icon">
+            <i class="bi bi-x-circle-fill"></i>
+        </div>
+        <div class="bita-stat__body">
+            <span class="bita-stat__num">{{ no_asistieron }}</span>
+            <span class="bita-stat__lbl">Ausentes / Cancelaron</span>
+        </div>
+    </div>
+
+    <div class="bita-stat bita-stat--gold">
+        <div class="bita-stat__icon">
+            <i class="bi bi-cash-stack"></i>
+        </div>
+        <div class="bita-stat__body">
+            <span class="bita-stat__num">${{ monto_dia|floatformat:0 }}</span>
+            <span class="bita-stat__lbl">Ingreso del día</span>
+        </div>
+    </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     ALERTA CITAS POR CERRAR
+════════════════════════════════════════════════════ -->
 {% if por_cerrar > 0 %}
-<div class="alert alert-warning border-0 rounded-3 d-flex align-items-center gap-2 mb-4 py-2 px-3" role="alert">
-    <i class="bi bi-clock-history fs-5 flex-shrink-0"></i>
-    <span><strong>{{ por_cerrar }} cita{{ por_cerrar|pluralize }}</strong> aún sin resultado final para este día.</span>
+<div class="bita-alert-warn mb-4">
+    <div class="bita-alert-warn__icon">
+        <i class="bi bi-clock-history"></i>
+    </div>
+    <div>
+        <strong>{{ por_cerrar }} cita{{ por_cerrar|pluralize }}</strong> aún sin resultado final para este día.
+    </div>
 </div>
 {% endif %}
 
-<div class="card shadow-sm border-0 rounded-4 overflow-hidden">
-    <div class="card-header bg-white border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
-        <h5 class="fw-bold mb-0 text-dark">
-            <i class="bi bi-table me-2 text-primary"></i>Registro del día
-        </h5>
-        <span class="badge bg-light text-dark border">{{ total }} registro{{ total|pluralize }}</span>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table id="tablaBitacora" class="table table-hover align-middle mb-0 tabla-bitacora">
-                <thead>
-                    <tr>
-                        <th>Hora</th>
-                        <th>Consultorio</th>
-                        <th>Paciente</th>
-                        <th>Terapeuta</th>
-                        <th>Servicio</th>
-                        <th>Estatus</th>
-                        <th>Pago</th>
-                        <th class="text-end">Costo</th>
-                        <th class="text-center">Seguimiento</th>
-                        <th class="text-center">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for cita in citas %}
-                    <tr class="{% if cita.estatus == 'si_asistio' %}fila-asistio{% elif cita.estatus == 'no_asistio' or cita.estatus == 'cancelo' %}fila-ausente{% endif %}">
-
-                        <td class="fw-bold text-primary" style="white-space:nowrap;">
-                            {{ cita.hora|time:"H:i" }}
-                        </td>
-
-                        <td>
-                            <span class="badge bg-light text-dark border small">{{ cita.consultorio|default:"—" }}</span>
-                        </td>
-
-                        <td style="min-width:160px;">
-                            {% if cita.paciente_id %}
-                            <a href="{% url 'detalle_paciente' cita.paciente.id %}"
-                               class="fw-semibold text-dark text-decoration-none link-hover">
-                                {{ cita.titulo_cita }}
-                            </a>
-                            {% else %}
-                            <span class="text-muted">{{ cita.titulo_cita }}</span>
-                            {% endif %}
-                        </td>
-
-                        <td class="text-secondary">{{ cita.terapeuta|default:"—" }}</td>
-
-                        <td>
-                            <span class="small text-muted">{{ cita.servicio|default:"—" }}</span>
-                        </td>
-
-                        <td style="white-space:nowrap;">
-                            {% if cita.estatus == 'si_asistio' %}
-                                <span class="estatus-pill estatus-pill--success"><i class="bi bi-check-circle-fill me-1"></i>Asistió</span>
-                            {% elif cita.estatus == 'no_asistio' %}
-                                <span class="estatus-pill estatus-pill--danger"><i class="bi bi-x-circle-fill me-1"></i>No asistió</span>
-                            {% elif cita.estatus == 'cancelo' %}
-                                <span class="estatus-pill estatus-pill--secondary"><i class="bi bi-slash-circle me-1"></i>Canceló</span>
-                            {% elif cita.estatus == 'incidencia' %}
-                                <span class="estatus-pill estatus-pill--warning"><i class="bi bi-exclamation-triangle me-1"></i>Incidencia</span>
-                            {% elif cita.estatus == 'confirmada' %}
-                                <span class="estatus-pill estatus-pill--primary"><i class="bi bi-calendar-check me-1"></i>Confirmada</span>
-                            {% elif cita.estatus == 'reagendo' %}
-                                <span class="estatus-pill estatus-pill--info"><i class="bi bi-arrow-clockwise me-1"></i>Reagendó</span>
-                            {% else %}
-                                <span class="estatus-pill estatus-pill--light">{{ cita.get_estatus_display }}</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            <span class="small text-secondary">{{ cita.metodo_pago|default:"—" }}</span>
-                        </td>
-
-                        <td class="text-end fw-bold">
-                            {% if cita.costo is not None %}
-                                ${{ cita.costo|floatformat:0 }}
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
-                        </td>
-
-                        <td class="text-center">
-                            {% if cita.solicito_seguimiento %}
-                                <span class="seguimiento-si" title="Solicitud de cita enviada a Recepción">
-                                    <i class="bi bi-send-check-fill"></i>
-                                </span>
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
-                        </td>
-
-                        <td class="text-center">
-                            <a href="{% url 'editar_cita' cita.id %}?next=bitacora"
-                               class="btn btn-sm btn-outline-secondary rounded-circle"
-                               title="Editar cita">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
-                        </td>
-
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<!-- ═══════════════════════════════════════════════════
+     TABLA
+════════════════════════════════════════════════════ -->
+<div class="bita-table-card">
+    <div class="bita-table-card__header">
+        <div class="d-flex align-items-center gap-2">
+            <div class="bita-table-card__icon">
+                <i class="bi bi-list-ul"></i>
+            </div>
+            <div>
+                <h5 class="bita-table-card__title">Registro del día</h5>
+                <p class="bita-table-card__sub">Todas las citas de la jornada</p>
+            </div>
         </div>
+        <span class="bita-count-badge">{{ total }} registro{{ total|pluralize }}</span>
+    </div>
+
+    <div class="table-responsive">
+        <table id="tablaBitacora" class="table align-middle mb-0 tabla-bitacora">
+            <thead>
+                <tr>
+                    <th>Hora</th>
+                    <th>Consultorio</th>
+                    <th>Paciente</th>
+                    <th>Terapeuta</th>
+                    <th>Servicio</th>
+                    <th>Estatus</th>
+                    <th>Pago</th>
+                    <th class="text-end">Costo</th>
+                    <th class="text-center">Seguimiento</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cita in citas %}
+                <tr class="bita-row {% if cita.estatus == 'si_asistio' %}bita-row--asistio{% elif cita.estatus == 'no_asistio' or cita.estatus == 'cancelo' %}bita-row--ausente{% endif %}">
+
+                    <td>
+                        <span class="bita-hora">{{ cita.hora|time:"H:i" }}</span>
+                    </td>
+
+                    <td>
+                        <span class="bita-consultorio-badge">{{ cita.consultorio|default:"—" }}</span>
+                    </td>
+
+                    <td style="min-width:160px;">
+                        {% if cita.paciente_id %}
+                        <a href="{% url 'detalle_paciente' cita.paciente.id %}"
+                           class="bita-paciente-link">
+                            <i class="bi bi-person-circle me-1 text-muted"></i>{{ cita.titulo_cita }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">{{ cita.titulo_cita }}</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <span class="bita-terapeuta">{{ cita.terapeuta|default:"—" }}</span>
+                    </td>
+
+                    <td>
+                        <span class="bita-servicio">{{ cita.servicio|default:"—" }}</span>
+                    </td>
+
+                    <td style="white-space:nowrap;">
+                        {% if cita.estatus == 'si_asistio' %}
+                            <span class="ep ep--green"><i class="bi bi-check-circle-fill"></i> Asistió</span>
+                        {% elif cita.estatus == 'no_asistio' %}
+                            <span class="ep ep--red"><i class="bi bi-x-circle-fill"></i> No asistió</span>
+                        {% elif cita.estatus == 'cancelo' %}
+                            <span class="ep ep--gray"><i class="bi bi-slash-circle"></i> Canceló</span>
+                        {% elif cita.estatus == 'incidencia' %}
+                            <span class="ep ep--amber"><i class="bi bi-exclamation-triangle"></i> Incidencia</span>
+                        {% elif cita.estatus == 'confirmada' %}
+                            <span class="ep ep--blue"><i class="bi bi-calendar-check"></i> Confirmada</span>
+                        {% elif cita.estatus == 'reagendo' %}
+                            <span class="ep ep--teal"><i class="bi bi-arrow-clockwise"></i> Reagendó</span>
+                        {% else %}
+                            <span class="ep ep--gray">{{ cita.get_estatus_display }}</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <span class="bita-pago">{{ cita.metodo_pago|default:"—" }}</span>
+                    </td>
+
+                    <td class="text-end">
+                        {% if cita.costo is not None %}
+                            <span class="bita-costo">${{ cita.costo|floatformat:0 }}</span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="text-center">
+                        {% if cita.solicito_seguimiento %}
+                            <span class="bita-seguimiento" title="Solicitud enviada a Recepción">
+                                <i class="bi bi-send-check-fill"></i>
+                            </span>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="text-center">
+                        <a href="{% url 'editar_cita' cita.id %}?next=bitacora"
+                           class="bita-edit-btn" title="Editar cita">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
+
+<!-- ═══════════════════════════════════════════════════
+     ESTILOS
+════════════════════════════════════════════════════ -->
 <style>
-    /* ── Header ── */
-    .bitacora-eyebrow {
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: #26C6DA;
-        margin-bottom: 0.15rem;
-    }
-    .bitacora-title {
-        font-family: 'Poppins', sans-serif;
-        font-weight: 700;
-        color: #263238;
-        font-size: 1.8rem;
-        margin-bottom: 0.1rem;
-    }
-    .bitacora-subtitle {
-        color: #78909C;
-        font-size: 0.95rem;
-        margin-bottom: 0;
-    }
+:root {
+    --teal:   #26C6DA;
+    --teal-d: #00838F;
+    --navy:   #0D1B2A;
+    --slate:  #37474F;
+    --muted:  #78909C;
+    --green:  #00C897;
+    --green-d:#00875A;
+    --red:    #FF5252;
+    --red-d:  #B71C1C;
+    --amber:  #FFB300;
+    --amber-d:#E65100;
+    --gold:   #F9A825;
+    --bg:     #F2F6F9;
+}
 
-    /* Solicitudes badge */
-    .solicitudes-badge {
-        display: inline-flex;
-        align-items: center;
-        background: #FFF3CD;
-        color: #856404;
-        border: 1.5px solid #FFECB5;
-        border-radius: 50px;
-        padding: 0.3rem 0.9rem;
-        font-size: 0.82rem;
-        font-weight: 700;
-        text-decoration: none;
-        transition: background 0.2s;
-    }
-    .solicitudes-badge:hover { background: #FFE69C; color: #664D03; }
+/* ── Banner ─────────────────────────────────── */
+.bita-banner {
+    background: linear-gradient(135deg, #0D1B2A 0%, #1B3A4B 60%, #1A3A4A 100%);
+    border-radius: 1.25rem;
+    padding: 1.75rem 2rem 1.35rem;
+    position: relative;
+    overflow: hidden;
+}
+.bita-banner::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(38,198,218,.18) 0%, transparent 70%);
+    pointer-events: none;
+}
+.bita-banner::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--teal), #00E5FF, var(--teal));
+}
+.bita-banner__inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.bita-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 0.4rem;
+}
+.bita-eyebrow__dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--teal);
+    animation: blink 2s ease-in-out infinite;
+}
+@keyframes blink {
+    0%,100% { opacity:1; }
+    50%      { opacity:.3; }
+}
+.bita-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.1rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+}
+.bita-title__accent { color: var(--teal); }
+.bita-date {
+    font-family: 'Outfit', sans-serif;
+    color: rgba(255,255,255,0.55);
+    font-size: 0.9rem;
+    margin-bottom: 0;
+    font-weight: 400;
+}
+.bita-banner__right {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
 
-    /* ── Stat cards ── */
-    .stat-card {
-        background: #fff;
-        border-radius: 1rem;
-        padding: 1rem 1.25rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-        border: 1px solid #F0F4F8;
-    }
-    .stat-icon-wrap {
-        width: 46px; height: 46px;
-        border-radius: 12px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 1.3rem;
-        flex-shrink: 0;
-    }
-    .stat-teal  { background: #E0F7FA; color: #00838F; }
-    .stat-green { background: #E8F5E9; color: #2E7D32; }
-    .stat-red   { background: #FFEBEE; color: #C62828; }
-    .stat-gold  { background: #FFF8E1; color: #F57F17; }
-    .stat-value { font-family: 'Poppins', sans-serif; font-size: 1.6rem; font-weight: 700; line-height: 1; }
-    .stat-label { font-size: 0.75rem; color: #90A4AE; margin-top: 0.15rem; }
+/* Alert badge */
+.bita-alert-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 179, 0, 0.15);
+    color: #FFB300;
+    border: 1.5px solid rgba(255,179,0,0.35);
+    border-radius: 50px;
+    padding: 0.35rem 0.9rem;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+.bita-alert-badge:hover { background: rgba(255,179,0,.25); color: #FFB300; }
+.bita-alert-badge__pulse {
+    position: absolute;
+    top: -3px; right: -3px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #FFB300;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse {
+    0%   { transform: scale(1); opacity: 1; }
+    70%  { transform: scale(1.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 0; }
+}
 
-    /* ── Tabla ── */
-    .tabla-bitacora thead th {
-        background: #F0F4F8;
-        color: #546E7A;
-        font-size: 0.78rem;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        border-bottom: 2px solid #E0E7EF;
-        padding: 0.85rem 1rem;
-        white-space: nowrap;
-    }
-    .tabla-bitacora tbody td {
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid #F0F4F8;
-        font-size: 0.9rem;
-        vertical-align: middle;
-    }
-    .tabla-bitacora tbody tr:hover { background: #FAFCFF; }
-    .fila-asistio  { border-left: 3px solid #4CAF50; }
-    .fila-ausente  { opacity: 0.6; }
+/* Buttons */
+.bita-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.38rem 1rem;
+    border-radius: 50px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.83rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1.5px solid transparent;
+    transition: all 0.18s;
+    white-space: nowrap;
+}
+.bita-btn--excel {
+    background: rgba(0,200,151,.15);
+    color: #00C897;
+    border-color: rgba(0,200,151,.35);
+}
+.bita-btn--excel:hover { background: rgba(0,200,151,.25); color: #00C897; }
+.bita-btn--ghost {
+    background: rgba(255,255,255,.08);
+    color: rgba(255,255,255,.75);
+    border-color: rgba(255,255,255,.2);
+}
+.bita-btn--ghost:hover { background: rgba(255,255,255,.15); color: #fff; }
 
-    /* ── Estatus pills ── */
-    .estatus-pill {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.25rem 0.65rem;
-        border-radius: 50px;
-        font-size: 0.78rem;
-        font-weight: 600;
-    }
-    .estatus-pill--success  { background: #E8F5E9; color: #2E7D32; }
-    .estatus-pill--danger   { background: #FFEBEE; color: #C62828; }
-    .estatus-pill--warning  { background: #FFF8E1; color: #E65100; }
-    .estatus-pill--secondary{ background: #ECEFF1; color: #546E7A; }
-    .estatus-pill--primary  { background: #E3F2FD; color: #1565C0; }
-    .estatus-pill--info     { background: #E0F7FA; color: #006064; }
-    .estatus-pill--light    { background: #F5F5F5; color: #757575; }
+/* Date nav */
+.bita-date-nav {
+    margin-top: 1.1rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(255,255,255,.1);
+}
+.bita-date-nav__label {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,.45);
+    white-space: nowrap;
+    font-weight: 500;
+}
+.bita-date-input {
+    background: rgba(255,255,255,.1);
+    border: 1.5px solid rgba(255,255,255,.2);
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.88rem;
+    padding: 0.3rem 0.7rem;
+    width: 170px;
+    outline: none;
+    transition: border 0.18s;
+}
+.bita-date-input:focus { border-color: var(--teal); }
+.bita-date-input::-webkit-calendar-picker-indicator { filter: invert(1) opacity(.6); cursor: pointer; }
+.bita-btn-hoy {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.9rem;
+    border-radius: 50px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--teal);
+    background: rgba(38,198,218,.12);
+    border: 1.5px solid rgba(38,198,218,.3);
+    text-decoration: none;
+    transition: background 0.18s;
+}
+.bita-btn-hoy:hover { background: rgba(38,198,218,.22); color: var(--teal); }
 
-    /* Seguimiento */
-    .seguimiento-si {
-        color: #26C6DA;
-        font-size: 1.1rem;
-    }
+/* ── Stat cards ────────────────────────────── */
+.bita-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.9rem;
+}
+@media (max-width: 768px) { .bita-stats { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 480px) { .bita-stats { grid-template-columns: 1fr; } }
 
-    .link-hover:hover { color: #26C6DA !important; }
+.bita-stat {
+    background: #fff;
+    border-radius: 1rem;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 12px rgba(13,27,42,.06);
+    border: 1px solid #EBF0F5;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.18s, box-shadow 0.18s;
+}
+.bita-stat:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(13,27,42,.1); }
+.bita-stat__icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+}
+.bita-stat__body { flex: 1; }
+.bita-stat__num {
+    display: block;
+    font-family: 'Syne', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--navy);
+}
+.bita-stat__lbl {
+    display: block;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+    font-weight: 500;
+}
+/* Colored left stripe */
+.bita-stat::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    border-radius: 4px 0 0 4px;
+}
+.bita-stat--teal .bita-stat__icon  { background: #E0F7FA; color: var(--teal-d); }
+.bita-stat--teal::before           { background: var(--teal); }
+.bita-stat--green .bita-stat__icon { background: #E8F5E9; color: var(--green-d); }
+.bita-stat--green::before          { background: var(--green); }
+.bita-stat--red .bita-stat__icon   { background: #FFEBEE; color: var(--red-d); }
+.bita-stat--red::before            { background: var(--red); }
+.bita-stat--gold .bita-stat__icon  { background: #FFF8E1; color: #F57F17; }
+.bita-stat--gold::before           { background: var(--gold); }
 
-    /* DataTables overrides */
-    div.dataTables_wrapper div.dataTables_filter input { border-radius: 50px; padding: 0.3rem 0.8rem; }
-    div.dataTables_wrapper div.dataTables_length select { border-radius: 8px; }
-    div.dataTables_info { font-size: 0.82rem; color: #90A4AE; }
-    div.dataTables_paginate .paginate_button { border-radius: 8px !important; }
-    div.dataTables_paginate .paginate_button.current {
-        background: #26C6DA !important;
-        color: white !important;
-        border-color: #26C6DA !important;
-    }
+/* ── Warn alert ────────────────────────────── */
+.bita-alert-warn {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    background: #FFFBEA;
+    border: 1.5px solid #FFECB3;
+    border-radius: 0.75rem;
+    padding: 0.8rem 1.2rem;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    color: #7B5800;
+}
+.bita-alert-warn__icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: #FFE082;
+    color: #7B5800;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+/* ── Table card ────────────────────────────── */
+.bita-table-card {
+    background: #fff;
+    border-radius: 1.25rem;
+    box-shadow: 0 2px 16px rgba(13,27,42,.07);
+    border: 1px solid #EBF0F5;
+    overflow: hidden;
+}
+.bita-table-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.1rem 1.5rem;
+    border-bottom: 1.5px solid #F0F5F9;
+    background: #FAFCFE;
+}
+.bita-table-card__icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: #E3F2FD;
+    color: #1565C0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.bita-table-card__title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 0;
+}
+.bita-table-card__sub {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 0;
+}
+.bita-count-badge {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: #EBF0F5;
+    color: var(--slate);
+    padding: 0.3rem 0.8rem;
+    border-radius: 50px;
+    border: 1px solid #DEE5EE;
+}
+
+/* ── Table styles ──────────────────────────── */
+.tabla-bitacora thead th {
+    background: #F5F8FB;
+    color: #607D8B;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-bottom: 2px solid #E8EEF5;
+    padding: 0.9rem 1rem;
+    white-space: nowrap;
+}
+.tabla-bitacora tbody td {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid #F2F6F9;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.88rem;
+    vertical-align: middle;
+}
+.tabla-bitacora tbody tr { transition: background 0.12s; }
+.tabla-bitacora tbody tr:hover { background: #F7FBFD; }
+
+/* Row accents */
+.bita-row--asistio { border-left: 3.5px solid var(--green); }
+.bita-row--ausente td { opacity: 0.55; }
+
+/* Cell contents */
+.bita-hora {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--teal-d);
+    letter-spacing: 0.02em;
+}
+.bita-consultorio-badge {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #EBF0F5;
+    color: var(--slate);
+    padding: 0.22rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #DEE5EE;
+    white-space: nowrap;
+}
+.bita-paciente-link {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    color: var(--navy);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+.bita-paciente-link:hover { color: var(--teal); }
+.bita-terapeuta {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.87rem;
+    color: var(--slate);
+}
+.bita-servicio {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+.bita-pago {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+.bita-costo {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--navy);
+}
+.bita-seguimiento {
+    color: var(--teal);
+    font-size: 1.1rem;
+}
+.bita-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: #F0F5FA;
+    color: #607D8B;
+    border: 1px solid #DEE5EE;
+    text-decoration: none;
+    transition: all 0.15s;
+    font-size: 0.9rem;
+}
+.bita-edit-btn:hover {
+    background: #E3F2FD;
+    color: #1565C0;
+    border-color: #90CAF9;
+}
+
+/* ── Estatus pills ─────────────────────────── */
+.ep {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.22rem 0.65rem;
+    border-radius: 6px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.77rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.ep--green  { background: #E8F5E9; color: #2E7D32; }
+.ep--red    { background: #FFEBEE; color: #C62828; }
+.ep--amber  { background: #FFF8E1; color: #E65100; }
+.ep--gray   { background: #ECEFF1; color: #546E7A; }
+.ep--blue   { background: #E3F2FD; color: #1565C0; }
+.ep--teal   { background: #E0F7FA; color: #006064; }
+
+/* ── DataTables overrides ──────────────────── */
+div.dataTables_wrapper div.dataTables_filter input {
+    border-radius: 50px;
+    padding: 0.3rem 0.85rem;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    border: 1.5px solid #DEE5EE;
+}
+div.dataTables_wrapper div.dataTables_filter input:focus {
+    border-color: var(--teal);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(38,198,218,.15);
+}
+div.dataTables_wrapper div.dataTables_length select {
+    border-radius: 8px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+}
+div.dataTables_info {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+div.dataTables_paginate .paginate_button {
+    border-radius: 8px !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 0.83rem !important;
+}
+div.dataTables_paginate .paginate_button.current,
+div.dataTables_paginate .paginate_button.current:hover {
+    background: var(--teal) !important;
+    color: white !important;
+    border-color: var(--teal) !important;
+}
+div.dataTables_paginate .paginate_button:hover {
+    background: #E0F7FA !important;
+    color: var(--teal-d) !important;
+    border-color: #B2EBF2 !important;
+}
 </style>
 
 {% endblock %}
@@ -343,9 +742,9 @@ $(document).ready(function () {
             emptyTable: 'No hay citas registradas para este día.',
         },
         pageLength: 25,
-        order: [[0, 'asc']],       // Ordenar por hora por defecto
+        order: [[0, 'asc']],
         columnDefs: [
-            { orderable: false, targets: [8, 9] },  // Seguimiento y Acciones no ordenables
+            { orderable: false, targets: [8, 9] },
         ],
         dom: '<"d-flex justify-content-between align-items-center px-4 py-3 flex-wrap gap-2"lf>t<"d-flex justify-content-between align-items-center px-4 py-2 flex-wrap"ip>',
     });
