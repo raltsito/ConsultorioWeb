@@ -363,22 +363,13 @@
             <!-- Identificación -->
             <div class="slbl">Identificación</div>
             <div class="row g-3 mb-4">
-              <div class="col-md-4">
-                <label class="form-label small fw-semibold">Nombre(s)</label>
+              <div class="col-md-12">
+                <label class="form-label small fw-semibold">{{ form_apertura.nombre.label }}</label>
                 {{ form_apertura.nombre }}
               </div>
-              <div class="col-md-4">
-                <label class="form-label small fw-semibold">{{ form_apertura.apellido_paterno.label }}</label>
-                {{ form_apertura.apellido_paterno }}
-                {% if form_apertura.apellido_paterno.errors %}
-                <div class="text-danger small mt-1">{{ form_apertura.apellido_paterno.errors|join:", " }}</div>
-                {% endif %}
-              </div>
-              <div class="col-md-4">
-                <label class="form-label small fw-semibold">{{ form_apertura.apellido_materno.label }}</label>
-                {{ form_apertura.apellido_materno }}
-              </div>
             </div>
+            {{ form_apertura.apellido_paterno }}
+            {{ form_apertura.apellido_materno }}
 
             <!-- Datos personales -->
             <div class="slbl">Datos Personales</div>

@@ -363,9 +363,7 @@ def _generar_pdf_apertura(apertura):
     elems.append(Paragraph('Datos Personales', T_SECTION))
     elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
     elems.append(grid([
-        [lbl('Nombre(s)'), val(p.nombre),
-         lbl('Apellido Paterno'), val(apertura.apellido_paterno)],
-        [lbl('Apellido Materno'), val(apertura.apellido_materno),
+        [lbl('Nombre completo'), val(p.nombre),
          lbl('Fecha de Nacimiento'),
          val(p.fecha_nacimiento.strftime('%d/%m/%Y') if p.fecha_nacimiento else '—')],
         [lbl('Ocupación'), val(apertura.ocupacion),
@@ -560,7 +558,16 @@ def expediente_terapeuta_detalle(request, paciente_id):
                 ap.paciente = paciente
                 ap.save()
 
-                paciente.nombre = form_apertura.cleaned_data.get('nombre') or paciente.nombre
+                nombre_completo = (form_apertura.cleaned_data.get('nombre') or '').strip()
+
+                # Los apellidos ya no se capturan por separado en la UI.
+                # Conservamos el modelo satisfecho con un valor de respaldo,
+                # pero la fuente real del nombre visible/PDF es paciente.nombre.
+                ap.apellido_paterno = ap.apellido_paterno or nombre_completo or '-'
+                ap.apellido_materno = ap.apellido_materno or ''
+                ap.save(update_fields=['apellido_paterno', 'apellido_materno'])
+
+                paciente.nombre = nombre_completo or paciente.nombre
                 paciente.fecha_nacimiento = form_apertura.cleaned_data.get('fecha_nacimiento') or paciente.fecha_nacimiento
                 paciente.telefono = form_apertura.cleaned_data.get('telefono') or paciente.telefono
                 paciente.save(update_fields=['nombre', 'fecha_nacimiento', 'telefono'])

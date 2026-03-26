@@ -426,8 +426,8 @@ class AperturaExpedienteForm(forms.ModelForm):
         exclude = ['paciente', 'documento', 'vive_con', 'creado_en', 'actualizado_en']
         widgets = {
             'expediente_no':        forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 001'}),
-            'apellido_paterno':     forms.TextInput(attrs={'class': 'form-control'}),
-            'apellido_materno':     forms.TextInput(attrs={'class': 'form-control'}),
+            'apellido_paterno':     forms.HiddenInput(),
+            'apellido_materno':     forms.HiddenInput(),
             'ocupacion':            forms.TextInput(attrs={'class': 'form-control'}),
             'lugar_de_trabajo':     forms.TextInput(attrs={'class': 'form-control'}),
             'cargo':                forms.TextInput(attrs={'class': 'form-control'}),
@@ -451,6 +451,9 @@ class AperturaExpedienteForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['nombre'].label = 'Nombre completo'
+        self.fields['apellido_paterno'].required = False
+        self.fields['apellido_materno'].required = False
         if self.instance.pk and self.instance.paciente_id:
             self.fields['nombre'].initial = self.instance.paciente.nombre
             self.fields['fecha_nacimiento'].initial = self.instance.paciente.fecha_nacimiento
