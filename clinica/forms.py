@@ -163,6 +163,23 @@ class CitaForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+
+        # Cuando la edición llega como POST parcial (por ejemplo, solo cambia estatus),
+        # conservamos los valores actuales en los campos obligatorios del modelo.
+        if self.instance and self.instance.pk:
+            campos_obligatorios = [
+                'paciente',
+                'fecha',
+                'hora',
+                'tipo_paciente',
+                'consultorio',
+                'servicio',
+                'terapeuta',
+            ]
+            for field_name in campos_obligatorios:
+                if cleaned_data.get(field_name) in (None, ''):
+                    cleaned_data[field_name] = getattr(self.instance, field_name)
+
         terapeuta = cleaned_data.get('terapeuta')
         fecha = cleaned_data.get('fecha')
         hora = cleaned_data.get('hora')
