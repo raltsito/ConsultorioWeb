@@ -698,6 +698,118 @@ class BonoExtra(models.Model):
         verbose_name_plural = "Bonos Extra"
 
 
+class ReporteSesion(models.Model):
+    """
+    Reporte clínico de una sesión, basado en el documento físico de INTRA.
+    Los campos auto-calculados (fecha, terapeuta, paciente, # sesión) se
+    pre-rellenan desde la BD; los campos de contenido los escribe el terapeuta.
+    """
+    paciente = models.ForeignKey(
+        'Paciente',
+        on_delete=models.CASCADE,
+        related_name='reportes_sesion',
+    )
+    terapeuta = models.ForeignKey(
+        'Terapeuta',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='reportes_sesion',
+    )
+    cita = models.ForeignKey(
+        'Cita',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reporte_sesion',
+    )
+    fecha = models.DateField()
+    numero_sesion = models.PositiveIntegerField(default=1, verbose_name='# De sesión')
+    hora_inicio = models.TimeField(null=True, blank=True, verbose_name='Hora de inicio')
+    hora_fin = models.TimeField(null=True, blank=True, verbose_name='Hora de finalización')
+
+    objetivo_sesion = models.TextField(blank=True, verbose_name='Objetivo de la sesión')
+    revision_tareas = models.TextField(blank=True, verbose_name='Revisión de tareas')
+    desarrollo_sesion = models.TextField(blank=True, verbose_name='Desarrollo de sesión')
+    tecnicas_utilizadas = models.TextField(blank=True, verbose_name='Técnicas utilizadas')
+    resultados_sesion = models.TextField(blank=True, verbose_name='Resultados de la sesión')
+    tareas = models.TextField(blank=True, verbose_name='Tareas')
+    comentarios_finales = models.TextField(blank=True, verbose_name='Comentarios Finales')
+
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Sesión #{self.numero_sesion} – {self.paciente} ({self.fecha:%d/%m/%Y})"
+
+    class Meta:
+        verbose_name = 'Reporte de Sesión'
+        verbose_name_plural = 'Reportes de Sesión'
+        ordering = ['-fecha', '-creado_en']
+
+
+class AperturaExpediente(models.Model):
+    """
+    Formulario de apertura de expediente clínico (un solo registro por paciente).
+    Al guardarse genera automáticamente un PDF que queda enlazado como DocumentoPaciente
+    con tipo_documento='apertura'.
+    """
+    ESTADO_CIVIL_CHOICES = [
+        ('', '---------'),
+        ('soltero', 'Soltero(a)'),
+        ('casado', 'Casado(a)'),
+        ('divorciado', 'Divorciado(a)'),
+        ('viudo', 'Viudo(a)'),
+        ('union_libre', 'Unión libre'),
+        ('otro', 'Otro'),
+    ]
+
+    paciente = models.OneToOneField(
+        'Paciente',
+        on_delete=models.CASCADE,
+        related_name='apertura_expediente_obj',
+    )
+    documento = models.OneToOneField(
+        'DocumentoPaciente',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='apertura_origen',
+    )
+
+    expediente_no       = models.CharField(max_length=50, blank=True, verbose_name='Expediente No.')
+    apellido_paterno    = models.CharField(max_length=100, verbose_name='Apellido Paterno')
+    apellido_materno    = models.CharField(max_length=100, blank=True, verbose_name='Apellido Materno')
+    ocupacion           = models.CharField(max_length=150, blank=True, verbose_name='Ocupación')
+    lugar_de_trabajo    = models.CharField(max_length=200, blank=True, verbose_name='Lugar de Trabajo')
+    cargo               = models.CharField(max_length=150, blank=True, verbose_name='Cargo que desempeña')
+    estado_civil        = models.CharField(max_length=20, choices=ESTADO_CIVIL_CHOICES, blank=True, verbose_name='Estado Civil')
+    calle               = models.CharField(max_length=200, blank=True, verbose_name='Calle')
+    num_exterior        = models.CharField(max_length=20, blank=True, verbose_name='Núm.')
+    colonia             = models.CharField(max_length=150, blank=True, verbose_name='Col.')
+    division            = models.ForeignKey('Division', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='División')
+    vive_con            = models.CharField(max_length=200, blank=True, verbose_name='Vive con')
+    tiene_hijos         = models.BooleanField(default=False, verbose_name='Tiene hijos')
+    num_hijos           = models.PositiveIntegerField(null=True, blank=True, verbose_name='No. de Hijos')
+    hijo_1              = models.CharField(max_length=200, blank=True, verbose_name='Hijo 1')
+    hijo_2              = models.CharField(max_length=200, blank=True, verbose_name='Hijo 2')
+    hijo_3              = models.CharField(max_length=200, blank=True, verbose_name='Hijo 3')
+    hijo_4              = models.CharField(max_length=200, blank=True, verbose_name='Hijo 4')
+    religion            = models.CharField(max_length=100, blank=True, verbose_name='Religión')
+    motivo_consulta     = models.TextField(blank=True, verbose_name='Motivo de consulta')
+    emergencia_contacto = models.CharField(max_length=200, blank=True, verbose_name='En caso de emergencia llamar a')
+    emergencia_telefono = models.CharField(max_length=30, blank=True, verbose_name='Teléfono de contacto de emergencia')
+    como_se_entero      = models.CharField(max_length=200, blank=True, verbose_name='¿Cómo se enteró de nosotros?')
+
+    creado_en      = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'Apertura – {self.paciente}'
+
+    class Meta:
+        verbose_name = 'Apertura de Expediente'
+        verbose_name_plural = 'Aperturas de Expediente'
+
+
 def obtener_bloqueos_terapeuta_en_fecha(terapeuta_id, fecha_obj):
     if not terapeuta_id or not fecha_obj:
         return BloqueoAgendaTerapeuta.objects.none()

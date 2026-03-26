@@ -2,12 +2,14 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from .models import (
+    AperturaExpediente,
     BloqueoAgendaTerapeuta,
     Cita,
     DocumentoPaciente,
     NotaTerapeutaPaciente,
     Paciente,
     ReglaTerapeuta,
+    ReporteSesion,
     TabuladorGeneral,
     obtener_bloqueo_terapeuta_en_fecha,
 )
@@ -340,3 +342,127 @@ class ReglaTerapeutaForm(forms.ModelForm):
             "bono_por_paciente":     "Bono por Paciente (supervisor)",
             "notas":                 "Notas Operativas",
         }
+
+
+_TEXTAREA = lambda placeholder, rows=4: forms.Textarea(attrs={
+    'class': 'form-control', 'rows': rows, 'placeholder': placeholder,
+})
+
+
+class ReporteSesionForm(forms.ModelForm):
+    class Meta:
+        model = ReporteSesion
+        fields = [
+            'hora_fin',
+            'objetivo_sesion',
+            'revision_tareas',
+            'desarrollo_sesion',
+            'tecnicas_utilizadas',
+            'resultados_sesion',
+            'tareas',
+            'comentarios_finales',
+        ]
+        widgets = {
+            'hora_fin': forms.TimeInput(attrs={
+                'class': 'form-control',
+                'type': 'time',
+            }),
+            'objetivo_sesion':     _TEXTAREA('Describe el objetivo principal de la sesión...', 4),
+            'revision_tareas':     _TEXTAREA('Revisión de tareas o actividades asignadas en la sesión anterior...', 4),
+            'desarrollo_sesion':   _TEXTAREA('Describe el desarrollo y dinámica de la sesión...', 5),
+            'tecnicas_utilizadas': _TEXTAREA('Técnicas, herramientas o enfoques utilizados...', 4),
+            'resultados_sesion':   _TEXTAREA('Resultados obtenidos, avances y observaciones...', 4),
+            'tareas':              _TEXTAREA('Tareas o actividades asignadas para la próxima sesión...', 3),
+            'comentarios_finales': _TEXTAREA('Comentarios finales, observaciones del terapeuta...', 3),
+        }
+        labels = {
+            'hora_fin':            'Hora de finalización',
+            'objetivo_sesion':     'Objetivo de la sesión',
+            'revision_tareas':     'Revisión de tareas',
+            'desarrollo_sesion':   'Desarrollo de sesión',
+            'tecnicas_utilizadas': 'Técnicas utilizadas',
+            'resultados_sesion':   'Resultados de la sesión',
+            'tareas':              'Tareas',
+            'comentarios_finales': 'Comentarios Finales',
+        }
+
+
+class AperturaExpedienteForm(forms.ModelForm):
+    nombre = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        label='Nombre(s)',
+    )
+    fecha_nacimiento = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        label='Fecha de Nacimiento',
+    )
+    telefono = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'WhatsApp'}),
+        label='Celular',
+    )
+
+    VIVE_CON_CHOICES = [
+        ('Padres',    'Padres'),
+        ('Familiares','Familiares'),
+        ('Solo(a)',   'Solo(a)'),
+        ('Familia',   'Familia'),
+        ('Esposo(a)', 'Esposo(a)'),
+        ('Novio(a)',  'Novio(a)'),
+        ('Cónyuge',  'Cónyuge'),
+    ]
+
+    vive_con_sel = forms.MultipleChoiceField(
+        choices=VIVE_CON_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label='Vive con',
+    )
+
+    class Meta:
+        model = AperturaExpediente
+        exclude = ['paciente', 'documento', 'vive_con', 'creado_en', 'actualizado_en']
+        widgets = {
+            'expediente_no':        forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 001'}),
+            'apellido_paterno':     forms.TextInput(attrs={'class': 'form-control'}),
+            'apellido_materno':     forms.TextInput(attrs={'class': 'form-control'}),
+            'ocupacion':            forms.TextInput(attrs={'class': 'form-control'}),
+            'lugar_de_trabajo':     forms.TextInput(attrs={'class': 'form-control'}),
+            'cargo':                forms.TextInput(attrs={'class': 'form-control'}),
+            'estado_civil':         forms.Select(attrs={'class': 'form-select'}),
+            'calle':                forms.TextInput(attrs={'class': 'form-control'}),
+            'num_exterior':         forms.TextInput(attrs={'class': 'form-control'}),
+            'colonia':              forms.TextInput(attrs={'class': 'form-control'}),
+            'division':             forms.Select(attrs={'class': 'form-select'}),
+            'tiene_hijos':          forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'num_hijos':            forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'hijo_1':               forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre y edad'}),
+            'hijo_2':               forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre y edad'}),
+            'hijo_3':               forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre y edad'}),
+            'hijo_4':               forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre y edad'}),
+            'religion':             forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional'}),
+            'motivo_consulta':      forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'emergencia_contacto':  forms.TextInput(attrs={'class': 'form-control'}),
+            'emergencia_telefono':  forms.TextInput(attrs={'class': 'form-control'}),
+            'como_se_entero':       forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk and self.instance.paciente_id:
+            self.fields['nombre'].initial = self.instance.paciente.nombre
+            self.fields['fecha_nacimiento'].initial = self.instance.paciente.fecha_nacimiento
+            self.fields['telefono'].initial = self.instance.paciente.telefono
+        if self.instance.pk and self.instance.vive_con:
+            self.fields['vive_con_sel'].initial = [
+                v.strip() for v in self.instance.vive_con.split(',') if v.strip()
+            ]
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.vive_con = ', '.join(self.cleaned_data.get('vive_con_sel', []))
+        if commit:
+            instance.save()
+        return instance

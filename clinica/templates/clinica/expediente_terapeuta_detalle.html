@@ -1,186 +1,798 @@
 {% extends 'clinica/base.html' %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-        <div>
-            <h2 class="fw-bold mb-1">{{ paciente.nombre }}</h2>
-            <p class="text-muted mb-0">Expediente visible para {{ terapeuta.nombre }}</p>
-        </div>
-        <a href="{% url 'expedientes_terapeuta' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Volver a Mis Expedientes
-        </a>
+<style>
+/* ── Design tokens ─────────────────────────────────────────── */
+:root {
+  --navy:    #37474F;
+  --navy-md: #455A64;
+  --teal:    #2A72EA;
+  --teal-lt: #EAF2FF;
+  --teal-dk: #1F5FCA;
+  --hero-start: #2A72EA;
+  --hero-end:   #2569DC;
+  --amber:   #F59E0B;
+  --rose:    #EF5350;
+  --bg:      #F0F4F8;
+  --card:    #FFFFFF;
+  --text:    #37474F;
+  --muted:   #78909C;
+  --border:  #DDE5EB;
+  --shadow:  0 10px 30px rgba(0,0,0,.05);
+  --r:       20px;
+}
+
+/* ── Animations ─────────────────────────────────────────────── */
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(20px); }
+  to   { opacity:1; transform:translateY(0);   }
+}
+@keyframes fadeIn {
+  from { opacity:0; } to { opacity:1; }
+}
+@keyframes pulseRing {
+  0%,100% { opacity:1; transform:scale(1);    }
+  50%      { opacity:.5; transform:scale(1.15); }
+}
+
+/* ── Hero ───────────────────────────────────────────────────── */
+.hero {
+  background: linear-gradient(135deg, var(--hero-start) 0%, var(--hero-end) 100%);
+  border-radius: var(--r);
+  padding: 1.75rem 2rem;
+  margin-bottom: 1.75rem;
+  position: relative;
+  overflow: hidden;
+  animation: fadeIn .5s both;
+}
+.hero::before {
+  content:'';
+  position:absolute; top:-50px; right:-50px;
+  width:180px; height:180px; border-radius:50%;
+  background:rgba(0,201,167,.12);
+  pointer-events:none;
+}
+.hero::after {
+  content:'';
+  position:absolute; bottom:-30px; left:40%;
+  width:120px; height:120px; border-radius:50%;
+  background:rgba(255,255,255,.04);
+  pointer-events:none;
+}
+.hero-avatar {
+  width:56px; height:56px; border-radius:50%;
+  background:rgba(255,255,255,.18);
+  border:2px solid rgba(255,255,255,.3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.4rem; font-weight:800; color:#fff;
+  flex-shrink:0;
+  font-family:'Poppins',sans-serif;
+}
+.hero-name { font-size:1.4rem; font-weight:700; color:#fff; margin:0; font-family:'Poppins',sans-serif; }
+.hero-sub  { font-size:.8rem; color:rgba(255,255,255,.78); margin:0; }
+.hero-pill {
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:10px; padding:.45rem 1rem;
+}
+.hero-pill .lbl { font-size:.6rem; text-transform:uppercase; letter-spacing:.09em; color:rgba(255,255,255,.7); margin:0; }
+.hero-pill .val { font-size:.85rem; font-weight:600; color:#fff; margin:0; }
+.hero-session {
+  background:#fff; color:var(--teal-dk);
+  border-radius:999px; padding:.5rem 1rem; font-weight:700;
+  font-size:.85rem; flex-shrink:0;
+}
+.btn-hero-back {
+  border:1.5px solid rgba(255,255,255,.35); color:#fff;
+  background:transparent; border-radius:999px; padding:.45rem 1rem;
+  font-size:.8rem; text-decoration:none; transition:all .2s;
+}
+.btn-hero-back:hover { border-color:#fff; color:#fff; background:rgba(255,255,255,.12); }
+
+/* ── Cards ──────────────────────────────────────────────────── */
+.xcard {
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  box-shadow:var(--shadow);
+  margin-bottom:1.25rem;
+  overflow:hidden;
+}
+.xcard:nth-child(1) { animation:slideUp .4s .05s both; }
+.xcard:nth-child(2) { animation:slideUp .4s .12s both; }
+.xcard:nth-child(3) { animation:slideUp .4s .19s both; }
+.xcard:nth-child(4) { animation:slideUp .4s .26s both; }
+.sidebar .xcard:nth-child(1) { animation:slideUp .4s .10s both; }
+.sidebar .xcard:nth-child(2) { animation:slideUp .4s .17s both; }
+.sidebar .xcard:nth-child(3) { animation:slideUp .4s .24s both; }
+
+/* ── Card header ────────────────────────────────────────────── */
+.xcard-hd {
+  padding:1.1rem 1.4rem;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  min-height:0;
+}
+.xcard-icon {
+  width:30px; height:30px; border-radius:8px;
+  background:var(--teal-lt); color:var(--teal);
+  display:flex; align-items:center; justify-content:center;
+  font-size:.9rem; flex-shrink:0;
+}
+.xcard-title {
+  font-size:.75rem; font-weight:700; color:var(--navy);
+  text-transform:uppercase; letter-spacing:.07em; margin:0;
+}
+
+/* ── Badges ─────────────────────────────────────────────────── */
+.badge-ok   { background:#E8F8F5; color:#009E84; border:1px solid #A8E6D8; border-radius:20px; padding:2px 10px; font-size:.7rem; font-weight:700; white-space:nowrap; }
+.badge-warn { background:#FFF8EC; color:#C47A00; border:1px solid #FDDEA0; border-radius:20px; padding:2px 10px; font-size:.7rem; font-weight:700; white-space:nowrap; }
+.badge-warn i { animation:pulseRing 2s infinite; display:inline-block; }
+
+/* ── Section labels ─────────────────────────────────────────── */
+.slbl {
+  font-size:.62rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--teal-dk); margin-bottom:.3rem;
+}
+
+/* ── Form controls ──────────────────────────────────────────── */
+.xcard .form-control,
+.xcard .form-select {
+  border:1.5px solid var(--border);
+  border-radius:9px; font-size:.85rem;
+  transition:border-color .2s, box-shadow .2s;
+  background:white;
+}
+.xcard .form-control:focus,
+.xcard .form-select:focus {
+  border-color:var(--teal);
+  box-shadow:0 0 0 3px rgba(0,201,167,.13);
+  outline:none;
+}
+.fro {
+  background:#F7F9FC; border:1.5px solid var(--border);
+  border-radius:9px; padding:.44rem .75rem;
+  font-size:.85rem; color:var(--muted);
+}
+
+/* ── Autofill strip ─────────────────────────────────────────── */
+.af-strip {
+  background:linear-gradient(135deg,#EBF5FB 0%,#E6F8F5 100%);
+  border:1px solid #CAE9F5; border-radius:11px;
+  padding:.9rem 1.1rem; margin-bottom:1.25rem;
+  display:flex; flex-wrap:wrap; gap:1.25rem;
+}
+.af-strip .af-lbl { font-size:.6rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+.af-strip .af-val { font-size:.88rem; font-weight:700; color:var(--navy); }
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.btn-teal {
+  background:var(--teal); color:#fff; border:none;
+  border-radius:50px; padding:.6rem 1.45rem;
+  font-size:.85rem; font-weight:700; cursor:pointer;
+  transition:transform .15s, box-shadow .15s;
+}
+.btn-teal:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(38,198,218,.3); color:#fff; }
+.btn-teal:active { transform:translateY(0); }
+.btn-ghost {
+  background:transparent; border:1.5px solid #CFD8DC;
+  border-radius:50px; padding:.45rem .95rem;
+  font-size:.78rem; color:var(--muted); cursor:pointer;
+  text-decoration:none; display:inline-flex; align-items:center; gap:.3rem;
+  transition:all .15s;
+}
+.btn-ghost:hover { border-color:#B0BEC5; background:#ECEFF1; color:var(--navy); }
+
+/* ── Vive-con chips ─────────────────────────────────────────── */
+.vive-grid { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.25rem; }
+.vive-chip input[type=checkbox] { display:none; }
+.vive-chip label {
+  display:inline-flex; align-items:center; gap:.3rem;
+  padding:.3rem .85rem; border-radius:20px;
+  border:1.5px solid var(--border); font-size:.8rem;
+  cursor:pointer; transition:all .15s; color:var(--muted);
+  user-select:none;
+}
+.vive-chip label::before {
+  content:''; width:6px; height:6px; border-radius:50%;
+  background:currentColor; transition:transform .15s;
+}
+.vive-chip input:checked + label {
+  background:var(--teal-lt); border-color:var(--teal);
+  color:var(--teal-dk); font-weight:700;
+}
+.vive-chip label:hover { border-color:var(--teal); color:var(--teal-dk); }
+
+/* ── Accordion (reportes) ───────────────────────────────────── */
+.rpt-item { border-bottom:1px solid var(--border); }
+.rpt-item:last-child { border-bottom:none; }
+.rpt-btn {
+  width:100%; text-align:left; background:none; border:none;
+  padding:.9rem 1.4rem; display:flex; align-items:center; gap:.75rem;
+  cursor:pointer; transition:background .15s;
+}
+.rpt-btn:hover { background:#FAFCFE; }
+.rpt-chip {
+  background:var(--navy); color:#fff;
+  border-radius:7px; padding:2px 9px;
+  font-size:.7rem; font-weight:700; flex-shrink:0;
+}
+.rpt-chevron { margin-left:auto; color:var(--muted); transition:transform .25s; }
+.rpt-btn[aria-expanded="true"] .rpt-chevron { transform:rotate(180deg); }
+.rpt-body { background:#FAFBFC; padding:1rem 1.4rem 1.25rem; }
+.rfl { font-size:.62rem; text-transform:uppercase; letter-spacing:.09em; color:var(--teal-dk); font-weight:700; margin-bottom:.2rem; }
+.rfv { font-size:.875rem; color:var(--text); margin-bottom:.75rem; }
+
+/* ── Citas timeline ─────────────────────────────────────────── */
+.cita-row {
+  display:flex; align-items:center; gap:.75rem;
+  padding:.7rem 1.4rem; border-bottom:1px solid var(--border);
+  transition:background .15s;
+}
+.cita-row:hover { background:#FAFCFE; }
+.cita-row:last-child { border-bottom:none; }
+.cita-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.dot-ok     { background:#00C9A7; }
+.dot-pend   { background:#F59E0B; }
+.dot-cancel { background:#EF4444; }
+.dot-miss   { background:#94A3B8; }
+
+/* ── Notas ──────────────────────────────────────────────────── */
+.nota-row { padding:.9rem 1.4rem; border-bottom:1px solid var(--border); }
+.nota-row:last-child { border-bottom:none; }
+.nota-num {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:22px; height:22px; border-radius:50%;
+  background:var(--teal-lt); color:var(--teal-dk);
+  font-size:.7rem; font-weight:700;
+}
+
+/* ── Docs ───────────────────────────────────────────────────── */
+.doc-row {
+  display:flex; align-items:center; gap:.75rem;
+  padding:.8rem 1.4rem; border-bottom:1px solid var(--border);
+  transition:background .15s;
+}
+.doc-row:hover { background:#FAFCFE; }
+.doc-row:last-child { border-bottom:none; }
+.doc-ico {
+  width:34px; height:34px; border-radius:8px;
+  background:var(--teal-lt); color:var(--teal-dk);
+  display:flex; align-items:center; justify-content:center;
+  font-size:.95rem; flex-shrink:0;
+}
+
+/* ── Sidebar sticky ─────────────────────────────────────────── */
+@media (min-width:992px) {
+  .sidebar { position:sticky; top:1.5rem; }
+}
+
+/* ── Empty state ────────────────────────────────────────────── */
+.empty-state {
+  padding:2rem; text-align:center;
+  color:var(--muted); font-size:.85rem;
+}
+.empty-state i { font-size:1.75rem; opacity:.35; display:block; margin-bottom:.5rem; }
+</style>
+
+<!-- ══ HERO ══════════════════════════════════════════════════ -->
+<div class="hero">
+  <div class="d-flex align-items-center gap-3 mb-3 position-relative">
+    <div class="hero-avatar">{{ paciente.nombre|slice:":1" }}</div>
+    <div>
+      <p class="hero-name">{{ paciente.nombre }}</p>
+      <p class="hero-sub">Expediente — {{ terapeuta.nombre }}</p>
     </div>
-
-    <div class="row g-4">
-        <div class="col-lg-7">
-            <div class="card shadow-sm border-0 rounded-4 mb-4">
-                <div class="card-header bg-white border-bottom p-4">
-                    <h5 class="fw-bold mb-0 text-primary">
-                        <i class="bi bi-person-vcard me-2"></i>Datos del Paciente
-                    </h5>
-                </div>
-                <div class="card-body p-4">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <small class="text-muted d-block">Telefono</small>
-                            <strong>{{ paciente.telefono }}</strong>
-                        </div>
-                        <div class="col-md-6">
-                            <small class="text-muted d-block">Fecha de nacimiento</small>
-                            <strong>{{ paciente.fecha_nacimiento }}</strong>
-                        </div>
-                        <div class="col-md-6">
-                            <small class="text-muted d-block">Servicio inicial</small>
-                            <strong>{{ paciente.servicio_inicial|default:"-" }}</strong>
-                        </div>
-                        <div class="col-md-6">
-                            <small class="text-muted d-block">Contacto</small>
-                            <strong>{{ paciente.identidad_contacto|default:"-" }}</strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-header bg-white border-bottom p-4">
-                    <h5 class="fw-bold mb-0 text-primary">
-                        <i class="bi bi-clock-history me-2"></i>Citas Contigo
-                    </h5>
-                </div>
-                <div class="card-body p-0">
-                    {% if historial %}
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="ps-4">Fecha</th>
-                                    <th>Hora</th>
-                                    <th>Servicio</th>
-                                    <th>Consultorio</th>
-                                    <th>Estatus</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for cita in historial %}
-                                <tr>
-                                    <td class="ps-4">{{ cita.fecha|date:"d M Y" }}</td>
-                                    <td>{{ cita.hora|time:"H:i" }}</td>
-                                    <td>{{ cita.servicio|default:"-" }}</td>
-                                    <td>{{ cita.consultorio|default:"-" }}</td>
-                                    <td>{{ cita.get_estatus_display }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="p-4 text-muted">No hay citas registradas con este paciente.</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-5">
-            <div class="card shadow-sm border-0 rounded-4 mb-4">
-                <div class="card-header bg-white border-bottom p-4">
-                    <h5 class="fw-bold mb-0 text-primary">
-                        <i class="bi bi-journal-medical me-2"></i>Notas Privadas del Terapeuta
-                    </h5>
-                </div>
-                <div class="card-body p-4">
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            {{ form_notas.notas }}
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <small class="text-muted">Cada guardado crea una nueva nota en este expediente.</small>
-                            <button type="submit" class="btn btn-primary fw-semibold">
-                                <i class="bi bi-save me-1"></i>Agregar Nota
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div class="card shadow-sm border-0 rounded-4 mb-4">
-                <div class="card-header bg-white border-bottom p-4">
-                    <h5 class="fw-bold mb-0 text-primary">
-                        <i class="bi bi-card-text me-2"></i>Historial de Notas
-                    </h5>
-                </div>
-                <div class="card-body p-0">
-                    {% if notas_historial %}
-                    <div class="list-group list-group-flush">
-                        {% for nota in notas_historial %}
-                        <div class="list-group-item p-4">
-                            <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
-                                <strong class="text-dark">Nota {{ forloop.counter }}</strong>
-                                <small class="text-muted">{{ nota.creado_en|date:"d/m/Y H:i" }}</small>
-                            </div>
-                            <div class="text-muted small">{{ nota.notas|linebreaks }}</div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <div class="p-4 text-muted">Aun no has agregado notas para este paciente.</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-header bg-white border-bottom p-4">
-                    <h5 class="fw-bold mb-0 text-primary">
-                        <i class="bi bi-paperclip me-2"></i>Documentos
-                    </h5>
-                </div>
-                <div class="card-body p-4">
-                    <form method="post" enctype="multipart/form-data" class="mb-4">
-                        {% csrf_token %}
-                        <input type="hidden" name="accion" value="subir_documento">
-                        <div class="mb-3">
-                            <label class="form-label">{{ form_documento.tipo_documento.label }}</label>
-                            {{ form_documento.tipo_documento }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">{{ form_documento.archivo.label }}</label>
-                            {{ form_documento.archivo }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">{{ form_documento.descripcion.label }}</label>
-                            {{ form_documento.descripcion }}
-                        </div>
-                        <button type="submit" class="btn btn-outline-primary fw-semibold">
-                            <i class="bi bi-upload me-1"></i>Subir Documento
-                        </button>
-                    </form>
-
-                    {% if documentos_historial %}
-                    <div class="list-group list-group-flush border rounded-3">
-                        {% for documento in documentos_historial %}
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-start gap-3">
-                                <div>
-                                    <strong class="d-block">{{ documento.get_tipo_documento_display }}</strong>
-                                    <small class="text-muted d-block">
-                                        Subido por {{ documento.autor_display }} el {{ documento.creado_en|date:"d/m/Y H:i" }}
-                                    </small>
-                                    {% if documento.descripcion %}
-                                    <small class="text-muted d-block">{{ documento.descripcion }}</small>
-                                    {% endif %}
-                                </div>
-                                <a href="{% url 'descargar_documento' documento.id %}" target="_blank" class="btn btn-sm btn-outline-secondary">Ver</a>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <p class="text-muted mb-0">No hay documentos cargados.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+    <a href="{% url 'expedientes_terapeuta' %}" class="btn-hero-back ms-auto position-relative">
+      <i class="bi bi-arrow-left me-1"></i>Mis Expedientes
+    </a>
+  </div>
+  <div class="d-flex flex-wrap gap-2 position-relative">
+    <div class="hero-pill">
+      <p class="lbl">Teléfono</p>
+      <p class="val">{{ paciente.telefono }}</p>
     </div>
+    <div class="hero-pill">
+      <p class="lbl">Nacimiento</p>
+      <p class="val">{{ paciente.fecha_nacimiento }}</p>
+    </div>
+    <div class="hero-pill">
+      <p class="lbl">Servicio</p>
+      <p class="val">{{ paciente.servicio_inicial|default:"—" }}</p>
+    </div>
+    <div class="hero-pill">
+      <p class="lbl">Contacto</p>
+      <p class="val">{{ paciente.identidad_contacto|default:"—" }}</p>
+    </div>
+    <div class="hero-session ms-auto">Sesión #{{ numero_sesion_sugerido }}</div>
+  </div>
 </div>
+
+<!-- ══ BODY ══════════════════════════════════════════════════ -->
+<div class="row g-4">
+
+  <!-- ════ COLUMNA CLÍNICA ════ -->
+  <div class="col-lg-7">
+
+    <!-- ── APERTURA DE EXPEDIENTE ──────────────────────────── -->
+    <div class="xcard">
+      <div class="xcard-hd">
+        <div class="d-flex align-items-center gap-2">
+          <div class="xcard-icon"><i class="bi bi-folder2-open"></i></div>
+          <span class="xcard-title">Apertura de Expediente</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          {% if apertura and apertura.documento %}
+          <a href="{% url 'descargar_documento' apertura.documento.id %}" target="_blank" class="btn-ghost">
+            <i class="bi bi-file-earmark-pdf"></i>PDF
+          </a>
+          {% endif %}
+          {% if apertura %}
+            <span class="badge-ok"><i class="bi bi-check2-circle me-1"></i>Registrada</span>
+          {% else %}
+            <span class="badge-warn"><i class="bi bi-exclamation-circle me-1"></i>Pendiente</span>
+          {% endif %}
+          <button class="btn-ghost" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#colApertura"
+                  aria-expanded="{% if not apertura %}true{% else %}false{% endif %}">
+            <i class="bi bi-chevron-{% if not apertura %}up{% else %}down{% endif %}" id="chevApertura"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="collapse {% if not apertura %}show{% endif %}" id="colApertura">
+        <div class="p-4">
+          {% if apertura %}
+          <p class="small mb-3" style="color:var(--muted);">
+            <i class="bi bi-arrow-clockwise me-1"></i>Última actualización: {{ apertura.actualizado_en|date:"d/m/Y H:i" }}
+          </p>
+          {% endif %}
+
+          <form method="post" id="formApertura">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="guardar_apertura">
+
+            <!-- Expediente No -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-4">
+                <div class="slbl">Expediente No.</div>
+                {{ form_apertura.expediente_no }}
+              </div>
+            </div>
+
+            <!-- Identificación -->
+            <div class="slbl">Identificación</div>
+            <div class="row g-3 mb-4">
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">Nombre(s)</label>
+                {{ form_apertura.nombre }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">{{ form_apertura.apellido_paterno.label }}</label>
+                {{ form_apertura.apellido_paterno }}
+                {% if form_apertura.apellido_paterno.errors %}
+                <div class="text-danger small mt-1">{{ form_apertura.apellido_paterno.errors|join:", " }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">{{ form_apertura.apellido_materno.label }}</label>
+                {{ form_apertura.apellido_materno }}
+              </div>
+            </div>
+
+            <!-- Datos personales -->
+            <div class="slbl">Datos Personales</div>
+            <div class="row g-3 mb-4">
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">Fecha de Nacimiento</label>
+                {{ form_apertura.fecha_nacimiento }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">{{ form_apertura.ocupacion.label }}</label>
+                {{ form_apertura.ocupacion }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">{{ form_apertura.estado_civil.label }}</label>
+                {{ form_apertura.estado_civil }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">{{ form_apertura.lugar_de_trabajo.label }}</label>
+                {{ form_apertura.lugar_de_trabajo }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">{{ form_apertura.cargo.label }}</label>
+                {{ form_apertura.cargo }}
+              </div>
+            </div>
+
+            <!-- Domicilio -->
+            <div class="slbl">Domicilio</div>
+            <div class="row g-3 mb-4">
+              <div class="col-md-5">
+                <label class="form-label small fw-semibold">{{ form_apertura.calle.label }}</label>
+                {{ form_apertura.calle }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small fw-semibold">Núm.</label>
+                {{ form_apertura.num_exterior }}
+              </div>
+              <div class="col-md-5">
+                <label class="form-label small fw-semibold">Col.</label>
+                {{ form_apertura.colonia }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">Celular</label>
+                {{ form_apertura.telefono }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">{{ form_apertura.division.label }}</label>
+                {{ form_apertura.division }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">{{ form_apertura.religion.label }}</label>
+                {{ form_apertura.religion }}
+              </div>
+            </div>
+
+            <!-- Vive con -->
+            <div class="slbl">Vive con</div>
+            <div class="vive-grid">
+              {% for checkbox in form_apertura.vive_con_sel %}
+              <div class="vive-chip">
+                {{ checkbox.tag }}
+                <label for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
+              </div>
+              {% endfor %}
+            </div>
+
+            <!-- Hijos -->
+            <div class="slbl">Hijos</div>
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <div class="form-check mb-0">
+                {{ form_apertura.tiene_hijos }}
+                <label class="form-check-label small fw-semibold" for="{{ form_apertura.tiene_hijos.id_for_label }}">
+                  Tiene hijos
+                </label>
+              </div>
+              <div style="max-width:100px;">
+                <label class="form-label small fw-semibold mb-1">No. de hijos</label>
+                {{ form_apertura.num_hijos }}
+              </div>
+            </div>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">Hijo 1 — nombre y edad</label>
+                {{ form_apertura.hijo_1 }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">Hijo 2 — nombre y edad</label>
+                {{ form_apertura.hijo_2 }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">Hijo 3 — nombre y edad</label>
+                {{ form_apertura.hijo_3 }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">Hijo 4 — nombre y edad</label>
+                {{ form_apertura.hijo_4 }}
+              </div>
+            </div>
+
+            <!-- Motivo -->
+            <div class="slbl">Motivo de Consulta</div>
+            <div class="mb-4">{{ form_apertura.motivo_consulta }}</div>
+
+            <!-- Emergencia -->
+            <div class="slbl">Contacto de Emergencia</div>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">{{ form_apertura.emergencia_contacto.label }}</label>
+                {{ form_apertura.emergencia_contacto }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">{{ form_apertura.emergencia_telefono.label }}</label>
+                {{ form_apertura.emergencia_telefono }}
+              </div>
+            </div>
+
+            <!-- Cómo se enteró -->
+            <div class="mb-4">
+              <label class="form-label small fw-semibold">{{ form_apertura.como_se_entero.label }}</label>
+              {{ form_apertura.como_se_entero }}
+            </div>
+
+            <div class="d-flex justify-content-end">
+              <button type="submit" class="btn-teal btn">
+                <i class="bi bi-save me-1"></i>
+                {% if apertura %}Actualizar Apertura{% else %}Guardar Apertura{% endif %}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NUEVO REPORTE DE SESIÓN ──────────────────────────── -->
+    <div class="xcard">
+      <div class="xcard-hd">
+        <div class="d-flex align-items-center gap-2">
+          <div class="xcard-icon"><i class="bi bi-clipboard2-pulse"></i></div>
+          <span class="xcard-title">Nuevo Reporte de Sesión</span>
+        </div>
+        <span style="background:var(--navy);color:#fff;border-radius:20px;padding:3px 11px;font-size:.72rem;font-weight:700;">
+          Sesión #{{ numero_sesion_sugerido }}
+        </span>
+      </div>
+      <div class="p-4">
+        <!-- Auto-fill strip -->
+        <div class="af-strip">
+          <div>
+            <div class="af-lbl"><i class="bi bi-calendar3 me-1"></i>Fecha</div>
+            <div class="af-val">{{ fecha_hoy|date:"l d M Y" }}</div>
+          </div>
+          <div>
+            <div class="af-lbl"><i class="bi bi-person me-1"></i>Paciente</div>
+            <div class="af-val">{{ paciente.nombre }}</div>
+          </div>
+          <div>
+            <div class="af-lbl"><i class="bi bi-person-badge me-1"></i>Terapeuta</div>
+            <div class="af-val">{{ terapeuta.nombre }}</div>
+          </div>
+          <div>
+            <div class="af-lbl"><i class="bi bi-clock me-1"></i>Hora inicio</div>
+            <div class="af-val">
+              {% if hora_inicio_sugerida %}{{ hora_inicio_sugerida|time:"H:i" }}
+              {% else %}<span style="color:var(--muted);font-weight:400;font-style:italic;">Sin cita hoy</span>{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="guardar_reporte">
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{{ form_reporte.hora_fin.label }}</label>
+              {{ form_reporte.hora_fin }}
+            </div>
+          </div>
+          {% for field in form_reporte %}
+            {% if field.name != 'hora_fin' %}
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|join:", " }}</div>{% endif %}
+            </div>
+            {% endif %}
+          {% endfor %}
+          <div class="d-flex justify-content-end mt-1">
+            <button type="submit" class="btn-teal btn">
+              <i class="bi bi-save me-1"></i>Guardar Reporte
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── HISTORIAL DE REPORTES ──────────────────────────────── -->
+    {% if reportes_historial %}
+    <div class="xcard">
+      <div class="xcard-hd">
+        <div class="d-flex align-items-center gap-2">
+          <div class="xcard-icon"><i class="bi bi-journals"></i></div>
+          <span class="xcard-title">Reportes Anteriores</span>
+        </div>
+        <span class="badge-ok">{{ reportes_historial|length }}</span>
+      </div>
+      {% for reporte in reportes_historial %}
+      <div class="rpt-item">
+        <button class="rpt-btn" type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#rpt{{ reporte.id }}"
+                aria-expanded="false">
+          <span class="rpt-chip">Sesión #{{ reporte.numero_sesion }}</span>
+          <span style="font-size:.875rem;font-weight:600;color:var(--text);">{{ reporte.fecha|date:"d M Y" }}</span>
+          {% if reporte.hora_inicio %}
+          <span style="font-size:.78rem;color:var(--muted);">
+            {{ reporte.hora_inicio|time:"H:i" }}{% if reporte.hora_fin %} – {{ reporte.hora_fin|time:"H:i" }}{% endif %}
+          </span>
+          {% endif %}
+          <i class="bi bi-chevron-down rpt-chevron"></i>
+        </button>
+        <div class="collapse" id="rpt{{ reporte.id }}">
+          <div class="rpt-body">
+            <div class="row g-2 mb-3">
+              <div class="col-6 col-md-3"><div class="rfl">Fecha</div><div class="rfv">{{ reporte.fecha|date:"d/m/Y" }}</div></div>
+              <div class="col-6 col-md-3"><div class="rfl">Inicio</div><div class="rfv">{{ reporte.hora_inicio|time:"H:i"|default:"—" }}</div></div>
+              <div class="col-6 col-md-3"><div class="rfl">Fin</div><div class="rfv">{{ reporte.hora_fin|time:"H:i"|default:"—" }}</div></div>
+              <div class="col-6 col-md-3"><div class="rfl"># Sesión</div><div class="rfv">{{ reporte.numero_sesion }}</div></div>
+            </div>
+            {% if reporte.objetivo_sesion %}<div><div class="rfl">Objetivo</div><div class="rfv">{{ reporte.objetivo_sesion|linebreaks }}</div></div>{% endif %}
+            {% if reporte.revision_tareas %}<div><div class="rfl">Revisión de tareas</div><div class="rfv">{{ reporte.revision_tareas|linebreaks }}</div></div>{% endif %}
+            {% if reporte.desarrollo_sesion %}<div><div class="rfl">Desarrollo</div><div class="rfv">{{ reporte.desarrollo_sesion|linebreaks }}</div></div>{% endif %}
+            {% if reporte.tecnicas_utilizadas %}<div><div class="rfl">Técnicas</div><div class="rfv">{{ reporte.tecnicas_utilizadas|linebreaks }}</div></div>{% endif %}
+            {% if reporte.resultados_sesion %}<div><div class="rfl">Resultados</div><div class="rfv">{{ reporte.resultados_sesion|linebreaks }}</div></div>{% endif %}
+            {% if reporte.tareas or reporte.comentarios_finales %}
+            <div class="row g-2 mt-1">
+              <div class="col-md-6">
+                <div style="background:#fff;border:1px solid var(--border);border-radius:9px;padding:.75rem;">
+                  <div class="rfl">Tareas</div>
+                  <div style="font-size:.85rem;">{{ reporte.tareas|linebreaks|default:"—" }}</div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div style="background:#fff;border:1px solid var(--border);border-radius:9px;padding:.75rem;">
+                  <div class="rfl">Comentarios finales</div>
+                  <div style="font-size:.85rem;">{{ reporte.comentarios_finales|linebreaks|default:"—" }}</div>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div><!-- /col-lg-7 -->
+
+  <!-- ════ SIDEBAR ════ -->
+  <div class="col-lg-5">
+    <div class="sidebar">
+
+      <!-- ── CITAS CONTIGO ──────────────────────────────── -->
+      <div class="xcard">
+        <div class="xcard-hd">
+          <div class="d-flex align-items-center gap-2">
+            <div class="xcard-icon"><i class="bi bi-calendar-check"></i></div>
+            <span class="xcard-title">Citas Contigo</span>
+          </div>
+          <span class="badge-ok">{{ historial|length }}</span>
+        </div>
+        {% if historial %}
+          {% for cita in historial %}
+          <div class="cita-row">
+            {% if cita.estatus == 'si_asistio' or cita.estatus == 'confirmada' %}
+              <span class="cita-dot dot-ok"></span>
+            {% elif cita.estatus == 'cancelo' %}
+              <span class="cita-dot dot-cancel"></span>
+            {% elif cita.estatus == 'no_asistio' %}
+              <span class="cita-dot dot-miss"></span>
+            {% else %}
+              <span class="cita-dot dot-pend"></span>
+            {% endif %}
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:.85rem;font-weight:600;color:var(--text);">
+                {{ cita.fecha|date:"d M Y" }}
+                <span style="color:var(--muted);font-weight:400;margin-left:.25rem;">{{ cita.hora|time:"H:i" }}</span>
+              </div>
+              <div style="font-size:.73rem;color:var(--muted);">
+                {{ cita.servicio|default:"—" }}{% if cita.consultorio %} · {{ cita.consultorio }}{% endif %}
+              </div>
+            </div>
+            <span style="font-size:.7rem;font-weight:600;
+              {% if cita.estatus == 'si_asistio' %}color:#009E84;
+              {% elif cita.estatus == 'cancelo' or cita.estatus == 'no_asistio' %}color:#EF4444;
+              {% else %}color:var(--muted);{% endif %}">
+              {{ cita.get_estatus_display }}
+            </span>
+          </div>
+          {% endfor %}
+        {% else %}
+        <div class="empty-state"><i class="bi bi-calendar-x"></i>Sin citas registradas</div>
+        {% endif %}
+      </div>
+
+      <!-- ── NOTAS PRIVADAS ─────────────────────────────── -->
+      <div class="xcard">
+        <div class="xcard-hd">
+          <div class="d-flex align-items-center gap-2">
+            <div class="xcard-icon"><i class="bi bi-journal-medical"></i></div>
+            <span class="xcard-title">Notas Privadas</span>
+          </div>
+          {% if notas_historial %}
+          <span class="badge-ok">{{ notas_historial|length }}</span>
+          {% endif %}
+        </div>
+        <!-- Formulario nueva nota -->
+        <div class="p-4" style="border-bottom:1px solid var(--border);">
+          <form method="post">
+            {% csrf_token %}
+            <div class="mb-2">{{ form_notas.notas }}</div>
+            <div class="d-flex justify-content-between align-items-center">
+              <small style="color:var(--muted);font-size:.72rem;">Cada guardado crea una nueva nota.</small>
+              <button type="submit" class="btn-teal btn btn-sm">
+                <i class="bi bi-plus me-1"></i>Agregar
+              </button>
+            </div>
+          </form>
+        </div>
+        <!-- Historial notas -->
+        {% if notas_historial %}
+          {% for nota in notas_historial %}
+          <div class="nota-row">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+              <span class="nota-num">{{ forloop.counter }}</span>
+              <small style="color:var(--muted);font-size:.7rem;">{{ nota.creado_en|date:"d/m/Y H:i" }}</small>
+            </div>
+            <div style="font-size:.85rem;color:var(--text);">{{ nota.notas|linebreaks }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+        <div class="empty-state"><i class="bi bi-journal"></i>Sin notas aún</div>
+        {% endif %}
+      </div>
+
+      <!-- ── DOCUMENTOS ──────────────────────────────────── -->
+      <div class="xcard">
+        <div class="xcard-hd">
+          <div class="d-flex align-items-center gap-2">
+            <div class="xcard-icon"><i class="bi bi-paperclip"></i></div>
+            <span class="xcard-title">Documentos</span>
+          </div>
+          {% if documentos_historial %}
+          <span class="badge-ok">{{ documentos_historial|length }}</span>
+          {% endif %}
+        </div>
+        <!-- Subir documento -->
+        <div class="p-4" style="border-bottom:1px solid var(--border);">
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="subir_documento">
+            <div class="mb-2">
+              <label class="form-label small fw-semibold">{{ form_documento.tipo_documento.label }}</label>
+              {{ form_documento.tipo_documento }}
+            </div>
+            <div class="mb-2">
+              <label class="form-label small fw-semibold">{{ form_documento.archivo.label }}</label>
+              {{ form_documento.archivo }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">{{ form_documento.descripcion.label }}</label>
+              {{ form_documento.descripcion }}
+            </div>
+            <button type="submit" class="btn-ghost w-100" style="justify-content:center;">
+              <i class="bi bi-upload"></i>Subir Documento
+            </button>
+          </form>
+        </div>
+        <!-- Lista de documentos -->
+        {% if documentos_historial %}
+          {% for doc in documentos_historial %}
+          <div class="doc-row">
+            <div class="doc-ico">
+              {% if doc.tipo_mime == 'application/pdf' %}<i class="bi bi-file-earmark-pdf"></i>
+              {% elif 'image' in doc.tipo_mime|default:"" %}<i class="bi bi-file-earmark-image"></i>
+              {% else %}<i class="bi bi-file-earmark"></i>{% endif %}
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:.85rem;font-weight:600;color:var(--text);">{{ doc.get_tipo_documento_display }}</div>
+              <div style="font-size:.72rem;color:var(--muted);">{{ doc.autor_display }} · {{ doc.creado_en|date:"d/m/Y" }}</div>
+              {% if doc.descripcion %}
+              <div style="font-size:.72rem;color:var(--muted);">{{ doc.descripcion }}</div>
+              {% endif %}
+            </div>
+            <a href="{% url 'descargar_documento' doc.id %}" target="_blank" class="btn-ghost">Ver</a>
+          </div>
+          {% endfor %}
+        {% else %}
+        <div class="empty-state"><i class="bi bi-file-earmark-x"></i>Sin documentos</div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div><!-- /sidebar -->
+
+</div><!-- /row -->
+
+<script>
+// Chevron toggle para apertura
+document.getElementById('colApertura').addEventListener('show.bs.collapse', function() {
+  document.getElementById('chevApertura').className = 'bi bi-chevron-up';
+});
+document.getElementById('colApertura').addEventListener('hide.bs.collapse', function() {
+  document.getElementById('chevApertura').className = 'bi bi-chevron-down';
+});
+</script>
 {% endblock %}

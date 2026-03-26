@@ -21,10 +21,12 @@ from openpyxl.utils import get_column_letter
 
 #Modelos, Formularios y Utilidades de nuestra App
 from .models import (
+    AperturaExpediente,
     BloqueoAgendaTerapeuta,
     DocumentoPaciente,
     Paciente,
     NotaTerapeutaPaciente,
+    ReporteSesion,
     Terapeuta,
     Cita,
     Horario,
@@ -33,12 +35,14 @@ from .models import (
 )
 from .models import CorteSemanal, LineaNomina, BonoExtra
 from .forms import (
+    AperturaExpedienteForm,
     BloqueoAgendaTerapeutaForm,
     PacienteForm,
     CitaForm,
     DocumentoPacienteForm,
     NotaTerapeutaPacienteForm,
     CheckoutCitaForm,
+    ReporteSesionForm,
 )
 from .services import calcular_nomina_semanal, preview_nomina_semanal, aprobar_corte_semanal
 #from .utils import sincronizar_google_sheet
@@ -285,6 +289,155 @@ def registrar_paciente(request):
 
 # En clinica/views.py (dentro de detalle_paciente)
 
+def _generar_pdf_apertura(apertura):
+    """Genera los bytes del PDF de apertura de expediente usando reportlab."""
+    from io import BytesIO
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import (
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
+    )
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=letter,
+        rightMargin=2 * cm, leftMargin=2 * cm,
+        topMargin=2 * cm, bottomMargin=2 * cm,
+    )
+
+    styles = getSampleStyleSheet()
+    blue  = colors.HexColor('#003087')
+    gray  = colors.HexColor('#546E7A')
+    lblue = colors.HexColor('#90CAF9')
+
+    T_HEADING = ParagraphStyle('heading', parent=styles['Normal'],
+                               fontSize=12, fontName='Helvetica-Bold',
+                               alignment=TA_CENTER, textColor=blue, spaceAfter=3)
+    T_SUB     = ParagraphStyle('sub', parent=styles['Normal'],
+                               fontSize=9, alignment=TA_CENTER, spaceAfter=8)
+    T_SECTION = ParagraphStyle('section', parent=styles['Normal'],
+                               fontSize=8, fontName='Helvetica-Bold',
+                               textColor=blue, spaceBefore=8, spaceAfter=3)
+    T_LABEL   = ParagraphStyle('label', parent=styles['Normal'],
+                               fontSize=7, fontName='Helvetica-Bold', textColor=gray)
+    T_VALUE   = ParagraphStyle('value', parent=styles['Normal'],
+                               fontSize=9, fontName='Helvetica', spaceAfter=3)
+    T_PRIVACY = ParagraphStyle('privacy', parent=styles['Normal'],
+                               fontSize=6.5, textColor=gray, leading=9, spaceBefore=6)
+
+    def lbl(text):
+        return Paragraph(text.upper(), T_LABEL)
+
+    def val(v):
+        return Paragraph(str(v) if v else '—', T_VALUE)
+
+    def grid(rows):
+        """Crea una tabla de 4 columnas label/valor, label/valor."""
+        tbl = Table(rows, colWidths=['18%', '32%', '18%', '32%'])
+        tbl.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ]))
+        return tbl
+
+    p = apertura.paciente
+    elems = []
+
+    # ── Encabezado ──────────────────────────────────────────────────────────
+    elems.append(Paragraph('INSTITUTO DE ATENCIÓN INTEGRAL Y DESARROLLO HUMANO A.C.', T_HEADING))
+    elems.append(Paragraph('Información Personal del Paciente — Apertura de Expediente', T_SUB))
+    elems.append(HRFlowable(width='100%', thickness=1.5, color=blue, spaceAfter=6))
+
+    # Expediente No / fecha
+    elems.append(grid([
+        [lbl('Expediente No.'), val(apertura.expediente_no or '—'),
+         lbl('Fecha de apertura'), val(apertura.creado_en.strftime('%d/%m/%Y'))],
+    ]))
+    elems.append(Spacer(1, 6))
+
+    # ── Datos Personales ────────────────────────────────────────────────────
+    elems.append(Paragraph('Datos Personales', T_SECTION))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    elems.append(grid([
+        [lbl('Nombre(s)'), val(p.nombre),
+         lbl('Apellido Paterno'), val(apertura.apellido_paterno)],
+        [lbl('Apellido Materno'), val(apertura.apellido_materno),
+         lbl('Fecha de Nacimiento'),
+         val(p.fecha_nacimiento.strftime('%d/%m/%Y') if p.fecha_nacimiento else '—')],
+        [lbl('Ocupación'), val(apertura.ocupacion),
+         lbl('Estado Civil'), val(apertura.get_estado_civil_display() if apertura.estado_civil else '—')],
+        [lbl('Lugar de Trabajo'), val(apertura.lugar_de_trabajo),
+         lbl('Cargo'), val(apertura.cargo)],
+        [lbl('Calle'), val(apertura.calle),
+         lbl('Núm.'), val(apertura.num_exterior)],
+        [lbl('Colonia'), val(apertura.colonia),
+         lbl('División'), val(str(apertura.division) if apertura.division else '—')],
+        [lbl('Número de Celular'), val(p.telefono or '—'),
+         lbl('Religión'), val(apertura.religion or 'No especificada')],
+    ]))
+
+    # ── Convivencia e Hijos ─────────────────────────────────────────────────
+    elems.append(Paragraph('Convivencia', T_SECTION))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    elems.append(grid([
+        [lbl('Vive con'), val(apertura.vive_con or '—'),
+         lbl('Tiene hijos'), val('Sí' if apertura.tiene_hijos else 'No')],
+        [lbl('No. de Hijos'), val(str(apertura.num_hijos) if apertura.num_hijos is not None else '—'),
+         lbl(''), val('')],
+    ]))
+    if apertura.tiene_hijos:
+        hijos = [
+            (1, apertura.hijo_1), (2, apertura.hijo_2),
+            (3, apertura.hijo_3), (4, apertura.hijo_4),
+        ]
+        h_rows = [[lbl(f'Hijo {i}'), val(h), lbl(''), val('')]
+                  for i, h in hijos if h]
+        if h_rows:
+            elems.append(grid(h_rows))
+
+    # ── Motivo de Consulta ──────────────────────────────────────────────────
+    elems.append(Paragraph('Motivo de Consulta', T_SECTION))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    elems.append(Paragraph(apertura.motivo_consulta or '—', T_VALUE))
+
+    # ── Emergencia ──────────────────────────────────────────────────────────
+    elems.append(Paragraph('Contacto de Emergencia', T_SECTION))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    emg = Table(
+        [[lbl('En caso de emergencia llamar a'), val(apertura.emergencia_contacto),
+          lbl('Teléfono'), val(apertura.emergencia_telefono)]],
+        colWidths=['22%', '28%', '14%', '36%'],
+    )
+    emg.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP')]))
+    elems.append(emg)
+
+    # ── Cómo se enteró ──────────────────────────────────────────────────────
+    elems.append(Spacer(1, 6))
+    elems.append(Table(
+        [[lbl('¿Cómo se enteró de nosotros?'), val(apertura.como_se_entero or '—')]],
+        colWidths=['28%', '72%'],
+    ))
+
+    # ── Aviso de Privacidad ─────────────────────────────────────────────────
+    elems.append(Spacer(1, 10))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=gray))
+    elems.append(Paragraph(
+        '<b>Aviso de Privacidad</b> — De acuerdo con lo establecido en la Constitución Política de los '
+        'Estados Unidos Mexicanos, la Ley Federal De Protección de Datos Personales y en el Código Ético '
+        'del Psicólogo, la totalidad de la información como de los registros e historias clínicas, están '
+        'cubiertas por el secreto profesional del Instituto de Atención Integral y Desarrollo Humano A.C. '
+        'y sus colaboradores. WhatsApp: 844 443 99 87 | ANA CECILIA TREVIÑO No. 158 COL. IGNACIO ZARAGOZA',
+        T_PRIVACY,
+    ))
+
+    doc.build(elems)
+    return buffer.getvalue()
+
+
 def detalle_paciente(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)
     historial = Cita.objects.filter(
@@ -299,13 +452,20 @@ def detalle_paciente(request, paciente_id):
     documentos_historial = DocumentoPaciente.objects.filter(
         paciente=paciente
     ).select_related('terapeuta', 'subido_por').order_by('-creado_en')
+    reportes_historial = ReporteSesion.objects.filter(
+        paciente=paciente
+    ).select_related('terapeuta').order_by('-fecha', '-creado_en')
+
+    apertura = getattr(paciente, 'apertura_expediente_obj', None)
 
     context = {
         'paciente': paciente,
         'historial': historial,
-        'terapeutas_previos': terapeutas_previos, # Pasamos la lista al HTML
+        'terapeutas_previos': terapeutas_previos,
         'notas_historial': notas_historial,
         'documentos_historial': documentos_historial,
+        'reportes_historial': reportes_historial,
+        'apertura': apertura,
     }
     return render(request, 'clinica/detalle_paciente.html', context)
 
@@ -362,14 +522,98 @@ def expediente_terapeuta_detalle(request, paciente_id):
         terapeuta=terapeuta,
         paciente=paciente,
     ).order_by('-creado_en')
-
     documentos_historial = DocumentoPaciente.objects.filter(
         paciente=paciente
     ).select_related('terapeuta', 'subido_por').order_by('-creado_en')
+    reportes_historial = ReporteSesion.objects.filter(
+        terapeuta=terapeuta,
+        paciente=paciente,
+    ).order_by('-fecha', '-creado_en')
+
+    apertura = getattr(paciente, 'apertura_expediente_obj', None)
+
+    # --- Auto-calc: número de sesión = citas completadas (si_asistio) + 1 ---
+    sesiones_completadas = Cita.objects.filter(
+        terapeuta=terapeuta,
+        estatus=Cita.ESTATUS_SI_ASISTIO,
+    ).filter(
+        Q(paciente=paciente) | Q(pacientes_adicionales=paciente)
+    ).distinct().count()
+    numero_sesion_sugerido = sesiones_completadas + 1
+
+    # --- Auto-calc: hora de la cita más reciente de hoy como hora_inicio ---
+    hoy = date.today()
+    cita_hoy = historial.filter(fecha=hoy).order_by('hora').last()
+    hora_inicio_sugerida = cita_hoy.hora if cita_hoy else None
+    cita_sugerida = cita_hoy
 
     if request.method == 'POST':
         accion = request.POST.get('accion')
-        if accion == 'subir_documento':
+
+        if accion == 'guardar_apertura':
+            form_apertura = AperturaExpedienteForm(request.POST, instance=apertura)
+            form_reporte = ReporteSesionForm()
+            form = NotaTerapeutaPacienteForm()
+            form_documento = DocumentoPacienteForm()
+            if form_apertura.is_valid():
+                ap = form_apertura.save(commit=False)
+                ap.paciente = paciente
+                ap.save()
+
+                paciente.nombre = form_apertura.cleaned_data.get('nombre') or paciente.nombre
+                paciente.fecha_nacimiento = form_apertura.cleaned_data.get('fecha_nacimiento') or paciente.fecha_nacimiento
+                paciente.telefono = form_apertura.cleaned_data.get('telefono') or paciente.telefono
+                paciente.save(update_fields=['nombre', 'fecha_nacimiento', 'telefono'])
+
+                # Generar PDF y enlazar como DocumentoPaciente
+                pdf_bytes = _generar_pdf_apertura(ap)
+                nombre_pdf = f'apertura_expediente_{paciente.id}.pdf'
+                if ap.documento:
+                    doc_obj = ap.documento
+                    doc_obj.contenido = pdf_bytes
+                    doc_obj.nombre_archivo = nombre_pdf
+                    doc_obj.save(update_fields=['contenido', 'nombre_archivo'])
+                else:
+                    doc_obj = DocumentoPaciente.objects.create(
+                        paciente=paciente,
+                        terapeuta=terapeuta,
+                        subido_por=request.user,
+                        tipo_documento='apertura',
+                        nombre_archivo=nombre_pdf,
+                        tipo_mime='application/pdf',
+                        contenido=pdf_bytes,
+                        descripcion='Apertura de expediente generada automáticamente.',
+                    )
+                    ap.documento = doc_obj
+                    ap.save(update_fields=['documento'])
+                messages.success(request, 'Apertura de expediente guardada y PDF generado correctamente.')
+                return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
+            else:
+                messages.error(request, 'Revisa los campos de la apertura.')
+
+        elif accion == 'guardar_reporte':
+            form_apertura = AperturaExpedienteForm(instance=apertura)
+            form_reporte = ReporteSesionForm(request.POST)
+            form = NotaTerapeutaPacienteForm()
+            form_documento = DocumentoPacienteForm()
+            if form_reporte.is_valid():
+                reporte = form_reporte.save(commit=False)
+                reporte.paciente = paciente
+                reporte.terapeuta = terapeuta
+                reporte.fecha = hoy
+                reporte.numero_sesion = numero_sesion_sugerido
+                reporte.hora_inicio = hora_inicio_sugerida
+                if cita_sugerida:
+                    reporte.cita = cita_sugerida
+                reporte.save()
+                messages.success(request, f'Reporte de sesión #{reporte.numero_sesion} guardado correctamente.')
+                return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
+            else:
+                messages.error(request, 'Revisa los campos del reporte.')
+
+        elif accion == 'subir_documento':
+            form_apertura = AperturaExpedienteForm(instance=apertura)
+            form_reporte = ReporteSesionForm()
             form_documento = DocumentoPacienteForm(request.POST, request.FILES)
             form = NotaTerapeutaPacienteForm()
             if form_documento.is_valid():
@@ -384,7 +628,10 @@ def expediente_terapeuta_detalle(request, paciente_id):
                 documento.save()
                 messages.success(request, 'Documento agregado correctamente.')
                 return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
+
         else:
+            form_apertura = AperturaExpedienteForm(instance=apertura)
+            form_reporte = ReporteSesionForm()
             form = NotaTerapeutaPacienteForm(request.POST)
             form_documento = DocumentoPacienteForm()
             if form.is_valid():
@@ -397,6 +644,8 @@ def expediente_terapeuta_detalle(request, paciente_id):
     else:
         form = NotaTerapeutaPacienteForm()
         form_documento = DocumentoPacienteForm()
+        form_reporte = ReporteSesionForm()
+        form_apertura = AperturaExpedienteForm(instance=apertura)
 
     return render(request, 'clinica/expediente_terapeuta_detalle.html', {
         'terapeuta': terapeuta,
@@ -406,6 +655,13 @@ def expediente_terapeuta_detalle(request, paciente_id):
         'notas_historial': notas_historial,
         'form_documento': form_documento,
         'documentos_historial': documentos_historial,
+        'form_reporte': form_reporte,
+        'reportes_historial': reportes_historial,
+        'numero_sesion_sugerido': numero_sesion_sugerido,
+        'hora_inicio_sugerida': hora_inicio_sugerida,
+        'fecha_hoy': hoy,
+        'apertura': apertura,
+        'form_apertura': form_apertura,
     })
 
 @login_required

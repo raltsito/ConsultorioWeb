@@ -115,7 +115,7 @@
 
                                 <div class="d-flex gap-2 flex-wrap">
                                     {% if cita.paciente_id %}
-                                    <a href="{% url 'detalle_paciente' cita.paciente.id %}"
+                                    <a href="{% url 'expediente_terapeuta_detalle' cita.paciente.id %}"
                                        class="btn btn-outline-primary btn-sm px-3 fw-semibold">
                                         <i class="bi bi-folder2-open me-1"></i>Expediente
                                     </a>
