@@ -23,7 +23,9 @@
       "Bash(pip freeze:*)",
       "Bash(echo \"import os; print\\(''''CLOUD_NAME:'''', os.environ.get\\(''''CLOUDINARY_CLOUD_NAME'''', ''''NO CONFIGURADO''''\\)\\)\")",
       "Bash(venv/Scripts/python manage.py shell -c \":*)",
-      "Bash(venv/Scripts/python -c \":*)"
+      "Bash(venv/Scripts/python -c \":*)",
+      "Bash(where pg_dump)",
+      "Bash(ls:*)"
     ]
   }
 }

@@ -54,6 +54,38 @@ def quitar_tildes(texto):
                    if unicodedata.category(c) != 'Mn').lower()
 
 
+def resolver_paciente_por_nombre(nombre):
+    nombre_normalizado = quitar_tildes(nombre).strip()
+    if not nombre_normalizado:
+        return None
+
+    paciente = Paciente.objects.filter(nombre__iexact=str(nombre).strip()).first()
+    if paciente:
+        return paciente
+
+    paciente = Paciente.objects.filter(nombre_normalizado=nombre_normalizado).first()
+    if paciente:
+        return paciente
+
+    tokens = [token for token in nombre_normalizado.split() if token]
+    if tokens:
+        filtro_normalizado = Q()
+        filtro_nombre = Q()
+        for token in tokens:
+            filtro_normalizado &= Q(nombre_normalizado__icontains=token)
+            filtro_nombre &= Q(nombre__icontains=token)
+        paciente = Paciente.objects.filter(
+            filtro_normalizado | filtro_nombre
+        ).order_by('nombre').first()
+        if paciente:
+            return paciente
+
+    return Paciente.objects.filter(
+        Q(nombre_normalizado__icontains=nombre_normalizado) |
+        Q(nombre__icontains=str(nombre).strip())
+    ).order_by('nombre').first()
+
+
 # ─── Excel helper ─────────────────────────────────────────────────────────────
 _TEAL_FILL  = PatternFill("solid", fgColor="26C6DA")
 _HEADER_FONT = Font(bold=True, color="FFFFFF", name="Calibri", size=11)
@@ -848,7 +880,13 @@ def crear_cita(request):
         if 'hora' in request.GET:
             datos_iniciales['hora'] = request.GET.get('hora')
         if 'paciente' in request.GET:
-            datos_iniciales['paciente'] = request.GET.get('paciente')
+            paciente_param = request.GET.get('paciente')
+            if str(paciente_param).isdigit():
+                datos_iniciales['paciente'] = paciente_param
+            else:
+                paciente_match = resolver_paciente_por_nombre(paciente_param)
+                if paciente_match:
+                    datos_iniciales['paciente'] = paciente_match.id
             
         # TRUCO: Lo convertimos a entero para que el campo Choice de Django lo acepte sin quejarse
         if 'terapeuta' in request.GET:
@@ -873,13 +911,7 @@ def crear_cita(request):
                 if solicitud.consultorio:
                     datos_iniciales['consultorio'] = solicitud.consultorio.id
 
-                # Buscamos si hay algún paciente en la BD que se llame igual
-                from .models import Paciente
-                paciente_match = Paciente.objects.filter(
-                    nombre_normalizado__icontains=solicitud.paciente_nombre.lower()
-                        .replace('á','a').replace('é','e').replace('í','i')
-                        .replace('ó','o').replace('ú','u').replace('ü','u').replace('ñ','n')
-                ).first()
+                paciente_match = resolver_paciente_por_nombre(solicitud.paciente_nombre)
                 if paciente_match:
                     datos_iniciales['paciente'] = paciente_match.id
             except SolicitudCita.DoesNotExist:
@@ -969,7 +1001,25 @@ def editar_cita(request, cita_id):
                     else:
                         messages.error(request, f"Error en {field}: {error}")
     else:
-        form = CitaForm(instance=cita)
+        datos_iniciales = {}
+        if 'fecha' in request.GET:
+            datos_iniciales['fecha'] = request.GET.get('fecha')
+        if 'hora' in request.GET:
+            datos_iniciales['hora'] = request.GET.get('hora')
+        if 'paciente' in request.GET:
+            paciente_param = request.GET.get('paciente')
+            if str(paciente_param).isdigit():
+                datos_iniciales['paciente'] = paciente_param
+            else:
+                paciente_match = resolver_paciente_por_nombre(paciente_param)
+                if paciente_match:
+                    datos_iniciales['paciente'] = paciente_match.id
+        if 'terapeuta' in request.GET:
+            try:
+                datos_iniciales['terapeuta'] = int(request.GET.get('terapeuta'))
+            except (TypeError, ValueError):
+                pass
+        form = CitaForm(instance=cita, initial=datos_iniciales)
 
     return render(request, 'clinica/editar_cita.html', {
         'form': form, 
