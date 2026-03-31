@@ -1,0 +1,488 @@
+{% extends 'clinica/base.html' %}
+{% load static %}
+
+{% block content %}
+
+{# ── ENCABEZADO HERO ─────────────────────────────────── #}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="disp-hero animate__animated animate__fadeInDown">
+            <div class="disp-hero-icon">
+                <i class="bi bi-person-lines-fill"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h2 class="fw-bold mb-1" style="font-family:'Poppins',sans-serif;">Disponibilidad Semanal</h2>
+                <p class="mb-0" style="opacity:0.82;">
+                    Define los días y horarios de trabajo permanentes de cada terapeuta.
+                    El sistema solo agendará citas dentro de estas franjas.
+                </p>
+            </div>
+            <a href="{% url 'home' %}" class="btn btn-outline-light rounded-pill fw-semibold px-4">
+                <i class="bi bi-arrow-left me-1"></i> Volver
+            </a>
+        </div>
+    </div>
+</div>
+
+{# ── BANNER INFO ─────────────────────────────────────── #}
+<div class="disp-info-banner mb-4">
+    <i class="bi bi-shield-check fs-5"></i>
+    <span>
+        <strong>Horarios permanentes.</strong>
+        Solo se podrán agendar citas en las franjas configuradas aquí.
+        Fuera de estos horarios, el sistema bloqueará la asignación automáticamente.
+    </span>
+</div>
+
+{# ── MENSAJES DJANGO ─────────────────────────────────── #}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show rounded-3 border-0 shadow-sm mb-3" role="alert">
+    <i class="bi bi-{% if msg.tags == 'success' %}check-circle-fill{% elif msg.tags == 'error' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %} me-2"></i>
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+
+{# ── TARJETAS DE TERAPEUTAS ──────────────────────────── #}
+{% for td in terapeutas_data %}
+<div class="disp-card mb-4 animate__animated animate__fadeInUp" style="animation-delay: {{ forloop.counter0 }}00ms;">
+
+    {# — Cabecera expandible — #}
+    <div class="disp-card-head"
+         data-bs-toggle="collapse"
+         data-bs-target="#disp-{{ td.terapeuta.id }}"
+         aria-expanded="false"
+         aria-controls="disp-{{ td.terapeuta.id }}">
+
+        <div class="disp-avatar">{{ td.terapeuta.nombre|slice:":2"|upper }}</div>
+
+        <div class="flex-grow-1 ms-1">
+            <h5 class="mb-0 fw-bold" style="font-family:'Poppins',sans-serif; color:#263238;">
+                {{ td.terapeuta.nombre }}
+            </h5>
+            {% if td.total > 0 %}
+            <small class="text-success fw-semibold">
+                <i class="bi bi-check-circle-fill me-1"></i>
+                {{ td.total }} franja{% if td.total != 1 %}s{% endif %} configurada{% if td.total != 1 %}s{% endif %}
+            </small>
+            {% else %}
+            <small class="text-danger fw-semibold">
+                <i class="bi bi-exclamation-circle-fill me-1"></i>Sin horarios — no se pueden agendar citas
+            </small>
+            {% endif %}
+        </div>
+
+        {# Días activos como pills #}
+        <div class="d-none d-lg-flex gap-1 flex-wrap align-items-center">
+            {% for dia in td.dias %}
+                {% if dia.slots %}
+                <span class="badge rounded-pill disp-day-badge">{{ dia.nombre|slice:":3" }}</span>
+                {% endif %}
+            {% endfor %}
+            {% if td.total == 0 %}
+            <span class="badge rounded-pill text-bg-light border text-muted">Sin días</span>
+            {% endif %}
+        </div>
+
+        <i class="bi bi-chevron-down disp-chevron ms-3"></i>
+    </div>
+
+    {# — Grid semanal — #}
+    <div class="collapse" id="disp-{{ td.terapeuta.id }}">
+        <div class="disp-week-grid">
+            {% for dia in td.dias %}
+            <div class="disp-day-col{% if dia.num >= 5 %} disp-weekend{% endif %}">
+
+                {# Etiqueta del día #}
+                <div class="disp-day-label">
+                    <span class="disp-day-name">{{ dia.nombre }}</span>
+                    {% if dia.slots %}
+                    <span class="disp-day-count">{{ dia.slots|length }}</span>
+                    {% endif %}
+                </div>
+
+                {# Franjas existentes #}
+                <div class="disp-slots-list">
+                    {% for slot in dia.slots %}
+                    <div class="disp-slot-pill disp-sede-{{ slot.sede|default:'sin_sede' }}">
+                        <div class="disp-slot-body">
+                            <span class="disp-slot-time">
+                                <i class="bi bi-clock me-1" style="font-size:0.6rem;"></i>
+                                {{ slot.hora_inicio|time:"H:i" }}–{{ slot.hora_fin|time:"H:i" }}
+                            </span>
+                            {% if slot.sede %}
+                            <span class="disp-sede-tag">
+                                <i class="bi bi-geo-alt-fill me-1" style="font-size:0.55rem;"></i>{{ slot.get_sede_display }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <form method="post"
+                              action="{% url 'eliminar_disponibilidad' slot.id %}"
+                              class="d-inline"
+                              onsubmit="return confirm('¿Eliminar este horario de {{ td.terapeuta.nombre }}?')">
+                            {% csrf_token %}
+                            <button type="submit" class="disp-del-btn" title="Eliminar franja">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% empty %}
+                    <p class="disp-empty-day">— libre —</p>
+                    {% endfor %}
+                </div>
+
+                {# Formulario agregar franja #}
+                <form method="post" action="{% url 'agregar_disponibilidad' %}" class="disp-add-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="terapeuta" value="{{ td.terapeuta.id }}">
+                    <input type="hidden" name="dia" value="{{ dia.num }}">
+                    <input type="time" name="hora_inicio" class="form-control form-control-sm disp-time-input" required title="Hora inicio">
+                    <input type="time" name="hora_fin"    class="form-control form-control-sm disp-time-input" required title="Hora fin">
+                    <select name="sede" class="form-select form-select-sm disp-time-input" required>
+                        <option value="" disabled selected>Sede</option>
+                        <option value="republica">República</option>
+                        <option value="morelos">Morelos</option>
+                        <option value="colinas">Colinas</option>
+                        <option value="trabajo_social">Trabajo Social</option>
+                        <option value="zoom">Zoom / Online</option>
+                        <option value="externo">Externo</option>
+                    </select>
+                    <button type="submit" class="btn btn-sm disp-add-btn w-100">
+                        <i class="bi bi-plus-lg me-1"></i>Agregar
+                    </button>
+                </form>
+
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% empty %}
+<div class="text-center py-5">
+    <div class="disp-empty-state">
+        <i class="bi bi-people"></i>
+        <h5 class="mt-3 text-muted fw-semibold">No hay terapeutas activos registrados</h5>
+        <p class="text-muted small">Registra terapeutas desde el panel de administración.</p>
+    </div>
+</div>
+{% endfor %}
+
+
+<style>
+/* ── HERO ───────────────────────────────────────────────── */
+.disp-hero {
+    background: linear-gradient(135deg, #7E57C2 0%, #4527A0 100%);
+    border-radius: 1.25rem;
+    padding: 1.75rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    color: #fff;
+    box-shadow: 0 8px 32px rgba(126,87,194,.28);
+}
+.disp-hero-icon {
+    width: 58px;
+    height: 58px;
+    background: rgba(255,255,255,.18);
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    backdrop-filter: blur(4px);
+}
+
+/* ── INFO BANNER ────────────────────────────────────────── */
+.disp-info-banner {
+    background: linear-gradient(90deg,#E8F5E9,#F1F8E9);
+    border: 1px solid #A5D6A7;
+    border-left: 4px solid #43A047;
+    border-radius: .75rem;
+    padding: .875rem 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: .875rem;
+    color: #2E7D32;
+    font-size: .9rem;
+}
+
+/* ── CARD TERAPEUTA ─────────────────────────────────────── */
+.disp-card {
+    background: #fff;
+    border-radius: 1.25rem;
+    border: 1px solid #EEF2F7;
+    box-shadow: 0 4px 24px rgba(0,0,0,.06);
+    overflow: hidden;
+    transition: box-shadow .25s;
+}
+.disp-card:hover {
+    box-shadow: 0 8px 32px rgba(0,0,0,.1);
+}
+.disp-card-head {
+    padding: 1.1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background .2s;
+    border-bottom: 1px solid transparent;
+}
+.disp-card-head:hover {
+    background: #F8FAFC;
+}
+[data-bs-toggle="collapse"][aria-expanded="true"].disp-card-head {
+    border-bottom-color: #EEF2F7;
+    background: #F8FAFC;
+}
+
+/* Avatar gradiente */
+.disp-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: linear-gradient(135deg,#7E57C2,#4527A0);
+    color: #fff;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: .95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 3px 10px rgba(126,87,194,.35);
+}
+
+/* Días activos pills */
+.disp-day-badge {
+    background: linear-gradient(135deg,#26C6DA,#00838F);
+    color: #fff;
+    font-size: .65rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+}
+
+/* Flecha animada */
+.disp-chevron {
+    color: #90A4AE;
+    font-size: .9rem;
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+    flex-shrink: 0;
+}
+[aria-expanded="true"] .disp-chevron {
+    transform: rotate(180deg);
+}
+
+/* ── GRID SEMANAL ───────────────────────────────────────── */
+.disp-week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+.disp-day-col {
+    padding: 1rem .85rem 1.1rem;
+    border-right: 1px solid #EEF2F7;
+    border-top: 1px solid #EEF2F7;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+}
+.disp-day-col:last-child {
+    border-right: none;
+}
+.disp-weekend {
+    background: #FAFBFF;
+}
+
+/* Etiqueta del día */
+.disp-day-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .65rem;
+}
+.disp-day-name {
+    font-family: 'Poppins', sans-serif;
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #546E7A;
+}
+.disp-day-count {
+    background: #26C6DA;
+    color: #fff;
+    border-radius: 999px;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .6rem;
+    font-weight: 700;
+}
+
+/* Franjas existentes */
+.disp-slots-list {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    margin-bottom: .6rem;
+}
+.disp-slot-pill {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 8px;
+    padding: .3rem .5rem;
+    gap: .25rem;
+    border-left: 3px solid #B0BEC5;
+    background: #F8FAFC;
+    border-top: 1px solid #EEF2F7;
+    border-right: 1px solid #EEF2F7;
+    border-bottom: 1px solid #EEF2F7;
+}
+/* Colores por sede */
+.disp-sede-republica      { border-left-color: #26C6DA; background: #E0F7FA; }
+.disp-sede-morelos        { border-left-color: #EF5350; background: #FFEBEE; }
+.disp-sede-colinas        { border-left-color: #43A047; background: #E8F5E9; }
+.disp-sede-trabajo_social { border-left-color: #FFA726; background: #FFF3E0; }
+.disp-sede-zoom           { border-left-color: #7E57C2; background: #EDE7F6; }
+.disp-sede-externo        { border-left-color: #78909C; background: #ECEFF1; }
+
+.disp-slot-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+.disp-slot-time {
+    font-size: .7rem;
+    font-weight: 700;
+    color: #263238;
+    white-space: nowrap;
+}
+.disp-sede-tag {
+    font-size: .6rem;
+    font-weight: 600;
+    color: #546E7A;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.disp-del-btn {
+    background: none;
+    border: none;
+    color: #EF5350;
+    padding: 1px 3px;
+    cursor: pointer;
+    font-size: .6rem;
+    opacity: .65;
+    border-radius: 4px;
+    transition: opacity .2s, background .2s;
+    line-height: 1;
+}
+.disp-del-btn:hover {
+    opacity: 1;
+    background: #FFEBEE;
+}
+.disp-empty-day {
+    font-size: .7rem;
+    color: #B0BEC5;
+    text-align: center;
+    font-style: italic;
+    margin: auto 0;
+    padding: .5rem 0;
+}
+
+/* Formulario agregar */
+.disp-add-form {
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+    margin-top: auto;
+    border-top: 1px dashed #E0E7EF;
+    padding-top: .6rem;
+}
+.disp-time-input {
+    font-size: .72rem;
+    border-radius: 7px;
+    border-color: #CFD8DC;
+    color: #37474F;
+}
+.disp-time-input:focus {
+    border-color: #7E57C2;
+    box-shadow: 0 0 0 3px rgba(126,87,194,.15);
+}
+.disp-add-btn {
+    background: linear-gradient(135deg,#7E57C2,#5E35B1);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: .72rem;
+    font-weight: 600;
+    padding: .3rem 0;
+    transition: opacity .2s, transform .15s;
+}
+.disp-add-btn:hover {
+    opacity: .9;
+    transform: translateY(-1px);
+    color: #fff;
+}
+
+/* ── EMPTY STATE ────────────────────────────────────────── */
+.disp-empty-state {
+    padding: 3rem 1rem;
+}
+.disp-empty-state i {
+    font-size: 3.5rem;
+    color: #B0BEC5;
+}
+
+/* ── RESPONSIVE ─────────────────────────────────────────── */
+@media (max-width: 1100px) {
+    .disp-week-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+@media (max-width: 768px) {
+    .disp-week-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .disp-hero {
+        flex-wrap: wrap;
+        gap: .875rem;
+    }
+    .disp-hero .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+@media (max-width: 480px) {
+    .disp-week-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+{% block scripts %}
+<script>
+/* Animar la flecha del collapse usando el evento de Bootstrap */
+document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(function(trigger) {
+    const targetId = trigger.getAttribute('data-bs-target');
+    const targetEl = document.querySelector(targetId);
+    if (!targetEl) return;
+
+    targetEl.addEventListener('show.bs.collapse', function() {
+        trigger.setAttribute('aria-expanded', 'true');
+    });
+    targetEl.addEventListener('hide.bs.collapse', function() {
+        trigger.setAttribute('aria-expanded', 'false');
+    });
+});
+</script>
+{% endblock %}
+
+{% endblock %}

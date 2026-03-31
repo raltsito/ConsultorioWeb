@@ -6,6 +6,7 @@ from .models import (
     BloqueoAgendaTerapeuta,
     Cita,
     DocumentoPaciente,
+    Horario,
     NotaTerapeutaPaciente,
     Paciente,
     ReglaTerapeuta,
@@ -193,6 +194,42 @@ class CitaForm(forms.ModelForm):
                 if hora:
                     self.add_error('hora', 'La hora seleccionada cae dentro de un bloqueo del terapeuta.')
                 raise ValidationError(mensaje)
+
+            # Validar horario y consultorio solo al CREAR citas nuevas
+            es_nueva = not (self.instance and self.instance.pk)
+            if hora and es_nueva:
+                _DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+                _SEDES = dict(Horario.SEDE_CHOICES)
+                dia_semana = fecha.weekday()
+                horarios_dia = list(Horario.objects.filter(terapeuta=terapeuta, dia=dia_semana))
+                if not horarios_dia:
+                    msg = f'{terapeuta.nombre} no tiene horario configurado los {_DIAS[dia_semana]}.'
+                    self.add_error('fecha', msg)
+                    self.add_error('hora', msg)
+                    raise ValidationError(msg)
+                horario_activo = next(
+                    (h for h in horarios_dia if h.hora_inicio <= hora < h.hora_fin), None
+                )
+                if not horario_activo:
+                    msg = (
+                        f'Las {hora.strftime("%H:%M")} está fuera del horario de '
+                        f'{terapeuta.nombre} los {_DIAS[dia_semana]}.'
+                    )
+                    self.add_error('hora', msg)
+                    raise ValidationError(msg)
+
+                # Validar que el consultorio coincida con la sede del horario activo
+                consultorio = cleaned_data.get('consultorio')
+                if horario_activo.sede and consultorio and consultorio.sede:
+                    if consultorio.sede != horario_activo.sede:
+                        sede_terapeuta = _SEDES.get(horario_activo.sede, horario_activo.sede)
+                        sede_consultorio = _SEDES.get(consultorio.sede, consultorio.sede)
+                        msg = (
+                            f'{terapeuta.nombre} trabaja en {sede_terapeuta} a esa hora, '
+                            f'pero el consultorio "{consultorio}" pertenece a {sede_consultorio}.'
+                        )
+                        self.add_error('consultorio', msg)
+                        return cleaned_data  # add_error invalida el form; no duplicar en __all__
 
         return cleaned_data
 

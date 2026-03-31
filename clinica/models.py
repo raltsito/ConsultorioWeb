@@ -236,8 +236,18 @@ class DocumentoPaciente(models.Model):
         ordering = ['-creado_en']
 
 class Consultorio(models.Model):
+    SEDE_CHOICES = [
+        ('republica',      'República'),
+        ('morelos',        'Morelos'),
+        ('colinas',        'Colinas'),
+        ('trabajo_social', 'Trabajo Social'),
+        ('zoom',           'Zoom / Online'),
+        ('externo',        'Externo'),
+    ]
+
     nombre = models.CharField(max_length=100)
-    
+    sede   = models.CharField(max_length=20, choices=SEDE_CHOICES, null=True, blank=True)
+
     def __str__(self):
         return self.nombre
 
@@ -446,16 +456,25 @@ class Horario(models.Model):
         (6, 'Domingo'),
     ]
 
-    terapeuta = models.ForeignKey('Terapeuta', on_delete=models.CASCADE)
-    dia = models.IntegerField(choices=DIAS_SEMANA)
+    SEDE_CHOICES = [
+        ('republica',      'República'),
+        ('morelos',        'Morelos'),
+        ('colinas',        'Colinas'),
+        ('trabajo_social', 'Trabajo Social'),
+        ('zoom',           'Zoom / Online'),
+        ('externo',        'Externo'),
+    ]
+
+    terapeuta   = models.ForeignKey('Terapeuta', on_delete=models.CASCADE)
+    dia         = models.IntegerField(choices=DIAS_SEMANA)
     hora_inicio = models.TimeField()
-    hora_fin = models.TimeField()
-    
-    # Opcional: Si un terapeuta solo trabaja en cierta sede en ese horario
-    # consultorio = models.ForeignKey('Consultorio', on_delete=models.CASCADE, null=True, blank=True)
+    hora_fin    = models.TimeField()
+    sede        = models.CharField(max_length=20, choices=SEDE_CHOICES, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.terapeuta} - {self.get_dia_display()} ({self.hora_inicio} - {self.hora_fin})"
+        sede_label = dict(self.SEDE_CHOICES).get(self.sede, '') if self.sede else ''
+        sede_str = f' @ {sede_label}' if sede_label else ''
+        return f"{self.terapeuta} - {self.get_dia_display()} ({self.hora_inicio} - {self.hora_fin}){sede_str}"
     
 
 class SolicitudCita(models.Model):

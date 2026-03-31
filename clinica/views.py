@@ -941,17 +941,15 @@ def api_pacientes_relacionados(request):
 # En clinica/views.py
 
 def verificar_disponibilidad(request):
-    # CAMBIO: Permitir cualquier combinación sin validar conflictos
-    # Las citas se pueden agendar sin restricción
-    
     fecha_str = request.GET.get('fecha')
     hora_str = request.GET.get('hora')
     consultorio_id = request.GET.get('consultorio')
     terapeuta_id = request.GET.get('terapeuta')
-    exclude_id = request.GET.get('exclude_id')
 
     if not (fecha_str and hora_str and consultorio_id and terapeuta_id):
         return JsonResponse({'available': True, 'msg': ''})
+
+    _DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
     try:
         if len(hora_str) > 5:
@@ -959,15 +957,49 @@ def verificar_disponibilidad(request):
 
         fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
         hora_obj = datetime.strptime(hora_str, '%H:%M').time()
+
+        # 1. Validar bloqueos del terapeuta
         bloqueo = obtener_bloqueo_terapeuta_en_fecha(terapeuta_id, fecha_obj, hora_obj)
         if bloqueo:
             return JsonResponse({'available': False, 'msg': bloqueo.mensaje_bloqueo()})
 
-        # CAMBIO: Siempre devolver disponibilidad sin validar conflictos
+        # 2. Validar que el día y hora estén dentro del horario configurado
+        dia_semana = fecha_obj.weekday()
+        horarios_dia = list(Horario.objects.filter(terapeuta_id=terapeuta_id, dia=dia_semana))
+        if not horarios_dia:
+            return JsonResponse({
+                'available': False,
+                'msg': f'El terapeuta no tiene horario configurado los {_DIAS[dia_semana]}.',
+            })
+        horario_activo = next(
+            (h for h in horarios_dia if h.hora_inicio <= hora_obj < h.hora_fin), None
+        )
+        if not horario_activo:
+            return JsonResponse({
+                'available': False,
+                'msg': f'Las {hora_str} está fuera del horario del terapeuta los {_DIAS[dia_semana]}.',
+            })
+
+        # 3. Validar que el consultorio pertenezca a la sede del horario activo
+        if horario_activo.sede and consultorio_id:
+            from .models import Consultorio as ConsultorioModel
+            _SEDES = dict(Horario.SEDE_CHOICES)
+            try:
+                cons = ConsultorioModel.objects.get(id=consultorio_id)
+                if cons.sede and cons.sede != horario_activo.sede:
+                    sede_t = _SEDES.get(horario_activo.sede, horario_activo.sede)
+                    sede_c = _SEDES.get(cons.sede, cons.sede)
+                    return JsonResponse({
+                        'available': False,
+                        'msg': f'El consultorio "{cons}" es de {sede_c}, pero el terapeuta trabaja en {sede_t} a esa hora.',
+                    })
+            except ConsultorioModel.DoesNotExist:
+                pass
+
         return JsonResponse({'available': True, 'msg': 'Disponible para agendar'})
 
     except ValueError as e:
-        print(f"Error de formato: {e}") 
+        print(f"Error de formato en verificar_disponibilidad: {e}")
         return JsonResponse({'available': True, 'msg': 'Disponible'})
     
 # En clinica/views.py
@@ -2117,3 +2149,100 @@ def tabuladores_editar_regla(request, regla_id):
         )
         messages.error(request, f'Error al guardar: {errores}')
     return redirect('tabuladores_config')
+
+
+# ─────────────────────────────────────────────────────────────
+# DISPONIBILIDAD SEMANAL
+# ─────────────────────────────────────────────────────────────
+
+DIAS_SEMANA = [
+    (0, 'Lunes'), (1, 'Martes'), (2, 'Miércoles'),
+    (3, 'Jueves'), (4, 'Viernes'), (5, 'Sábado'), (6, 'Domingo'),
+]
+
+@login_required
+def disponibilidad_semanal(request):
+    terapeutas = Terapeuta.objects.filter(activo=True).order_by('nombre')
+    terapeutas_data = []
+    for t in terapeutas:
+        horarios_qs = list(Horario.objects.filter(terapeuta=t).order_by('dia', 'hora_inicio'))
+        dias_data = []
+        for dia_num, dia_nombre in DIAS_SEMANA:
+            slots = [h for h in horarios_qs if h.dia == dia_num]
+            dias_data.append({'num': dia_num, 'nombre': dia_nombre, 'slots': slots})
+        terapeutas_data.append({
+            'terapeuta': t,
+            'dias': dias_data,
+            'total': len(horarios_qs),
+        })
+    return render(request, 'clinica/disponibilidad_semanal.html', {
+        'terapeutas_data': terapeutas_data,
+    })
+
+
+@login_required
+def agregar_disponibilidad(request):
+    if request.method != 'POST':
+        return redirect('disponibilidad_semanal')
+    terapeuta = get_object_or_404(Terapeuta, id=request.POST.get('terapeuta'))
+    dia = request.POST.get('dia')
+    hora_inicio = request.POST.get('hora_inicio')
+    hora_fin = request.POST.get('hora_fin')
+    sede = request.POST.get('sede') or None
+    if not (dia and hora_inicio and hora_fin and sede):
+        messages.error(request, 'Completa todos los campos del horario, incluyendo la sede.')
+        return redirect('disponibilidad_semanal')
+    if hora_fin <= hora_inicio:
+        messages.error(request, 'La hora de fin debe ser mayor que la de inicio.')
+        return redirect('disponibilidad_semanal')
+    Horario.objects.create(terapeuta=terapeuta, dia=int(dia), hora_inicio=hora_inicio, hora_fin=hora_fin, sede=sede)
+    messages.success(request, f'Horario agregado para {terapeuta.nombre}.')
+    return redirect('disponibilidad_semanal')
+
+
+@login_required
+def eliminar_disponibilidad(request, horario_id):
+    if request.method != 'POST':
+        return redirect('disponibilidad_semanal')
+    horario = get_object_or_404(Horario, id=horario_id)
+    nombre = horario.terapeuta.nombre
+    horario.delete()
+    messages.success(request, f'Horario eliminado para {nombre}.')
+    return redirect('disponibilidad_semanal')
+
+
+def api_consultorios_por_horario(request):
+    """Devuelve los consultorios válidos para un terapeuta en una fecha y hora dadas."""
+    from .models import Consultorio as ConsultorioModel
+    terapeuta_id = request.GET.get('terapeuta')
+    fecha_str    = request.GET.get('fecha')
+    hora_str     = request.GET.get('hora')
+
+    if not (terapeuta_id and fecha_str and hora_str):
+        todos = list(ConsultorioModel.objects.values('id', 'nombre'))
+        return JsonResponse({'consultorios': todos, 'filtrado': False})
+
+    try:
+        if len(hora_str) > 5:
+            hora_str = hora_str[:5]
+        fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        hora_obj  = datetime.strptime(hora_str, '%H:%M').time()
+        dia_semana = fecha_obj.weekday()
+
+        horarios_dia = list(Horario.objects.filter(terapeuta_id=terapeuta_id, dia=dia_semana))
+        horario_activo = next(
+            (h for h in horarios_dia if h.hora_inicio <= hora_obj < h.hora_fin), None
+        )
+
+        if horario_activo and horario_activo.sede:
+            qs = ConsultorioModel.objects.filter(sede=horario_activo.sede)
+            consultorios = list(qs.values('id', 'nombre'))
+            return JsonResponse({'consultorios': consultorios, 'filtrado': True, 'sede': horario_activo.sede})
+
+        todos = list(ConsultorioModel.objects.values('id', 'nombre'))
+        return JsonResponse({'consultorios': todos, 'filtrado': False})
+
+    except Exception as e:
+        print(f'Error en api_consultorios_por_horario: {e}')
+        todos = list(ConsultorioModel.objects.values('id', 'nombre'))
+        return JsonResponse({'consultorios': todos, 'filtrado': False})

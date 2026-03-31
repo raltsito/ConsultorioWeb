@@ -38,6 +38,7 @@ urlpatterns = [
     path('solicitud/rechazar/<int:solicitud_id>/', clinica_views.rechazar_solicitud, name='rechazar_solicitud'),
     path('mi-portal-doc/solicitar/', clinica_views.solicitar_cita_terapeuta, name='solicitar_cita_terapeuta'),
     path('api/disponibilidad-terapeuta/', clinica_views.api_disponibilidad_terapeuta, name='api_disponibilidad'),
+    path('api/consultorios-por-horario/', clinica_views.api_consultorios_por_horario, name='api_consultorios_por_horario'),
     path('citas/<int:cita_id>/checkout/', clinica_views.checkout_cita, name='checkout_cita'),
     path('bitacora/', clinica_views.bitacora_diaria, name='bitacora_diaria'),
     path('reporte-general/', clinica_views.reporte_general, name='reporte_general'),
@@ -49,7 +50,10 @@ urlpatterns = [
     path('nomina/<int:terapeuta_id>/calcular/', clinica_views.nomina_calcular, name='nomina_calcular'),
     path('nomina/corte/<int:corte_id>/aprobar/', clinica_views.nomina_aprobar, name='nomina_aprobar'),
     path('nomina/corte/<int:corte_id>/bono/', clinica_views.nomina_agregar_bono, name='nomina_agregar_bono'),
-    
+    path('disponibilidad/', clinica_views.disponibilidad_semanal, name='disponibilidad_semanal'),
+    path('disponibilidad/agregar/', clinica_views.agregar_disponibilidad, name='agregar_disponibilidad'),
+    path('disponibilidad/eliminar/<int:horario_id>/', clinica_views.eliminar_disponibilidad, name='eliminar_disponibilidad'),
+
 ]
 
 if settings.DEBUG:

@@ -50,6 +50,13 @@
                         <div class="mb-3">
                             <label class="form-label text-muted mb-1">Consultorio</label>
                             {{ form.consultorio }}
+                            {% if form.consultorio.errors %}
+                            <div class="invalid-feedback d-block fw-semibold">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                {{ form.consultorio.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                            <div id="aviso-consultorio" class="form-text d-none"></div>
                         </div>
 
                         <div class="mb-3">
@@ -190,6 +197,42 @@
             });
         }
 
+        // ── Filtrar consultorios según sede del terapeuta ──────────────
+        const $consultorio = $('#id_consultorio');
+        const $avisoConsultorio = $('#aviso-consultorio');
+        const $hora = $('#id_hora');
+
+        function filtrarConsultorios() {
+            const terapeuta = $terapeuta.val();
+            const fecha     = $fecha.val();
+            const hora      = $hora.val();
+
+            if (!terapeuta || !fecha || !hora) return;
+
+            $.get('/api/consultorios-por-horario/', { terapeuta, fecha, hora }, function(data) {
+                const valorActual = $consultorio.val();
+                $consultorio.empty().append('<option value="">---------</option>');
+                data.consultorios.forEach(function(c) {
+                    $consultorio.append(new Option(c.nombre, c.id, false, String(c.id) === String(valorActual)));
+                });
+                if (data.filtrado) {
+                    const nombres = { republica: 'República', morelos: 'Morelos', colinas: 'Colinas',
+                                      trabajo_social: 'Trabajo Social', zoom: 'Zoom / Online', externo: 'Externo' };
+                    $avisoConsultorio
+                        .removeClass('d-none text-muted')
+                        .addClass('text-info fw-semibold')
+                        .html('<i class="bi bi-geo-alt-fill me-1"></i>Solo se muestran consultorios de <strong>' + (nombres[data.sede] || data.sede) + '</strong> según el horario del terapeuta.');
+                } else {
+                    $avisoConsultorio.addClass('d-none').html('');
+                }
+            });
+        }
+
+        $fecha.on('change', filtrarConsultorios);
+        $hora.on('change', filtrarConsultorios);
+        $terapeuta.on('change', filtrarConsultorios);
+        // ────────────────────────────────────────────────────────────────
+
         $paciente.on('change', cargarRelacionados);
         $servicio.on('change', cargarRelacionados);
         $fecha.on('change', actualizarRadar);
@@ -197,6 +240,7 @@
 
         cargarRelacionados();
         actualizarRadar();
+        filtrarConsultorios();
     });
 </script>
 {% endblock %}
