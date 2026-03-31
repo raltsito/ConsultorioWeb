@@ -2,6 +2,7 @@
 import unicodedata
 import csv
 import io
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
@@ -1146,6 +1147,40 @@ def portal_terapeuta(request):
         terapeuta=mi_perfil,
         fecha__gt=hoy,
     ).order_by('fecha', 'hora')[:10] 
+
+    try:
+        semana_offset = int(request.GET.get('semana_offset', 0))
+    except (TypeError, ValueError):
+        semana_offset = 0
+
+    inicio_semana = hoy - timedelta(days=hoy.weekday()) + timedelta(weeks=semana_offset)
+    fin_semana = inicio_semana + timedelta(days=6)
+    citas_semana = list(
+        Cita.objects.filter(
+            terapeuta=mi_perfil,
+            fecha__gte=inicio_semana,
+            fecha__lte=fin_semana,
+        )
+        .select_related('consultorio', 'servicio', 'paciente')
+        .prefetch_related('pacientes_adicionales')
+        .order_by('fecha', 'hora')
+    )
+    citas_por_fecha = defaultdict(list)
+    for cita in citas_semana:
+        citas_por_fecha[cita.fecha].append(cita)
+
+    dias_semana_cortos = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+    meses_cortos = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+    agenda_semanal = []
+    for offset in range(7):
+        fecha_item = inicio_semana + timedelta(days=offset)
+        agenda_semanal.append({
+            'fecha': fecha_item,
+            'nombre_corto': dias_semana_cortos[fecha_item.weekday()],
+            'mes_corto': meses_cortos[fecha_item.month - 1],
+            'es_hoy': fecha_item == hoy,
+            'citas': citas_por_fecha.get(fecha_item, []),
+        })
     
     mis_solicitudes = SolicitudCita.objects.filter(
         terapeuta=mi_perfil
@@ -1161,6 +1196,11 @@ def portal_terapeuta(request):
         'terapeuta': mi_perfil,
         'citas_hoy': citas_hoy,
         'citas_proximas': citas_proximas,
+        'agenda_semanal': agenda_semanal,
+        'agenda_inicio_semana': inicio_semana,
+        'agenda_fin_semana': fin_semana,
+        'agenda_semana_offset': semana_offset,
+        'mostrar_agenda_semanal': request.GET.get('ver_agenda') == '1',
         'fecha_bonita': fecha_bonita, # <--- Pasamos la fecha arreglada
         'mis_solicitudes': mis_solicitudes,
         'bloqueos_agenda': bloqueos_futuros,
