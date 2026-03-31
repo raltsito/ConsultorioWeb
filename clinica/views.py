@@ -963,8 +963,12 @@ def verificar_disponibilidad(request):
         if bloqueo:
             return JsonResponse({'available': False, 'msg': bloqueo.mensaje_bloqueo()})
 
-        # 2. Validar que el día y hora estén dentro del horario configurado
+        # 2. Validar horario solo si el terapeuta tiene alguno configurado
         dia_semana = fecha_obj.weekday()
+        tiene_horarios = Horario.objects.filter(terapeuta_id=terapeuta_id).exists()
+        if not tiene_horarios:
+            return JsonResponse({'available': True, 'msg': 'Disponible para agendar'})
+
         horarios_dia = list(Horario.objects.filter(terapeuta_id=terapeuta_id, dia=dia_semana))
         if not horarios_dia:
             return JsonResponse({

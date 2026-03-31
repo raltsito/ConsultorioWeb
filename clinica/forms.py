@@ -195,9 +195,11 @@ class CitaForm(forms.ModelForm):
                     self.add_error('hora', 'La hora seleccionada cae dentro de un bloqueo del terapeuta.')
                 raise ValidationError(mensaje)
 
-            # Validar horario y consultorio solo al CREAR citas nuevas
+            # Validar horario y consultorio solo al CREAR citas nuevas.
+            # Si el terapeuta no tiene ningún horario configurado, se permite agendar sin restricción.
             es_nueva = not (self.instance and self.instance.pk)
-            if hora and es_nueva:
+            tiene_horarios = Horario.objects.filter(terapeuta=terapeuta).exists()
+            if hora and es_nueva and tiene_horarios:
                 _DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
                 _SEDES = dict(Horario.SEDE_CHOICES)
                 dia_semana = fecha.weekday()
