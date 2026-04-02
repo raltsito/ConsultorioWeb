@@ -2273,17 +2273,18 @@ def portal_empresa(request):
     # Solo nombre y teléfono — no expediente
     pacientes = mi_empresa.pacientes.only('id', 'nombre', 'telefono').order_by('nombre')
 
-    proximas_citas = Cita.objects.filter(
+    proximas_citas_qs = Cita.objects.filter(
         paciente__empresa=mi_empresa,
         fecha__gte=hoy,
         estatus__in=Cita.ESTATUS_ACTIVOS,
-    ).select_related('paciente', 'terapeuta').order_by('fecha', 'hora')[:10]
+    ).select_related('paciente', 'terapeuta').order_by('fecha', 'hora')
 
     return render(request, 'clinica/portal_empresa.html', {
         'empresa': mi_empresa,
         'pacientes': pacientes,
         'total_pacientes': pacientes.count(),
-        'proximas_citas': proximas_citas,
+        'proximas_citas': proximas_citas_qs[:10],
+        'total_proximas_citas': proximas_citas_qs.count(),
         'hoy': hoy,
     })
 
