@@ -982,7 +982,7 @@ def verificar_disponibilidad(request):
                 'msg': f'El terapeuta no tiene horario configurado los {_DIAS[dia_semana]}.',
             })
         horario_activo = next(
-            (h for h in horarios_dia if h.hora_inicio <= hora_obj < h.hora_fin), None
+            (h for h in horarios_dia if h.hora_inicio <= hora_obj <= h.hora_fin), None
         )
         if not horario_activo:
             return JsonResponse({
@@ -1478,7 +1478,7 @@ def api_disponibilidad_terapeuta(request):
             hora_actual = datetime.combine(fecha_obj, hl.hora_inicio)
             hora_fin = datetime.combine(fecha_obj, hl.hora_fin)
             
-            while hora_actual < hora_fin:
+            while hora_actual <= hora_fin:
                 slots_posibles.append(hora_actual.time())
                 hora_actual += timedelta(minutes=60)
 
@@ -2241,7 +2241,7 @@ def api_consultorios_por_horario(request):
 
         horarios_dia = list(Horario.objects.filter(terapeuta_id=terapeuta_id, dia=dia_semana))
         horario_activo = next(
-            (h for h in horarios_dia if h.hora_inicio <= hora_obj < h.hora_fin), None
+            (h for h in horarios_dia if h.hora_inicio <= hora_obj <= h.hora_fin), None
         )
 
         if horario_activo and horario_activo.sede:
