@@ -432,13 +432,6 @@
 
   <!-- BODY -->
   <div class="app-body">
-    <aside>
-      <a href="{% url 'portal_empresa' %}" class="side-btn" title="Dashboard">🏠</a>
-      <a href="{% url 'registrar_paciente_empresa' %}" class="side-btn active" title="Registrar colaborador">👤</a>
-      <a href="{% url 'agendar_cita_empresa' %}" class="side-btn" title="Agendar cita">📅</a>
-      <div class="side-spacer"></div>
-      <a href="{% url 'logout' %}" class="side-btn" title="Cerrar sesión" style="color:#ff7849;">⬡</a>
-    </aside>
 
     <main>
       <div class="form-container">
@@ -508,7 +501,6 @@
   <div class="toast-stack">
     {% for message in messages %}
     <div class="toast {% if message.tags == 'error' %}error{% elif message.tags == 'warning' %}warning{% endif %}">
-      {% if message.tags == 'success' %}✅{% elif message.tags == 'error' %}❌{% else %}⚠️{% endif %}
       {{ message }}
     </div>
     {% endfor %}

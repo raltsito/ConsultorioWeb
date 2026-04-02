@@ -401,13 +401,6 @@
 
   <!-- BODY -->
   <div class="app-body">
-    <aside>
-      <a href="{% url 'portal_empresa' %}" class="side-btn" title="Dashboard">🏠</a>
-      <a href="{% url 'registrar_paciente_empresa' %}" class="side-btn" title="Registrar colaborador">👤</a>
-      <a href="{% url 'agendar_cita_empresa' %}" class="side-btn active" title="Agendar cita">📅</a>
-      <div class="side-spacer"></div>
-      <a href="{% url 'logout' %}" class="side-btn" title="Cerrar sesión" style="color:#ff7849;">⬡</a>
-    </aside>
 
     <main>
 
@@ -457,9 +450,8 @@
             <div id="hora-selected-display" style="display:none;margin-top:.7rem;">
               <div style="font-size:.72rem;font-weight:600;color:var(--text);margin-bottom:.3rem;">Horario seleccionado</div>
               <div style="display:inline-flex;align-items:center;gap:.5rem;background:var(--cyan-light);border:1.5px solid var(--cyan);border-radius:var(--radius-sm);padding:.4rem .8rem;">
-                <span style="font-size:1rem;">🕐</span>
                 <span id="hora-selected-text" style="font-size:.88rem;font-weight:700;color:var(--cyan);"></span>
-                <button type="button" id="clear-hora" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:0 0 0 .4rem;" title="Cambiar hora">✕</button>
+                <button type="button" id="clear-hora" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:0 0 0 .4rem;" title="Cambiar hora">x</button>
               </div>
             </div>
 
@@ -506,14 +498,13 @@
 
         <div class="avail-card">
           <div>
-            <div class="avail-title">📅 Horarios disponibles</div>
+            <div class="avail-title">Horarios disponibles</div>
             <div class="avail-sub">Selecciona terapeuta y fecha para ver disponibilidad en tiempo real.</div>
           </div>
 
           <div id="slots-container">
             <div class="slots-state">
-              <div class="state-icon">🔍</div>
-              <div>Elige terapeuta y fecha para ver slots disponibles.</div>
+                <div>Elige terapeuta y fecha para ver slots disponibles.</div>
             </div>
           </div>
         </div>
@@ -533,7 +524,6 @@
   <div class="toast-stack">
     {% for message in messages %}
     <div class="toast {% if message.tags == 'error' %}error{% elif message.tags == 'warning' %}warning{% endif %}">
-      {% if message.tags == 'success' %}✅{% elif message.tags == 'error' %}❌{% else %}⚠️{% endif %}
       {{ message }}
     </div>
     {% endfor %}
@@ -595,16 +585,16 @@
         .then(r => r.json())
         .then(data => {
           if (data.bloqueado) {
-            slotsContainer.innerHTML = `<div class="slots-bloqueado">🚫 ${data.mensaje || 'El terapeuta no está disponible en esta fecha.'}</div>`;
+            slotsContainer.innerHTML = `<div class="slots-bloqueado">${data.mensaje || 'El terapeuta no está disponible en esta fecha.'}</div>`;
             return;
           }
           if (!data.horarios || data.horarios.length === 0) {
-            slotsContainer.innerHTML = '<div class="slots-state"><div class="state-icon">😔</div><div>Sin horarios disponibles para esta fecha.</div></div>';
+            slotsContainer.innerHTML = '<div class="slots-state"><div>Sin horarios disponibles para esta fecha.</div></div>';
             return;
           }
 
           let html = '';
-          if (data.mensaje) html += `<div style="font-size:.7rem;color:var(--orange);margin-bottom:.6rem;">⚠️ ${data.mensaje}</div>`;
+          if (data.mensaje) html += `<div style="font-size:.7rem;color:var(--orange);margin-bottom:.6rem;">${data.mensaje}</div>`;
           html += '<div class="slots-grid">';
           data.horarios.forEach(h => {
             const isSelected = h === selectedSlot ? ' selected' : '';
@@ -614,7 +604,7 @@
           slotsContainer.innerHTML = html;
         })
         .catch(() => {
-          slotsContainer.innerHTML = '<div class="slots-state"><div class="state-icon">⚠️</div><div>Error al consultar disponibilidad.</div></div>';
+          slotsContainer.innerHTML = '<div class="slots-state"><div>Error al consultar disponibilidad.</div></div>';
         });
     }
 
@@ -648,11 +638,11 @@
           .then(r => r.json())
           .then(data => {
             if (data.bloqueado) {
-              slotsContainer.innerHTML = `<div class="slots-bloqueado">🚫 ${data.mensaje || 'Bloqueado.'}</div>`;
+              slotsContainer.innerHTML = `<div class="slots-bloqueado">${data.mensaje || 'El terapeuta no está disponible en esta fecha.'}</div>`;
               return;
             }
             if (!data.horarios || data.horarios.length === 0) {
-              slotsContainer.innerHTML = '<div class="slots-state"><div class="state-icon">😔</div><div>Sin horarios disponibles.</div></div>';
+              slotsContainer.innerHTML = '<div class="slots-state"><div>Sin horarios disponibles.</div></div>';
               return;
             }
             let html = '<div class="slots-grid">';
