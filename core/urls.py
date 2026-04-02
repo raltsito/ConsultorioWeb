@@ -54,6 +54,11 @@ urlpatterns = [
     path('disponibilidad/agregar/', clinica_views.agregar_disponibilidad, name='agregar_disponibilidad'),
     path('disponibilidad/eliminar/<int:horario_id>/', clinica_views.eliminar_disponibilidad, name='eliminar_disponibilidad'),
 
+    # Portal Empresa
+    path('empresa/', clinica_views.portal_empresa, name='portal_empresa'),
+    path('empresa/registrar-paciente/', clinica_views.registrar_paciente_empresa, name='registrar_paciente_empresa'),
+    path('empresa/agendar-cita/', clinica_views.agendar_cita_empresa, name='agendar_cita_empresa'),
+
 ]
 
 if settings.DEBUG:

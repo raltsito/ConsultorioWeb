@@ -22,6 +22,22 @@ class Terapeuta(models.Model):
         return self.nombre
 
 
+class Empresa(models.Model):
+    usuario = models.OneToOneField(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='perfil_empresa'
+    )
+    nombre = models.CharField(max_length=200)
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
+
+    class Meta:
+        verbose_name = "Empresa"
+        verbose_name_plural = "Empresas"
+
+
 class BloqueoAgendaTerapeuta(models.Model):
     TIPO_TEMPORAL = 'temporal'
     TIPO_PERMANENTE = 'permanente'
@@ -307,6 +323,12 @@ class Paciente(models.Model):
     apertura_expediente = models.FileField(upload_to='documentos/', blank=True, null=True)
     resumen_clinico = models.TextField(blank=True, null=True)
     
+    # Empresa que dio de alta a este paciente (opcional)
+    empresa = models.ForeignKey(
+        'Empresa', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='pacientes'
+    )
+
     # Relaciones
     pacientes_relacionados = models.ManyToManyField('self', blank=True, symmetrical=True)
     enlace_resultados = models.URLField(blank=True, null=True)

@@ -14,6 +14,7 @@ from .models import (
     TabuladorGeneral,
     obtener_bloqueo_terapeuta_en_fecha,
 )
+from .models import Terapeuta, Consultorio, Division, Servicio
 
 
 class CheckoutCitaForm(forms.Form):
@@ -525,3 +526,45 @@ class AperturaExpedienteForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+# =============================================================================
+# FORMULARIOS EMPRESA
+# =============================================================================
+
+class PacienteEmpresaForm(forms.ModelForm):
+    """Formulario simplificado para que una Empresa registre nuevos pacientes."""
+    class Meta:
+        model = Paciente
+        fields = ['nombre', 'fecha_nacimiento', 'sexo', 'telefono', 'identidad_contacto', 'servicio_inicial']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre completo'}),
+            'fecha_nacimiento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'sexo': forms.Select(attrs={'class': 'form-select'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'WhatsApp'}),
+            'identidad_contacto': forms.Select(attrs={'class': 'form-select'}),
+            'servicio_inicial': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+
+class CitaEmpresaForm(forms.ModelForm):
+    """Formulario para que una Empresa agende citas directamente."""
+
+    def __init__(self, *args, empresa=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if empresa is not None:
+            self.fields['paciente'].queryset = empresa.pacientes.all().order_by('nombre')
+
+    class Meta:
+        model = Cita
+        fields = ['paciente', 'terapeuta', 'fecha', 'hora', 'tipo_paciente', 'consultorio', 'division', 'servicio']
+        widgets = {
+            'paciente': forms.Select(attrs={'class': 'form-select'}),
+            'terapeuta': forms.Select(attrs={'class': 'form-select'}),
+            'fecha': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
+            'hora': forms.TimeInput(format='%H:%M', attrs={'type': 'time', 'class': 'form-control'}),
+            'tipo_paciente': forms.Select(attrs={'class': 'form-select'}),
+            'consultorio': forms.Select(attrs={'class': 'form-select'}),
+            'division': forms.Select(attrs={'class': 'form-select'}),
+            'servicio': forms.Select(attrs={'class': 'form-select'}),
+        }

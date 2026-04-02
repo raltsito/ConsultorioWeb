@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>INTRA – Health Monitoring Dashboard</title>
+  <meta name="description" content="INTRA is a modern health monitoring dashboard to track your vitals, appointments, and medications in real time." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cyan:       #00c9be;
+      --cyan-light: #e0faf9;
+      --cyan-mid:   #b2f0ed;
+      --bg:         #f0f2f5;
+      --card:       #ffffff;
+      --text:       #1a1e2c;
+      --muted:      #8892a4;
+      --border:     #e8ecf2;
+      --orange:     #ff7849;
+      --shadow-sm:  0 2px 12px rgba(0,0,0,.06);
+      --shadow-md:  0 6px 28px rgba(0,0,0,.09);
+      --radius-lg:  20px;
+      --radius-md:  14px;
+      --radius-sm:  10px;
+      --radius-xs:  7px;
+      --sidebar-w:  60px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 0 1.8rem;
+      height: 64px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0,0,0,.04);
+      position: relative;
+      z-index: 10;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      display: flex;
+      align-items: center;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #111;
+      letter-spacing: .02em;
+      line-height: 1;
+    }
+
+    .logo-heart {
+      display: inline-flex;
+      align-items: center;
+      margin-left: .05rem;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: .3rem;
+      background: var(--bg);
+      border-radius: 999px;
+      padding: .3rem;
+      margin: 0 auto;
+    }
+
+    nav a {
+      text-decoration: none;
+      font-size: .82rem;
+      font-weight: 500;
+      color: var(--muted);
+      padding: .45rem 1.1rem;
+      border-radius: 999px;
+      transition: all .2s;
+      position: relative;
+    }
+
+    nav a:hover { color: var(--text); background: rgba(255,255,255,.7); }
+
+    nav a.active {
+      background: var(--cyan);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .nav-badge {
+      position: absolute;
+      top: -4px; right: -2px;
+      background: var(--orange);
+      color: #fff;
+      border-radius: 50%;
+      width: 16px; height: 16px;
+      font-size: .62rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      margin-left: auto;
+    }
+
+    .icon-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all .2s;
+      font-size: .95rem;
+      color: var(--muted);
+    }
+
+    .icon-btn:hover { background: var(--cyan-light); color: var(--cyan); }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: .3rem .7rem .3rem .35rem;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .user-pill:hover { border-color: var(--cyan); }
+
+    .avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: linear-gradient(135deg, #ffd6cc, #ffb3a7);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .avatar svg { width: 100%; height: 100%; }
+
+    .user-info { line-height: 1.2; }
+    .user-info .name { font-size: .8rem; font-weight: 600; color: var(--text); }
+    .user-info .handle { font-size: .7rem; color: var(--muted); }
+
+    /* ── LAYOUT ─────────────────────────────────────────────── */
+    .app-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── SIDEBAR ────────────────────────────────────────────── */
+    aside {
+      width: var(--sidebar-w);
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.2rem 0;
+      gap: .5rem;
+      flex-shrink: 0;
+    }
+
+    .side-btn {
+      width: 40px; height: 40px;
+      border-radius: 999px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 1.1rem;
+      transition: all .2s;
+    }
+
+    .side-btn:hover { background: var(--cyan-light); color: var(--cyan); }
+    .side-btn.active { background: var(--cyan); color: #fff; box-shadow: 0 4px 14px rgba(0,201,190,.35); }
+
+    .side-spacer { flex: 1; }
+
+    /* ── MAIN ───────────────────────────────────────────────── */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 280px 260px;
+      gap: 1.1rem;
+      padding: 1.2rem 1.2rem 1.2rem 1rem;
+      overflow: auto;
+      min-width: 0;
+    }
+
+    /* ── CARD BASE ──────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 1.1rem 1.2rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .7rem;
+    }
+
+    .card-title {
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .card-icon-sm {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .7rem;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    /* ── HERO COLUMN ────────────────────────────────────────── */
+    .hero-col {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-width: 0;
+    }
+
+    .greeting {
+      font-size: 1.7rem;
+      font-weight: 800;
+      line-height: 1.25;
+      color: var(--text);
+      letter-spacing: -.03em;
+    }
+
+    .greeting span { color: var(--cyan); }
+
+    .heart-stage {
+      flex: 1;
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+      min-height: 340px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Glow background */
+    .heart-stage::before {
+      content: '';
+      position: absolute;
+      width: 280px; height: 280px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,201,190,.13) 0%, transparent 70%);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* The 3-D heart SVG illustration */
+    .heart-svg-wrap {
+      position: relative;
+      z-index: 2;
+      width: 260px; height: 260px;
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-10px); }
+    }
+
+    .heart-svg-wrap svg { width: 100%; height: 100%; filter: drop-shadow(0 18px 40px rgba(0,0,0,.22)); }
+
+    /* Floating tooltip chips */
+    .chip {
+      position: absolute;
+      background: rgba(255,255,255,.95);
+      border-radius: var(--radius-md);
+      padding: .45rem .8rem;
+      box-shadow: var(--shadow-md);
+      font-size: .72rem;
+      font-weight: 600;
+      z-index: 4;
+      display: flex;
+      flex-direction: column;
+      gap: .1rem;
+      backdrop-filter: blur(6px);
+    }
+
+    .chip.hrv { left: 12%; top: 45%; border-left: 3px solid var(--cyan); }
+    .chip.chol { right: 10%; top: 50%; border-left: 3px solid #a78bfa; }
+    .chip .chip-label { color: var(--muted); font-weight: 500; font-size: .65rem; }
+    .chip .chip-val { font-size: .85rem; font-weight: 700; color: var(--text); }
+    .chip .chip-sub { font-size: .64rem; color: var(--cyan); font-weight: 500; }
+
+    /* dot markers on heart */
+    .dot {
+      position: absolute;
+      width: 10px; height: 10px;
+      background: var(--cyan);
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 4px rgba(0,201,190,.25);
+      z-index: 5;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 4px rgba(0,201,190,.25); }
+      50%       { box-shadow: 0 0 0 8px rgba(0,201,190,.1); }
+    }
+
+    .dot.d1 { left: 36%; top: 46%; }
+    .dot.d2 { left: 52%; top: 42%; }
+
+    /* Organ selector */
+    .organ-selector {
+      position: absolute;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: .5rem;
+      z-index: 6;
+    }
+
+    .organ-btn {
+      width: 44px; height: 44px;
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      border: 2px solid transparent;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 1.2rem;
+      transition: all .2s;
+    }
+
+    .organ-btn.selected { border-color: var(--cyan); background: var(--cyan-light); }
+    .organ-btn:hover { border-color: var(--cyan-mid); }
+
+    /* Zoom controls */
+    .zoom-controls {
+      position: absolute;
+      right: .8rem; top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: .3rem;
+      z-index: 6;
+    }
+
+    .zoom-btn {
+      width: 28px; height: 28px;
+      border-radius: var(--radius-xs);
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all .2s;
+    }
+
+    .zoom-btn:hover { background: var(--cyan-light); color: var(--cyan); }
+
+    /* ── CENTER COLUMN ──────────────────────────────────────── */
+    .center-col {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-width: 0;
+    }
+
+    /* Heart Function Efficiency */
+    .efficiency-val {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .efficiency-sub {
+      font-size: .72rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--bg);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: .8rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--cyan), #00a89f);
+      transition: width .8s cubic-bezier(.4,0,.2,1);
+    }
+
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: .65rem;
+      color: var(--muted);
+      margin-top: .35rem;
+    }
+
+    /* Blood Pressure */
+    .bp-info {
+      font-size: .72rem;
+      color: var(--muted);
+      margin-bottom: .6rem;
+    }
+
+    .bars-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 55px;
+    }
+
+    .bar-item {
+      flex: 1;
+      border-radius: 3px 3px 0 0;
+      transition: height .6s ease;
+    }
+
+    .bp-reading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: .6rem;
+    }
+
+    .bp-val {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .bp-unit { font-size: .7rem; color: var(--muted); margin-left: .2rem; }
+
+    /* Medication Reminder */
+    .med-reminder {
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      padding: .65rem 1rem;
+      background: linear-gradient(135deg, rgba(0,201,190,.08), rgba(0,201,190,.03));
+      border: 1px solid var(--cyan-mid);
+      border-radius: var(--radius-md);
+    }
+
+    .med-icon {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--cyan);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem;
+      flex-shrink: 0;
+    }
+
+    .med-text { font-size: .73rem; color: var(--text); font-weight: 500; line-height: 1.4; }
+    .med-time { font-weight: 700; color: var(--cyan); }
+
+    /* Upcoming Appointments */
+    .date-strip {
+      display: flex;
+      align-items: center;
+      gap: .3rem;
+      margin-bottom: .8rem;
+    }
+
+    .date-nav {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: .65rem;
+      color: var(--muted);
+      flex-shrink: 0;
+      transition: all .2s;
+    }
+
+    .date-nav:hover { background: var(--cyan-light); color: var(--cyan); }
+
+    .date-items {
+      display: flex;
+      gap: .3rem;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .date-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: .4rem .2rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: .68rem;
+      color: var(--muted);
+      font-weight: 500;
+      transition: all .2s;
+      line-height: 1.6;
+    }
+
+    .date-item:hover { background: var(--bg); }
+    .date-item.today { background: var(--cyan); color: #fff; font-weight: 700; }
+    .date-item span { font-size: .75rem; }
+
+    .appt-card {
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+    }
+
+    .doc-avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ffd6cc, #ffb3a7);
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .appt-info { flex: 1; }
+    .appt-name { font-size: .78rem; font-weight: 700; color: var(--text); }
+    .appt-role { font-size: .68rem; color: var(--muted); }
+    .appt-time { font-size: .68rem; color: var(--text); margin-top: .15rem; font-weight: 500; }
+
+    .appt-btns {
+      display: flex;
+      gap: .4rem;
+    }
+
+    .appt-btn {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: .75rem;
+      transition: all .2s;
+    }
+
+    .appt-btn.msg { background: var(--cyan); color: #fff; box-shadow: 0 4px 12px rgba(0,201,190,.35); }
+    .appt-btn.vid { background: var(--bg); color: var(--muted); }
+    .appt-btn:hover { transform: scale(1.08); }
+
+    /* ── RIGHT COLUMN ───────────────────────────────────────── */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* My Profiles */
+    .profile-card {
+      display: flex;
+      gap: .9rem;
+      align-items: flex-start;
+    }
+
+    .profile-avatar {
+      width: 52px; height: 52px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #ffd6cc 0%, #ffe0d5 100%);
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+    }
+
+    .profile-info .age { font-size: .65rem; color: var(--muted); margin-bottom: .15rem; }
+    .profile-info .pname { font-size: .88rem; font-weight: 700; color: var(--text); }
+    .profile-info .diag-label { font-size: .62rem; color: var(--muted); margin-top: .3rem; }
+    .profile-info .diag { font-size: .72rem; color: var(--text); font-weight: 600; }
+
+    .profile-stats { margin-top: .8rem; display: flex; flex-direction: column; gap: .4rem; }
+
+    .stat-row {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      padding: .45rem .7rem;
+    }
+
+    .stat-icon {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: var(--cyan-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .7rem;
+      color: var(--cyan);
+      flex-shrink: 0;
+    }
+
+    .stat-label { font-size: .68rem; color: var(--muted); flex: 1; }
+    .stat-val { font-size: .8rem; font-weight: 700; color: var(--text); }
+    .stat-trend { font-size: .7rem; color: var(--orange); }
+
+    /* ── ANIMATIONS ─────────────────────────────────────────── */
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card, .heart-stage, .chip, .greeting {
+      animation: slideUp .5s ease both;
+    }
+
+    .chip { animation-delay: .3s; }
+
+    /* Staggered cards */
+    main > * { animation: slideUp .5s ease both; }
+    main > *:nth-child(1) { animation-delay: .05s; }
+    main > *:nth-child(2) { animation-delay: .12s; }
+    main > *:nth-child(3) { animation-delay: .18s; }
+
+    /* ── RESPONSIVE ─────────────────────────────────────────── */
+    @media (max-width: 1100px) {
+      main { grid-template-columns: 1fr 260px; }
+      .right-col { display: none; }
+    }
+
+    @media (max-width: 780px) {
+      main { grid-template-columns: 1fr; }
+      .center-col, .right-col { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════ HEADER -->
+  <header>
+
+    <!-- Logo -->
+    <a href="#" class="logo">
+
+      <!-- Head + Brain icon (SVG fiel al logo real) -->
+      <div class="logo-icon">
+        <svg viewBox="0 0 100 108" width="44" height="48" xmlns="http://www.w3.org/2000/svg" fill="none">
+          <!-- Cuello -->
+          <path d="M40 84 L40 96 Q50 100 60 96 L60 84" stroke="#00c9be" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Silueta cabeza -->
+          <path d="M50 6 C28 6 14 22 14 42 C14 58 24 70 38 76 L38 84 L62 84 L62 76 C76 70 86 58 86 42 C86 22 72 6 50 6 Z"
+            stroke="#00c9be" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Cerebro - lóbulo izquierdo superior -->
+          <path d="M36 38 Q35 28 43 26 Q47 25 49 30" stroke="#00c9be" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <!-- Cerebro - lóbulo derecho superior -->
+          <path d="M51 30 Q53 25 57 26 Q65 28 65 38" stroke="#00c9be" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <!-- División central -->
+          <line x1="50" y1="30" x2="50" y2="55" stroke="#00c9be" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- Surcos izquierdos -->
+          <path d="M36 38 Q31 44 35 51 Q30 57 37 62" stroke="#00c9be" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+          <path d="M43 26 Q37 32 39 41 Q34 47 40 52 Q36 58 42 62" stroke="#00c9be" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <!-- Surcos derechos -->
+          <path d="M65 38 Q70 44 66 51 Q71 57 64 62" stroke="#00c9be" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+          <path d="M57 26 Q63 32 61 41 Q66 47 60 52 Q64 58 58 62" stroke="#00c9be" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <!-- Arco inferior cerebro -->
+          <path d="M37 62 Q44 68 50 55 Q56 68 64 62" stroke="#00c9be" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <!-- INTRA + corazón rojo -->
+      <span class="logo-text">
+        INTRA
+        <span class="logo-heart">
+          <svg viewBox="0 0 32 28" width="24" height="21" xmlns="http://www.w3.org/2000/svg" fill="none" style="margin-bottom:-3px">
+            <path
+              d="M16 25 C12 21 2 15 2 9 C2 5 5 2 9 2 C12 2 14.5 3.5 16 6 C17.5 3.5 20 2 23 2 C27 2 30 5 30 9 C30 15 20 21 16 25Z"
+              stroke="#d92020" stroke-width="3.2" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+          </svg>
+        </span>
+      </span>
+
+    </a>
+
+    <!-- Nav -->
+    <nav>
+      <a href="#" class="active" id="nav-dashboard">Dashboard</a>
+      <a href="#" id="nav-vitals">Vitals</a>
+      <a href="#" id="nav-lab">Lab Results</a>
+      <a href="#" id="nav-med">Medication</a>
+      <a href="#" id="nav-reports" style="position:relative;">
+        Reports
+        <span class="nav-badge">12</span>
+      </a>
+    </nav>
+
+    <!-- Actions -->
+    <div class="header-actions">
+      <div class="icon-btn" title="Messages">✉</div>
+      <div class="icon-btn" title="Notifications">🔔</div>
+      <div class="user-pill">
+        <div class="avatar">
+          <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#ffcdb8"/><ellipse cx="20" cy="16" rx="7" ry="7.5" fill="#ff9f80"/><ellipse cx="20" cy="36" rx="13" ry="10" fill="#ff9f80"/></svg>
+        </div>
+        <div class="user-info">
+          <div class="name">Olivia Carter</div>
+          <div class="handle">@oli_carter</div>
+        </div>
+        <span style="font-size:.6rem;color:var(--muted);margin-left:.2rem;">▾</span>
+      </div>
+    </div>
+
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════ BODY -->
+  <div class="app-body">
+
+    <!-- ── SIDEBAR ─────────────────────── -->
+    <aside>
+      <div class="side-btn active" title="Home">🏠</div>
+      <div class="side-btn" title="Calendar">📅</div>
+      <div class="side-btn" title="Charts">📊</div>
+      <div class="side-btn" title="Files">🗂</div>
+      <div class="side-btn" title="Settings">⚙</div>
+      <div class="side-spacer"></div>
+      <div class="side-btn" title="Logout" style="color:#ff7849;">⬡</div>
+    </aside>
+
+    <!-- ── MAIN GRID ───────────────────── -->
+    <main>
+
+      <!-- ════════════════════ COL 1 · HERO -->
+      <div class="hero-col">
+        <h1 class="greeting">Hey, Olivia!<br><span>Let's monitor your health</span></h1>
+
+        <!-- Heart Stage -->
+        <div class="heart-stage">
+
+          <!-- HRV chip -->
+          <div class="chip hrv">
+            <span class="chip-label">HRV</span>
+            <span class="chip-val">84 ms</span>
+            <span class="chip-sub">▲ Stable</span>
+          </div>
+
+          <!-- Cholesterol chip -->
+          <div class="chip chol">
+            <span class="chip-label">Cholesterol</span>
+            <span class="chip-val">166 mg/dl</span>
+          </div>
+
+          <!-- Dot markers -->
+          <div class="dot d1"></div>
+          <div class="dot d2"></div>
+
+          <!-- 3-D Heart SVG (stylized illustration) -->
+          <div class="heart-svg-wrap">
+            <svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="heartGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%"   stop-color="#ff9980"/>
+                  <stop offset="100%" stop-color="#c0392b"/>
+                </radialGradient>
+                <radialGradient id="heartHighlight" cx="35%" cy="30%" r="45%">
+                  <stop offset="0%"   stop-color="#ff6b55" stop-opacity="1"/>
+                  <stop offset="100%" stop-color="#8b0000" stop-opacity="0"/>
+                </radialGradient>
+                <filter id="blur2"><feGaussianBlur stdDeviation="2"/></filter>
+                <filter id="shadow">
+                  <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#8b0000" flood-opacity=".4"/>
+                </filter>
+              </defs>
+
+              <!-- Shadow base -->
+              <ellipse cx="130" cy="238" rx="70" ry="14" fill="rgba(139,0,0,.18)" filter="url(#blur2)"/>
+
+              <!-- Main heart body -->
+              <path filter="url(#shadow)"
+                d="M130,210 
+                   C80,175 20,150 20,95 
+                   C20,55 50,30 85,30 
+                   C103,30 118,38 130,55 
+                   C142,38 157,30 175,30 
+                   C210,30 240,55 240,95 
+                   C240,150 180,175 130,210Z"
+                fill="url(#heartGlow)"/>
+
+              <!-- Highlight layer -->
+              <path
+                d="M130,205 
+                   C84,172 26,148 26,95 
+                   C26,57 55,34 88,34 
+                   C105,34 119,42 130,58 
+                   C141,42 155,34 172,34 
+                   C205,34 234,57 234,95 
+                   C234,148 176,172 130,205Z"
+                fill="url(#heartHighlight)" opacity=".55"/>
+
+              <!-- Vessel / aorta -->
+              <path d="M115 35 Q105 10 120 5 Q135 0 138 18 Q142 8 155 10 Q168 14 158 35"
+                    fill="none" stroke="#c0392b" stroke-width="9" stroke-linecap="round"/>
+              <path d="M115 35 Q105 10 120 5 Q135 0 138 18 Q142 8 155 10 Q168 14 158 35"
+                    fill="none" stroke="rgba(255,160,140,.4)" stroke-width="5" stroke-linecap="round"/>
+
+              <!-- Pulmonary vessels left -->
+              <path d="M55 80 Q30 75 28 60" fill="none" stroke="#c0392b" stroke-width="7" stroke-linecap="round"/>
+              <path d="M60 100 Q32 98 28 85" fill="none" stroke="#c0392b" stroke-width="6" stroke-linecap="round"/>
+
+              <!-- Pulmonary vessels right -->
+              <path d="M205 80 Q232 75 232 60" fill="none" stroke="#922b21" stroke-width="7" stroke-linecap="round"/>
+              <path d="M200 100 Q228 98 230 83" fill="none" stroke="#922b21" stroke-width="6" stroke-linecap="round"/>
+
+              <!-- Highlight bubble -->
+              <ellipse cx="95" cy="68" rx="28" ry="18" fill="rgba(255,255,255,.18)" transform="rotate(-30,95,68)"/>
+
+              <!-- Sheen line -->
+              <path d="M78 55 Q95 75 85 100" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="5" stroke-linecap="round"/>
+            </svg>
+          </div>
+
+          <!-- Organ selector -->
+          <div class="organ-selector">
+            <div class="organ-btn" title="Lungs">🫁</div>
+            <div class="organ-btn selected" title="Heart">❤</div>
+            <div class="organ-btn" title="Brain">🧠</div>
+          </div>
+
+          <!-- Zoom controls -->
+          <div class="zoom-controls">
+            <div class="zoom-btn">🔍</div>
+            <div class="zoom-btn">+</div>
+            <div class="zoom-btn">−</div>
+          </div>
+
+        </div><!-- /heart-stage -->
+      </div>
+
+      <!-- ════════════════════ COL 2 · CENTER WIDGETS -->
+      <div class="center-col">
+
+        <!-- Heart Function Efficiency -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Heart Function Efficiency</span>
+            <div class="card-icon-sm">↗</div>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:.4rem;">
+            <span class="efficiency-val" id="eff-val">86%</span>
+            <span class="efficiency-sub">Moderate</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="eff-bar" style="width:86%;"></div>
+          </div>
+          <div class="progress-labels"><span>0</span><span>100%</span></div>
+        </div>
+
+        <!-- Blood Pressure -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Blood Pressure</span>
+            <div class="card-icon-sm">⋯</div>
+          </div>
+          <p class="bp-info">Your blood pressure is slightly elevated today.</p>
+          <div class="bars-chart" id="bp-chart"></div>
+          <div class="bp-reading">
+            <div>
+              <span class="bp-val">130/82</span>
+              <span class="bp-unit">mmHg</span>
+            </div>
+            <div class="card-icon-sm">↺</div>
+          </div>
+        </div>
+
+        <!-- Medication Reminder -->
+        <div class="med-reminder">
+          <div class="med-icon">💊</div>
+          <div class="med-text">
+            Take your antihypertensive medication at <span class="med-time">3:00 PM</span>
+          </div>
+          <div class="card-icon-sm">⋯</div>
+        </div>
+
+        <!-- Upcoming Appointments -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Upcoming Appointments</span>
+            <div class="card-icon-sm">↗</div>
+          </div>
+
+          <!-- Date strip -->
+          <div class="date-strip">
+            <div class="date-nav">‹</div>
+            <div class="date-items" id="date-strip"></div>
+            <div class="date-nav">›</div>
+          </div>
+
+          <!-- Appointment card -->
+          <div class="appt-card">
+            <div class="doc-avatar">👩‍⚕️</div>
+            <div class="appt-info">
+              <div class="appt-name">Sophia Bennett</div>
+              <div class="appt-role">Cardiologist</div>
+              <div class="appt-time">May 19th, 2023 &nbsp;·&nbsp; 03:30 – 04:00 pm</div>
+            </div>
+            <div class="appt-btns">
+              <div class="appt-btn msg" title="Message">💬</div>
+              <div class="appt-btn vid" title="Video call">📹</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ════════════════════ COL 3 · RIGHT WIDGETS -->
+      <div class="right-col">
+
+        <!-- My Profiles -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">My Profiles</span>
+            <div class="card-icon-sm">⋯</div>
+          </div>
+
+          <div class="profile-card">
+            <div class="profile-avatar">👤</div>
+            <div class="profile-info">
+              <div class="age">27 years old</div>
+              <div class="pname">Olivia Carter</div>
+              <div class="diag-label">Diagnosis</div>
+              <div class="diag">Mild Hypertension</div>
+            </div>
+          </div>
+
+          <div class="profile-stats">
+            <div class="stat-row">
+              <div class="stat-icon">❤</div>
+              <span class="stat-label">Heart Rate</span>
+              <span class="stat-val">112 bpm</span>
+              <span class="stat-trend">↑</span>
+            </div>
+            <div class="stat-row">
+              <div class="stat-icon">🩸</div>
+              <span class="stat-label">Glucose Level</span>
+              <span class="stat-val">9.0 mmol/L</span>
+              <span class="stat-trend">↑</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ SCRIPTS -->
+  <script>
+    /* ── Blood Pressure bars ────────────────────────────────── */
+    const bpChart = document.getElementById('bp-chart');
+    const bpData  = [55,62,70,65,72,60,78,68,75,80,72,65,70,68,75,80,72,65,60,74,82,60,65];
+    bpData.forEach((h, i) => {
+      const bar = document.createElement('div');
+      bar.className = 'bar-item';
+      const alpha = i === bpData.length - 3 ? 1 : .55 + (i / bpData.length) * .3;
+      bar.style.height   = `${h}%`;
+      bar.style.background = `rgba(0,201,190,${alpha})`;
+      bar.style.borderRadius = '3px 3px 0 0';
+      bpChart.appendChild(bar);
+    });
+
+    /* ── Date strip ─────────────────────────────────────────── */
+    const strip = document.getElementById('date-strip');
+    const days  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const dates = [18,19,20,21,22,23,24];
+    const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    dates.forEach((d, i) => {
+      const el = document.createElement('div');
+      el.className = 'date-item' + (d === 21 ? ' today' : '');
+      el.innerHTML = `<span>${d}</span>${dayLabels[i]}`;
+      el.addEventListener('click', () => {
+        document.querySelectorAll('.date-item').forEach(x => x.classList.remove('today'));
+        el.classList.add('today');
+      });
+      strip.appendChild(el);
+    });
+
+    /* ── Nav tabs ────────────────────────────────────────────── */
+    document.querySelectorAll('nav a').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        document.querySelectorAll('nav a').forEach(x => x.classList.remove('active'));
+        a.classList.add('active');
+      });
+    });
+
+    /* ── Sidebar items ───────────────────────────────────────── */
+    document.querySelectorAll('.side-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.side-btn').forEach(x => x.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    /* ── Organ selector ─────────────────────────────────────── */
+    document.querySelectorAll('.organ-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.organ-btn').forEach(x => x.classList.remove('selected'));
+        btn.classList.add('selected');
+      });
+    });
+
+    /* ── Animate progress bar on load ──────────────────────── */
+    window.addEventListener('load', () => {
+      const bar = document.getElementById('eff-bar');
+      bar.style.width = '0%';
+      setTimeout(() => { bar.style.transition = 'width 1.2s cubic-bezier(.4,0,.2,1)'; bar.style.width = '86%'; }, 200);
+    });
+  </script>
+
+</body>
+</html>

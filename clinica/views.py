@@ -25,6 +25,7 @@ from .models import (
     AperturaExpediente,
     BloqueoAgendaTerapeuta,
     DocumentoPaciente,
+    Empresa,
     Paciente,
     NotaTerapeutaPaciente,
     ReporteSesion,
@@ -38,6 +39,8 @@ from .models import CorteSemanal, LineaNomina, BonoExtra
 from .forms import (
     AperturaExpedienteForm,
     BloqueoAgendaTerapeutaForm,
+    CitaEmpresaForm,
+    PacienteEmpresaForm,
     PacienteForm,
     CitaForm,
     DocumentoPacienteForm,
@@ -229,7 +232,10 @@ def home(request):
     
     if hasattr(request.user, 'perfil_paciente'):
         return redirect('portal_paciente')
-    
+
+    if hasattr(request.user, 'perfil_empresa'):
+        return redirect('portal_empresa')
+
     from django.utils import timezone
     from .forms import CitaForm 
     from .models import SolicitudCita # <-- Importamos la sala de espera por si acaso
@@ -2250,3 +2256,99 @@ def api_consultorios_por_horario(request):
         print(f'Error en api_consultorios_por_horario: {e}')
         todos = list(ConsultorioModel.objects.values('id', 'nombre'))
         return JsonResponse({'consultorios': todos, 'filtrado': False})
+
+
+# =============================================================================
+# PORTAL EMPRESA
+# =============================================================================
+
+@login_required
+def portal_empresa(request):
+    if not hasattr(request.user, 'perfil_empresa'):
+        return redirect('home')
+
+    mi_empresa = request.user.perfil_empresa
+    hoy = date.today()
+
+    # Solo nombre y teléfono — no expediente
+    pacientes = mi_empresa.pacientes.only('id', 'nombre', 'telefono').order_by('nombre')
+
+    proximas_citas = Cita.objects.filter(
+        paciente__empresa=mi_empresa,
+        fecha__gte=hoy,
+        estatus__in=Cita.ESTATUS_ACTIVOS,
+    ).select_related('paciente', 'terapeuta').order_by('fecha', 'hora')[:10]
+
+    return render(request, 'clinica/portal_empresa.html', {
+        'empresa': mi_empresa,
+        'pacientes': pacientes,
+        'total_pacientes': pacientes.count(),
+        'proximas_citas': proximas_citas,
+        'hoy': hoy,
+    })
+
+
+@login_required
+def registrar_paciente_empresa(request):
+    if not hasattr(request.user, 'perfil_empresa'):
+        return redirect('home')
+
+    mi_empresa = request.user.perfil_empresa
+
+    if request.method == 'POST':
+        form = PacienteEmpresaForm(request.POST)
+        if form.is_valid():
+            paciente = form.save(commit=False)
+            paciente.empresa = mi_empresa
+            paciente.save()
+            messages.success(request, f'Paciente {paciente.nombre} registrado correctamente.')
+            return redirect('portal_empresa')
+    else:
+        form = PacienteEmpresaForm()
+
+    return render(request, 'clinica/registrar_paciente_empresa.html', {
+        'form': form,
+        'empresa': mi_empresa,
+    })
+
+
+@login_required
+def agendar_cita_empresa(request):
+    if not hasattr(request.user, 'perfil_empresa'):
+        return redirect('home')
+
+    mi_empresa = request.user.perfil_empresa
+    terapeutas = Terapeuta.objects.filter(activo=True)
+
+    if request.method == 'POST':
+        form = CitaEmpresaForm(request.POST, empresa=mi_empresa)
+        if form.is_valid():
+            cita = form.save(commit=False)
+            cita.estatus = Cita.ESTATUS_SIN_CONFIRMAR
+
+            # Verificar que el slot esté disponible
+            conflicto = Cita.objects.filter(
+                terapeuta_id=cita.terapeuta_id,
+                fecha=cita.fecha,
+                hora=cita.hora,
+                estatus__in=Cita.ESTATUS_ACTIVOS,
+            ).exists()
+
+            if conflicto:
+                messages.error(request, 'Este horario ya está ocupado. Por favor elige otro.')
+            else:
+                bloqueo = obtener_bloqueo_terapeuta_en_fecha(cita.terapeuta_id, cita.fecha, cita.hora)
+                if bloqueo:
+                    messages.error(request, f'El terapeuta tiene este horario bloqueado: {bloqueo.motivo or "sin motivo especificado"}.')
+                else:
+                    cita.save()
+                    messages.success(request, f'Cita agendada para {cita.paciente.nombre} el {cita.fecha} a las {cita.hora:%H:%M}.')
+                    return redirect('portal_empresa')
+    else:
+        form = CitaEmpresaForm(empresa=mi_empresa)
+
+    return render(request, 'clinica/agendar_cita_empresa.html', {
+        'form': form,
+        'empresa': mi_empresa,
+        'terapeutas': terapeutas,
+    })
