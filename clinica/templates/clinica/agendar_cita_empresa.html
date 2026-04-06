@@ -493,7 +493,7 @@
 
             <div class="form-actions" style="margin-top:1.4rem;">
               <a href="{% url 'portal_empresa' %}" class="btn-ghost">← Cancelar</a>
-              <button type="submit" class="btn-primary" id="submit-btn" disabled>Confirmar cita →</button>
+              <button type="submit" class="btn-primary" id="submit-btn" disabled>Solicitar cita →</button>
             </div>
 
           </form>
@@ -546,7 +546,7 @@
     /* ── Referencias DOM ────────────────────────────────────── */
     const terapeutaSel   = document.getElementById('{{ form.terapeuta.id_for_label }}');
     const fechaInput     = document.getElementById('{{ form.fecha.id_for_label }}');
-    const horaInput      = document.getElementById('{{ form.hora.id_for_label }}');
+    const horaInput      = document.getElementById('id_hora');
     const slotsContainer = document.getElementById('slots-container');
     const submitBtn      = document.getElementById('submit-btn');
     const horaDisplay    = document.getElementById('hora-selected-display');
