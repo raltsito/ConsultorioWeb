@@ -473,8 +473,15 @@
               </div>
 
               <div class="form-group">
-                <label for="{{ form.division.id_for_label }}">División</label>
-                {{ form.division }}
+                <label>División</label>
+                {% if empresa.division %}
+                  {{ form.division }}
+                  <div style="display:inline-flex;align-items:center;gap:.4rem;background:var(--cyan-light);border:1.5px solid var(--cyan);border-radius:var(--radius-sm);padding:.45rem .8rem;font-size:.82rem;font-weight:600;color:var(--cyan);">
+                    {{ empresa.division.nombre }}
+                  </div>
+                {% else %}
+                  {{ form.division }}
+                {% endif %}
               </div>
 
               <div class="form-group">

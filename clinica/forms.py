@@ -552,8 +552,18 @@ class CitaEmpresaForm(forms.ModelForm):
 
     def __init__(self, *args, empresa=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.empresa = empresa
         if empresa is not None:
             self.fields['paciente'].queryset = empresa.pacientes.all().order_by('nombre')
+            if empresa.division:
+                self.fields['division'].initial = empresa.division
+                self.fields['division'].widget = forms.HiddenInput()
+
+    def clean_division(self):
+        # Si la empresa tiene división fija, siempre la usamos (ignorar lo que venga del POST)
+        if self.empresa and self.empresa.division:
+            return self.empresa.division
+        return self.cleaned_data.get('division')
 
     class Meta:
         model = Cita
@@ -562,7 +572,7 @@ class CitaEmpresaForm(forms.ModelForm):
             'paciente': forms.Select(attrs={'class': 'form-select'}),
             'terapeuta': forms.Select(attrs={'class': 'form-select'}),
             'fecha': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
-            'hora': forms.TimeInput(format='%H:%M', attrs={'type': 'time', 'class': 'form-control'}),
+            'hora': forms.HiddenInput(),
             'tipo_paciente': forms.Select(attrs={'class': 'form-select'}),
             'consultorio': forms.Select(attrs={'class': 'form-select'}),
             'division': forms.Select(attrs={'class': 'form-select'}),

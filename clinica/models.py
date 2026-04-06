@@ -29,6 +29,10 @@ class Empresa(models.Model):
     )
     nombre = models.CharField(max_length=200)
     activo = models.BooleanField(default=True)
+    division = models.ForeignKey(
+        'Division', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='empresas'
+    )
 
     def __str__(self):
         return self.nombre
