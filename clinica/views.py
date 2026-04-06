@@ -918,9 +918,17 @@ def crear_cita(request):
                 if solicitud.consultorio:
                     datos_iniciales['consultorio'] = solicitud.consultorio.id
 
-                paciente_match = resolver_paciente_por_nombre(solicitud.paciente_nombre)
-                if paciente_match:
-                    datos_iniciales['paciente'] = paciente_match.id
+                if solicitud.paciente:
+                    datos_iniciales['paciente'] = solicitud.paciente.id
+                else:
+                    paciente_match = resolver_paciente_por_nombre(solicitud.paciente_nombre)
+                    if paciente_match:
+                        datos_iniciales['paciente'] = paciente_match.id
+
+                if solicitud.division:
+                    datos_iniciales['division'] = solicitud.division.id
+                if solicitud.servicio:
+                    datos_iniciales['servicio'] = solicitud.servicio.id
             except SolicitudCita.DoesNotExist:
                 pass
         form = CitaForm(initial=datos_iniciales)
@@ -2324,27 +2332,23 @@ def agendar_cita_empresa(request):
     if request.method == 'POST':
         form = CitaEmpresaForm(request.POST, empresa=mi_empresa)
         if form.is_valid():
-            cita = form.save(commit=False)
-            cita.estatus = Cita.ESTATUS_SIN_CONFIRMAR
-
-            # Verificar que el slot esté disponible
-            conflicto = Cita.objects.filter(
-                terapeuta_id=cita.terapeuta_id,
-                fecha=cita.fecha,
-                hora=cita.hora,
-                estatus__in=Cita.ESTATUS_ACTIVOS,
-            ).exists()
-
-            if conflicto:
-                messages.error(request, 'Este horario ya está ocupado. Por favor elige otro.')
-            else:
-                bloqueo = obtener_bloqueo_terapeuta_en_fecha(cita.terapeuta_id, cita.fecha, cita.hora)
-                if bloqueo:
-                    messages.error(request, f'El terapeuta tiene este horario bloqueado: {bloqueo.motivo or "sin motivo especificado"}.')
-                else:
-                    cita.save()
-                    messages.success(request, f'Cita agendada para {cita.paciente.nombre} el {cita.fecha} a las {cita.hora:%H:%M}.')
-                    return redirect('portal_empresa')
+            data = form.cleaned_data
+            paciente = data['paciente']
+            SolicitudCita.objects.create(
+                paciente_nombre=paciente.nombre,
+                telefono=paciente.telefono or '',
+                fecha_deseada=data['fecha'],
+                hora_deseada=data['hora'],
+                terapeuta=data.get('terapeuta'),
+                consultorio=data.get('consultorio'),
+                paciente=paciente,
+                empresa=mi_empresa,
+                division=data.get('division') or mi_empresa.division,
+                servicio=data.get('servicio'),
+                estado='pendiente',
+            )
+            messages.success(request, f'Solicitud enviada para {paciente.nombre}. Recepción la confirmará pronto.')
+            return redirect('portal_empresa')
     else:
         form = CitaEmpresaForm(empresa=mi_empresa)
 

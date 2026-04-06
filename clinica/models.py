@@ -519,6 +519,12 @@ class SolicitudCita(models.Model):
     consultorio = models.ForeignKey('Consultorio', on_delete=models.SET_NULL, null=True, blank=True)
     notas_paciente = models.TextField(blank=True, null=True, help_text="Mensaje original del paciente")
 
+    # Campos para solicitudes desde portal empresa
+    paciente  = models.ForeignKey('Paciente', on_delete=models.SET_NULL, null=True, blank=True, related_name='solicitudes')
+    empresa   = models.ForeignKey('Empresa', on_delete=models.SET_NULL, null=True, blank=True, related_name='solicitudes')
+    division  = models.ForeignKey('Division', on_delete=models.SET_NULL, null=True, blank=True)
+    servicio  = models.ForeignKey('Servicio', on_delete=models.SET_NULL, null=True, blank=True)
+
     estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
     motivo_rechazo = models.TextField(blank=True, null=True, help_text="Razón enviada al paciente si se rechaza")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
