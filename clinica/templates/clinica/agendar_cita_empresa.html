@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -358,18 +359,7 @@
   <header>
     <a href="{% url 'portal_empresa' %}" class="logo">
       <div class="logo-icon">
-        <svg viewBox="0 0 100 108" width="44" height="48" xmlns="http://www.w3.org/2000/svg" fill="none">
-          <path d="M40 84 L40 96 Q50 100 60 96 L60 84" stroke="#00c9be" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M50 6 C28 6 14 22 14 42 C14 58 24 70 38 76 L38 84 L62 84 L62 76 C76 70 86 58 86 42 C86 22 72 6 50 6 Z" stroke="#00c9be" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M36 38 Q35 28 43 26 Q47 25 49 30" stroke="#00c9be" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <path d="M51 30 Q53 25 57 26 Q65 28 65 38" stroke="#00c9be" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <line x1="50" y1="30" x2="50" y2="55" stroke="#00c9be" stroke-width="2.5" stroke-linecap="round"/>
-          <path d="M36 38 Q31 44 35 51 Q30 57 37 62" stroke="#00c9be" stroke-width="2.8" fill="none" stroke-linecap="round"/>
-          <path d="M43 26 Q37 32 39 41 Q34 47 40 52 Q36 58 42 62" stroke="#00c9be" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-          <path d="M65 38 Q70 44 66 51 Q71 57 64 62" stroke="#00c9be" stroke-width="2.8" fill="none" stroke-linecap="round"/>
-          <path d="M57 26 Q63 32 61 41 Q66 47 60 52 Q64 58 58 62" stroke="#00c9be" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-          <path d="M37 62 Q44 68 50 55 Q56 68 64 62" stroke="#00c9be" stroke-width="3" fill="none" stroke-linecap="round"/>
-        </svg>
+        <img src="{% static 'clinica/images/logo.png' %}" alt="INTRA Logo" width="44" height="44" style="object-fit:contain;">
       </div>
       <span class="logo-text">
         INTRA
