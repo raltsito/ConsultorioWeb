@@ -116,13 +116,22 @@
                         <p class="mb-0 fs-5 text-white-50">Portal Médico | Tu agenda para hoy: {{ fecha_bonita }}</p>
                     </div>
                 </div>
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="{% url 'expedientes_terapeuta' %}" class="btn btn-outline-light btn-lg fw-bold shadow-sm d-flex align-items-center">
-                        <i class="bi bi-folder2-open fs-5 me-2"></i>Mis Expedientes
-                    </a>
-                    <a href="{% url 'solicitar_cita_terapeuta' %}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm d-flex align-items-center">
-                        <i class="bi bi-calendar-plus fs-5 me-2"></i>Solicitar Cita a Recepción
-                    </a>
+                <div class="dropdown">
+                    <button class="btn btn-light btn-lg text-primary fw-bold shadow-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-grid-3x3-gap-fill fs-5"></i> Menú
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 mt-1">
+                        <li>
+                            <a class="dropdown-item py-2 fw-semibold" href="{% url 'expedientes_terapeuta' %}">
+                                <i class="bi bi-folder2-open me-2 text-primary"></i>Mis Expedientes
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item py-2 fw-semibold" href="{% url 'solicitar_cita_terapeuta' %}">
+                                <i class="bi bi-calendar-plus me-2 text-primary"></i>Solicitar Cita a Recepción
+                            </a>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
