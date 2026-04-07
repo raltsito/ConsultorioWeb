@@ -1,0 +1,41 @@
+name: Respaldo semanal de base de datos
+
+on:
+  schedule:
+    - cron: '0 8 * * 0'   # Cada domingo a las 2am hora Ciudad de México (UTC-6 → 08:00 UTC)
+  workflow_dispatch:        # También permite correrlo manualmente desde GitHub
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout rama backups
+        uses: actions/checkout@v4
+        with:
+          ref: backups
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Instalar cliente PostgreSQL
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Crear respaldo
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          FECHA=$(date +'%Y-%m-%d')
+          pg_dump "$DATABASE_URL" -Fc -f "respaldo_${FECHA}.dump"
+          echo "Respaldo creado: respaldo_${FECHA}.dump"
+
+      - name: Conservar solo los últimos 4 respaldos
+        run: |
+          ls -t respaldo_*.dump 2>/dev/null | tail -n +5 | xargs -r rm -v
+
+      - name: Commit del respaldo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add respaldo_*.dump
+          git diff --cached --quiet || git commit -m "backup: respaldo $(date +'%Y-%m-%d')"
+          git push origin backups
