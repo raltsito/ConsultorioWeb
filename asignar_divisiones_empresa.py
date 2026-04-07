@@ -12,7 +12,7 @@ from clinica.models import Division, Empresa
 MAPEO = {
     'GIASA':          'GIASA',
     'NEAPCO':         'NEAPCO',
-    'CARITAS':        'Critas de Saltillo',
+    'CARITAS':        'Cáritas de Saltillo',
     'DOROTHEA':       'DOROTHEA',
     'INTEC DON BOSCO': 'INTEC Don Bosco',
 }

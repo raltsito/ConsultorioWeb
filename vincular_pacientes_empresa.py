@@ -18,7 +18,7 @@ from clinica.models import Division, Empresa, Paciente, Cita
 MAPEO = {
     'NEAPCO':              'NEAPCO',
     'GIASA':               'GIASA',
-    'Critas de Saltillo':  'CARITAS',
+    'Cáritas de Saltillo': 'CARITAS',
     'DOROTHEA':            'DOROTHEA',
     'INTEC Don Bosco':     'INTEC DON BOSCO',
 }
