@@ -36,7 +36,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           FECHA=$(date +'%Y-%m-%d')
-          pg_dump "$DATABASE_URL" -Fc -f "respaldo_${FECHA}.dump"
+          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" -Fc -f "respaldo_${FECHA}.dump"
           echo "Respaldo creado: respaldo_${FECHA}.dump"
 
       - name: Conservar solo los últimos 4 respaldos
