@@ -569,14 +569,11 @@ def expediente_terapeuta_detalle(request, paciente_id):
 
     apertura = getattr(paciente, 'apertura_expediente_obj', None)
 
-    # --- Auto-calc: número de sesión = citas completadas (si_asistio) + 1 ---
-    sesiones_completadas = Cita.objects.filter(
+    # --- Auto-calc: número de sesión = reportes ya guardados + 1 ---
+    numero_sesion_sugerido = ReporteSesion.objects.filter(
         terapeuta=terapeuta,
-        estatus=Cita.ESTATUS_SI_ASISTIO,
-    ).filter(
-        Q(paciente=paciente) | Q(pacientes_adicionales=paciente)
-    ).distinct().count()
-    numero_sesion_sugerido = sesiones_completadas + 1
+        paciente=paciente,
+    ).count() + 1
 
     # --- Auto-calc: hora de la cita más reciente de hoy como hora_inicio ---
     hoy = date.today()
