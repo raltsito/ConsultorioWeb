@@ -20,7 +20,7 @@
 ## Técnico
 
 - [ ] **Almacenamiento externo para media (S3)** — los documentos subidos viven dentro del contenedor Docker y se pierden en cada redeploy; conectar a S3 o similar es crítico
-- [ ] **Respaldo automático de BD** — actualmente los respaldos son manuales; configurar un cron semanal en Railway o script programado
+- [x] **Respaldo automático de BD** — GitHub Actions corre cada domingo, hace pg_dump de producción y guarda en rama `backups` (últimos 4 respaldos)
 - [ ] **Paginación en listas grandes** — lista de pacientes y bitácora se vuelven lentas con cientos de registros
 
 ## Seguridad / acceso
