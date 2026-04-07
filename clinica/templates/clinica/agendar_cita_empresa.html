@@ -385,7 +385,10 @@
           <div class="handle">Empresa</div>
         </div>
       </div>
-      <a href="{% url 'logout' %}" class="icon-btn" title="Cerrar sesión">⎋</a>
+      <form method="post" action="{% url 'logout' %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="icon-btn" title="Cerrar sesión">⎋</button>
+      </form>
     </div>
   </header>
 
