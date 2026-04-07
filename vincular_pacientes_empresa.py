@@ -6,6 +6,7 @@ Mapeo:
   GIASA             -> Empresa GIASA
   Cáritas de Saltillo -> Empresa CARITAS
   DOROTHEA          -> Empresa DOROTHEA
+  INTEC Don Bosco   -> Empresa INTEC DON BOSCO
 """
 import django, os
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
@@ -17,8 +18,9 @@ from clinica.models import Division, Empresa, Paciente, Cita
 MAPEO = {
     'NEAPCO':              'NEAPCO',
     'GIASA':               'GIASA',
-    'Cáritas de Saltillo': 'CARITAS',
+    'Critas de Saltillo':  'CARITAS',
     'DOROTHEA':            'DOROTHEA',
+    'INTEC Don Bosco':     'INTEC DON BOSCO',
 }
 
 # Cargar objetos

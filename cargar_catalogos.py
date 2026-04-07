@@ -23,6 +23,7 @@ def cargar_datos():
         "iFOOD",
         "UTS",
         "Cáritas de Saltillo",
+        "INTEC Don Bosco",
         "Escuela",
         "Otro"
     ]

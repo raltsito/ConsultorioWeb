@@ -14,7 +14,7 @@ MAPEO = {
     'NEAPCO':         'NEAPCO',
     'CARITAS':        'Critas de Saltillo',
     'DOROTHEA':       'DOROTHEA',
-    # INTEC DON BOSCO se deja sin division por ahora
+    'INTEC DON BOSCO': 'INTEC Don Bosco',
 }
 
 for emp_nombre, div_nombre in MAPEO.items():
