@@ -1,0 +1,229 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <p class="reporte-eyebrow">Panel de Recepción</p>
+        <h2 class="reporte-title">
+            <i class="bi bi-person-x me-2"></i>Estadísticas de Ausentismo
+        </h2>
+        <p class="reporte-subtitle">
+            {% if fecha_inicio %}
+                Del {{ fecha_inicio|date:"d/m/Y" }} al {{ fecha_fin|date:"d/m/Y" }}
+            {% else %}
+                Hasta el {{ fecha_fin|date:"d/m/Y" }} — histórico completo
+            {% endif %}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'reporte_general' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-bar-chart-line me-1"></i>Reporte General
+        </a>
+        <a href="{% url 'bitacora_diaria' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-journal-text me-1"></i>Bitácora
+        </a>
+    </div>
+</div>
+
+<div class="filtros-panel mb-4">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-sm-6 col-lg-4">
+            <label class="form-label small fw-semibold text-secondary">Fecha inicio <span class="text-muted fw-normal">(vacío = histórico)</span></label>
+            <input type="date" name="fecha_inicio" value="{{ fecha_inicio_iso }}"
+                   class="form-control form-control-sm">
+        </div>
+        <div class="col-sm-6 col-lg-4">
+            <label class="form-label small fw-semibold text-secondary">Fecha fin</label>
+            <input type="date" name="fecha_fin" value="{{ fecha_fin_iso }}"
+                   class="form-control form-control-sm">
+        </div>
+        <div class="col-sm-12 col-lg-4">
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 flex-grow-1">
+                    <i class="bi bi-funnel me-1"></i>Filtrar
+                </button>
+                <a href="{% url 'estadisticas_ausentismo' %}" class="btn btn-light btn-sm border rounded-pill px-3" title="Limpiar filtros">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="d-flex flex-wrap gap-3 mb-4">
+    <div class="reporte-stat reporte-stat--danger">
+        <span class="reporte-stat-val">{{ total_pacientes }}</span>
+        <span class="reporte-stat-lbl">pacientes con ausentismo</span>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+    <div class="card-header bg-white border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-table me-2 text-danger"></i>Ranking de ausentismo
+        </h5>
+        <span class="badge bg-light text-dark border">{{ total_pacientes }} paciente{{ total_pacientes|pluralize }}</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table id="tablaAusentismo" class="table table-hover align-middle mb-0 tabla-ausentismo">
+                <thead>
+                    <tr>
+                        <th class="text-center">#</th>
+                        <th>Paciente</th>
+                        <th class="text-center">Cancelaciones</th>
+                        <th class="text-center">Inasistencias</th>
+                        <th class="text-center">Total ausencias</th>
+                        <th class="text-center">Total citas</th>
+                        <th class="text-center">% Ausentismo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in pacientes_stats %}
+                    {% with pct=p.total_ausencias|floatformat:0 %}
+                    <tr>
+                        <td class="text-center text-muted fw-bold small">{{ forloop.counter }}</td>
+
+                        <td>
+                            <a href="{% url 'detalle_paciente' p.paciente__id %}"
+                               class="fw-semibold text-dark text-decoration-none link-hover">
+                                {{ p.paciente__nombre }}
+                            </a>
+                        </td>
+
+                        <td class="text-center">
+                            {% if p.cancelaciones > 0 %}
+                            <span class="badge-ausentismo badge-cancelo">
+                                <i class="bi bi-x-circle me-1"></i>{{ p.cancelaciones }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">
+                            {% if p.inasistencias > 0 %}
+                            <span class="badge-ausentismo badge-inasistencia">
+                                <i class="bi bi-person-dash me-1"></i>{{ p.inasistencias }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center fw-bold">
+                            <span class="badge-ausentismo badge-total">{{ p.total_ausencias }}</span>
+                        </td>
+
+                        <td class="text-center text-secondary">{{ p.total_citas }}</td>
+
+                        <td class="text-center">
+                            {% if p.total_citas > 0 %}
+                            {% widthratio p.total_ausencias p.total_citas 100 as porcentaje %}
+                            <div class="d-flex align-items-center justify-content-center gap-2">
+                                <div class="progress flex-grow-1" style="height:6px; max-width:80px;">
+                                    <div class="progress-bar {% if porcentaje >= 50 %}bg-danger{% elif porcentaje >= 25 %}bg-warning{% else %}bg-info{% endif %}"
+                                         style="width:{{ porcentaje }}%"></div>
+                                </div>
+                                <span class="small fw-semibold
+                                    {% if porcentaje >= 50 %}text-danger{% elif porcentaje >= 25 %}text-warning{% else %}text-secondary{% endif %}">
+                                    {{ porcentaje }}%
+                                </span>
+                            </div>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endwith %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-check-circle text-success fs-3 d-block mb-2"></i>
+                            No hay pacientes con cancelaciones o inasistencias en el período seleccionado.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .reporte-eyebrow {
+        font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em;
+        text-transform: uppercase; color: #26C6DA; margin-bottom: 0.15rem;
+    }
+    .reporte-title {
+        font-family: 'Poppins', sans-serif; font-weight: 700;
+        color: #263238; font-size: 1.8rem; margin-bottom: 0.1rem;
+    }
+    .reporte-subtitle { color: #78909C; font-size: 0.95rem; margin-bottom: 0; }
+
+    .filtros-panel {
+        background: #fff; border-radius: 1rem; padding: 1.25rem 1.5rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.05); border: 1px solid #F0F4F8;
+    }
+
+    .reporte-stat {
+        display: flex; flex-direction: column; align-items: center;
+        background: #F8FBFD; border: 1px solid #E0E7EF;
+        border-radius: 0.75rem; padding: 0.6rem 1.2rem; min-width: 100px;
+    }
+    .reporte-stat--danger { border-color: #FFCDD2; background: #FFF5F5; }
+    .reporte-stat-val {
+        font-family: 'Poppins', sans-serif; font-size: 1.4rem;
+        font-weight: 700; color: #263238; line-height: 1;
+    }
+    .reporte-stat-lbl { font-size: 0.72rem; color: #90A4AE; margin-top: 0.15rem; }
+
+    .tabla-ausentismo thead th {
+        background: #F0F4F8; color: #546E7A;
+        font-size: 0.78rem; font-weight: 700;
+        letter-spacing: 0.06em; text-transform: uppercase;
+        border-bottom: 2px solid #E0E7EF; padding: 0.85rem 1rem;
+        white-space: nowrap;
+    }
+    .tabla-ausentismo tbody td {
+        padding: 0.75rem 1rem; border-bottom: 1px solid #F0F4F8;
+        font-size: 0.88rem; vertical-align: middle;
+    }
+    .tabla-ausentismo tbody tr:hover { background: #FAFCFF; }
+
+    .badge-ausentismo {
+        display: inline-flex; align-items: center;
+        padding: 0.25rem 0.65rem; border-radius: 50px;
+        font-size: 0.78rem; font-weight: 600;
+    }
+    .badge-cancelo    { background: #FFEBEE; color: #C62828; }
+    .badge-inasistencia { background: #EDE7F6; color: #4527A0; }
+    .badge-total      { background: #FCE4EC; color: #880E4F; font-size: 0.85rem; }
+
+    .link-hover:hover { color: #26C6DA !important; }
+</style>
+
+{% endblock %}
+
+{% block after_body %}
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<script>
+$(document).ready(function () {
+    $('#tablaAusentismo').DataTable({
+        language: {
+            url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+            emptyTable: 'Sin datos de ausentismo para el período seleccionado.',
+        },
+        pageLength: 25,
+        order: [[4, 'desc']],
+        columnDefs: [
+            { orderable: false, targets: [0] },
+        ],
+        dom: '<"d-flex justify-content-between align-items-center px-4 py-3 flex-wrap gap-2"lf>t<"d-flex justify-content-between align-items-center px-4 py-2 flex-wrap"ip>',
+    });
+});
+</script>
+{% endblock %}

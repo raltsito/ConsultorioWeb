@@ -1771,6 +1771,59 @@ def reporte_general(request):
     })
 
 
+@login_required
+def estadisticas_ausentismo(request):
+    """
+    Ranking de pacientes con más cancelaciones o inasistencias.
+    Acceso exclusivo a is_superuser.
+    """
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    hoy = date.today()
+
+    fecha_inicio_str = request.GET.get('fecha_inicio', '')
+    fecha_fin_str    = request.GET.get('fecha_fin', '')
+
+    try:
+        fecha_inicio = date.fromisoformat(fecha_inicio_str) if fecha_inicio_str else None
+    except ValueError:
+        fecha_inicio = None
+
+    try:
+        fecha_fin = date.fromisoformat(fecha_fin_str) if fecha_fin_str else hoy
+    except ValueError:
+        fecha_fin = hoy
+
+    citas_qs = Cita.objects.filter(paciente__isnull=False, fecha__lte=fecha_fin)
+    if fecha_inicio:
+        citas_qs = citas_qs.filter(fecha__gte=fecha_inicio)
+
+    pacientes_stats = (
+        citas_qs
+        .values('paciente__id', 'paciente__nombre')
+        .annotate(
+            cancelaciones=Count('id', filter=Q(estatus=Cita.ESTATUS_CANCELO)),
+            inasistencias=Count('id', filter=Q(estatus=Cita.ESTATUS_NO_ASISTIO)),
+            total_ausencias=Count('id', filter=Q(estatus__in=[
+                Cita.ESTATUS_CANCELO, Cita.ESTATUS_NO_ASISTIO
+            ])),
+            total_citas=Count('id'),
+        )
+        .filter(total_ausencias__gt=0)
+        .order_by('-total_ausencias', '-cancelaciones')
+    )
+
+    return render(request, 'clinica/estadisticas_ausentismo.html', {
+        'pacientes_stats':  pacientes_stats,
+        'fecha_inicio':     fecha_inicio,
+        'fecha_fin':        fecha_fin,
+        'fecha_inicio_iso': fecha_inicio.isoformat() if fecha_inicio else '',
+        'fecha_fin_iso':    fecha_fin.isoformat(),
+        'total_pacientes':  pacientes_stats.count(),
+    })
+
+
 # =============================================================================
 # SPRINT 4 — NÓMINA SEMANAL
 # =============================================================================

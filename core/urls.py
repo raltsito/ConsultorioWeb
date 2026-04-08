@@ -42,6 +42,7 @@ urlpatterns = [
     path('citas/<int:cita_id>/checkout/', clinica_views.checkout_cita, name='checkout_cita'),
     path('bitacora/', clinica_views.bitacora_diaria, name='bitacora_diaria'),
     path('reporte-general/', clinica_views.reporte_general, name='reporte_general'),
+    path('ausentismo/', clinica_views.estadisticas_ausentismo, name='estadisticas_ausentismo'),
     path('nomina/', clinica_views.nomina_lista, name='nomina_lista'),
     path('nomina/tabuladores/', clinica_views.tabuladores_config, name='tabuladores_config'),
     path('nomina/tabuladores/categoria/<int:categoria_id>/editar/', clinica_views.tabuladores_editar_categoria, name='tabuladores_editar_categoria'),

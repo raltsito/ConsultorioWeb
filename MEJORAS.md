@@ -10,7 +10,7 @@
 
 - [ ] **Reporte por empresa** — citas del mes, asistencias y cancelaciones por división (útil para que las empresas rindan cuentas a RRHH)
 - [ ] **Exportar agenda del terapeuta** — descargar citas de la semana en PDF o CSV
-- [ ] **Estadísticas de ausentismo** — pacientes con más cancelaciones o inasistencias, visible para recepción
+- [x] **Estadísticas de ausentismo** — pacientes con más cancelaciones o inasistencias, visible para recepción
 
 ## Pacientes
 

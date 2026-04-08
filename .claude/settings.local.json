@@ -25,7 +25,22 @@
       "Bash(venv/Scripts/python manage.py shell -c \":*)",
       "Bash(venv/Scripts/python -c \":*)",
       "Bash(where pg_dump)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(xargs basename:*)",
+      "Bash(venv/Scripts/python.exe -c \"import dj_database_url\")",
+      "Bash(venv/Scripts/python.exe manage.py check)",
+      "Bash(venv/Scripts/python.exe manage.py runserver)",
+      "Bash(kill %1)",
+      "Bash(venv/Scripts/python.exe -c \"from clinica import views\")",
+      "Bash(venv/Scripts/python.exe manage.py shell -c \"from clinica import views; print\\('OK'\\)\")",
+      "Bash(venv/Scripts/python.exe manage.py shell -c \"from django.urls import get_urlconf; from django.conf import settings; print\\('ROOT_URLCONF:', settings.ROOT_URLCONF\\)\")",
+      "Bash(venv/Scripts/python.exe manage.py shell -c \"import core.urls; import inspect; print\\(inspect.getfile\\(core.urls\\)\\)\")",
+      "Bash(venv/Scripts/python.exe manage.py shell -c \"import core.urls; print\\([str\\(p.pattern\\) for p in core.urls.urlpatterns]\\)\")",
+      "Bash(netstat -ano)",
+      "Bash(findstr :8000)",
+      "Bash(taskkill:*)",
+      "Bash(cmd:*)",
+      "Bash(powershell:*)"
     ]
   }
 }
