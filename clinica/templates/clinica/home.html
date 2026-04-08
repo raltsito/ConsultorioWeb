@@ -589,6 +589,91 @@
 </style>
 
 
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header border-0 py-3 d-flex justify-content-between align-items-center gap-2 flex-wrap"
+                 style="background: linear-gradient(90deg, #78350f 0%, #92400e 100%); color: white;">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-slash-circle me-2"></i>Bloqueos de Terapeutas
+                </h5>
+                {% if bloqueos_vigentes %}
+                <span class="badge bg-warning text-dark fw-semibold">{{ bloqueos_vigentes.count }} activo{{ bloqueos_vigentes.count|pluralize }}</span>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0 tabla-bloqueos">
+                        <thead>
+                            <tr>
+                                <th>Terapeuta</th>
+                                <th>Periodo</th>
+                                <th>Horario</th>
+                                <th>Tipo</th>
+                                <th>Motivo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in bloqueos_vigentes %}
+                            <tr>
+                                <td class="fw-semibold">{{ b.terapeuta }}</td>
+                                <td>{{ b.rango_display }}</td>
+                                <td>
+                                    {% if b.hora_inicio and b.hora_fin %}
+                                        {{ b.hora_inicio|time:"H:i" }} – {{ b.hora_fin|time:"H:i" }}
+                                    {% else %}
+                                        <span class="text-muted">Día completo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if b.tipo_bloqueo == 'permanente' %}
+                                        <span class="badge text-bg-danger">Permanente</span>
+                                    {% else %}
+                                        <span class="badge text-bg-warning text-dark">Temporal</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted fst-italic">{{ b.motivo|default:"—" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    <i class="bi bi-check-circle me-1 text-success"></i>Sin bloqueos activos.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tabla-bloqueos thead th {
+        background: #fef3c7;
+        color: #78350f;
+        font-style: italic;
+        border-bottom: 2px solid #fbbf24;
+        white-space: nowrap;
+    }
+    .tabla-bloqueos tbody tr:nth-child(odd) {
+        background-color: #fffbeb;
+    }
+    .tabla-bloqueos tbody td {
+        border-color: #fde68a;
+        white-space: nowrap;
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .tabla-bloqueos tbody td:nth-child(5) {
+        white-space: normal;
+        max-width: none;
+    }
+</style>
+
     {% if solicitudes_pendientes %}
     <div class="row mt-4 mb-4">
         <div class="col-12">

@@ -281,6 +281,13 @@ def home(request):
         'pacientes_adicionales'
     ).order_by('fecha', 'hora')
 
+    bloqueos_vigentes = BloqueoAgendaTerapeuta.objects.filter(
+        activo=True,
+    ).filter(
+        Q(tipo_bloqueo=BloqueoAgendaTerapeuta.TIPO_PERMANENTE) |
+        Q(fecha_fin__gte=hoy)
+    ).select_related('terapeuta').order_by('fecha_inicio', 'terapeuta__nombre')
+
     return render(request, 'clinica/home.html', {
         'citas_hoy': citas_hoy_count,
         'pendientes': pendientes_count,
@@ -291,7 +298,8 @@ def home(request):
         'fecha_tablero': fecha_tablero,
         'hoy': hoy,
         'form': CitaForm(),
-        'solicitudes_pendientes': solicitudes_pendientes, # <--- AQUI YA ESTA INCLUIDO EN EL PAQUETE
+        'solicitudes_pendientes': solicitudes_pendientes,
+        'bloqueos_vigentes': bloqueos_vigentes,
     })
 # Asegúrate de tener esto arriba: from django.db.models import Q
 
