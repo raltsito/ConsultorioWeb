@@ -87,7 +87,7 @@ class PacienteForm(forms.ModelForm):
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre completo'}),
-            'fecha_nacimiento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha_nacimiento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'WhatsApp'}),
             'identidad_contacto': forms.Select(attrs={'class': 'form-select'}),
             'servicio_inicial': forms.Select(attrs={'class': 'form-select'}),
