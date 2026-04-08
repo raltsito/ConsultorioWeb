@@ -564,18 +564,27 @@
     .tabla-tablero-citas tbody td {
         border-color: #d3d8dd;
         white-space: nowrap;
-        max-width: 160px;
+        max-width: 110px;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    /* Columnas cortas no necesitan límite */
+    /* Columnas cortas sin límite de ancho */
     .tabla-tablero-citas tbody td:nth-child(1), /* Hora */
     .tabla-tablero-citas tbody td:nth-child(2), /* Tipo */
     .tabla-tablero-citas tbody td:nth-child(7), /* Situación */
     .tabla-tablero-citas tbody td:nth-child(9), /* $/Pase */
     .tabla-tablero-citas tbody td:nth-child(10) /* Acciones */ {
         max-width: none;
+    }
+
+    /* Columna Paciente: muestra nombre completo con wrap */
+    .tabla-tablero-citas tbody td:nth-child(4) {
+        white-space: normal;
+        max-width: none;
+        min-width: 120px;
+        word-break: break-word;
+        overflow: visible;
     }
 </style>
 
