@@ -564,6 +564,18 @@
     .tabla-tablero-citas tbody td {
         border-color: #d3d8dd;
         white-space: nowrap;
+        max-width: 160px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Columnas cortas no necesitan límite */
+    .tabla-tablero-citas tbody td:nth-child(1), /* Hora */
+    .tabla-tablero-citas tbody td:nth-child(2), /* Tipo */
+    .tabla-tablero-citas tbody td:nth-child(7), /* Situación */
+    .tabla-tablero-citas tbody td:nth-child(9), /* $/Pase */
+    .tabla-tablero-citas tbody td:nth-child(10) /* Acciones */ {
+        max-width: none;
     }
 </style>
 
