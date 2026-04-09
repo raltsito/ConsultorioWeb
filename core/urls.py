@@ -55,6 +55,11 @@ urlpatterns = [
     path('disponibilidad/agregar/', clinica_views.agregar_disponibilidad, name='agregar_disponibilidad'),
     path('disponibilidad/eliminar/<int:horario_id>/', clinica_views.eliminar_disponibilidad, name='eliminar_disponibilidad'),
 
+    # Reagendos
+    path('citas/<int:cita_id>/solicitar-reagendo/', clinica_views.solicitar_reagendo, name='solicitar_reagendo'),
+    path('reagendo/<int:solicitud_id>/aprobar/', clinica_views.aprobar_reagendo, name='aprobar_reagendo'),
+    path('reagendo/<int:solicitud_id>/rechazar/', clinica_views.rechazar_reagendo, name='rechazar_reagendo'),
+
     # Portal Empresa
     path('empresa/', clinica_views.portal_empresa, name='portal_empresa'),
     path('empresa/registrar-paciente/', clinica_views.registrar_paciente_empresa, name='registrar_paciente_empresa'),

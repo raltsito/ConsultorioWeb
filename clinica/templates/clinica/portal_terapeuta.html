@@ -131,7 +131,7 @@
 
 
 {# ─────────────────────────── SOLICITUDES ENVIADAS ─────────────────────────── #}
-{% if mis_solicitudes %}
+{% if mis_solicitudes or mis_reagendos %}
 <div class="card shadow-sm border-0 rounded-4 mb-4 border-start border-primary border-5">
     <div class="card-header bg-white border-bottom p-3" style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#peticionesCollapse" aria-expanded="false" aria-controls="peticionesCollapse">
         <div class="d-flex justify-content-between align-items-center">
@@ -142,6 +142,11 @@
     <div class="collapse" id="peticionesCollapse">
         <div class="card-body p-0">
             <div class="list-group list-group-flush">
+
+                {% if mis_solicitudes %}
+                <div class="list-group-item bg-light px-3 py-2">
+                    <small class="fw-bold text-muted text-uppercase" style="letter-spacing:.06em;">Solicitudes de nueva cita</small>
+                </div>
                 {% for solicitud in mis_solicitudes %}
                 <div class="list-group-item p-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -162,6 +167,41 @@
                     {% endif %}
                 </div>
                 {% endfor %}
+                {% endif %}
+
+                {% if mis_reagendos %}
+                <div class="list-group-item bg-light px-3 py-2">
+                    <small class="fw-bold text-muted text-uppercase" style="letter-spacing:.06em;">Solicitudes de reagendo</small>
+                </div>
+                {% for sr in mis_reagendos %}
+                <div class="list-group-item p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-1 gap-2 flex-wrap">
+                        <div>
+                            <strong class="text-dark d-block">{{ sr.cita.pacientes_display_natural }}</strong>
+                            <small class="text-muted">
+                                {{ sr.cita.fecha|date:"d M" }} {{ sr.cita.hora|time:"H:i" }}
+                                <i class="bi bi-arrow-right mx-1"></i>
+                                <span class="text-warning fw-semibold">{{ sr.fecha_propuesta|date:"d M" }} {{ sr.hora_propuesta|time:"H:i" }}</span>
+                            </small>
+                        </div>
+                        {% if sr.estado == 'pendiente' %}
+                            <span class="badge bg-warning text-dark border px-2 py-1">Esperando Confirmación</span>
+                        {% elif sr.estado == 'aprobada' %}
+                            <span class="badge bg-success border px-2 py-1">Aprobado</span>
+                        {% elif sr.estado == 'rechazada' %}
+                            <span class="badge bg-danger border px-2 py-1">Rechazado</span>
+                        {% endif %}
+                    </div>
+                    {% if sr.estado == 'rechazada' and sr.nota_recepcion %}
+                    <div class="bg-light p-2 rounded border border-danger border-opacity-25 mt-2">
+                        <small class="text-danger fw-bold d-block">Nota de Recepción:</small>
+                        <small class="text-secondary">"{{ sr.nota_recepcion }}"</small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% endif %}
+
             </div>
         </div>
     </div>
@@ -244,6 +284,19 @@
                                         <i class="bi bi-lock me-1"></i>Sesión cerrada
                                     </span>
                                     {% endif %}
+
+                                    {% if cita.es_finalizable %}
+                                    <button type="button"
+                                            class="btn btn-outline-warning btn-sm px-3 fw-semibold"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalReagendo"
+                                            data-cita-id="{{ cita.id }}"
+                                            data-paciente="{{ cita.titulo_cita }}"
+                                            data-fecha-actual="{{ cita.fecha|date:'d/m/Y' }}"
+                                            data-hora-actual="{{ cita.hora|time:'H:i' }}">
+                                        <i class="bi bi-arrow-repeat me-1"></i>Proponer Reagendo
+                                    </button>
+                                    {% endif %}
                                 </div>
                             </div>
 
@@ -280,12 +333,30 @@
                 <div class="list-group list-group-flush">
                     {% for cita in citas_proximas %}
                     <div class="list-group-item p-4">
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
                             <div>
                                 <strong class="text-dark d-block fs-5">{{ cita.titulo_cita }}</strong>
                                 <span class="text-muted fs-6">{{ cita.fecha|date:"l d M" }} a las {{ cita.hora|time:"H:i" }}</span>
                             </div>
-                            <span class="badge bg-light text-dark border px-3 py-2 fs-6">{{ cita.consultorio }}</span>
+                            <div class="d-flex gap-2 align-items-center flex-wrap">
+                                <span class="badge bg-light text-dark border px-3 py-2 fs-6">{{ cita.consultorio }}</span>
+                                {% if cita.estatus == 'reagendo' %}
+                                <span class="badge text-bg-warning px-3 py-2">
+                                    <i class="bi bi-hourglass-split me-1"></i>Reagendo pendiente
+                                </span>
+                                {% else %}
+                                <button type="button"
+                                        class="btn btn-outline-warning btn-sm fw-semibold"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalReagendo"
+                                        data-cita-id="{{ cita.id }}"
+                                        data-paciente="{{ cita.titulo_cita }}"
+                                        data-fecha-actual="{{ cita.fecha|date:'d/m/Y' }}"
+                                        data-hora-actual="{{ cita.hora|time:'H:i' }}">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Reagendar
+                                </button>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
@@ -906,6 +977,68 @@ ivo</option>
 
 })();
 </script>
+{# ── MODAL PROPONER REAGENDO ── #}
+<div class="modal fade" id="modalReagendo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4 overflow-hidden">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg,#f59e0b,#d97706);">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-arrow-repeat me-2"></i>Proponer Reagendo
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="formReagendo" action="">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <p class="text-muted mb-1 small">Paciente</p>
+                    <p class="fw-bold fs-5 mb-3" id="reagendo-paciente">—</p>
+                    <p class="text-muted mb-3 small">
+                        Fecha actual: <span class="fw-semibold text-dark" id="reagendo-fecha-actual">—</span>
+                        &nbsp;·&nbsp;
+                        <span class="fw-semibold text-dark" id="reagendo-hora-actual">—</span>
+                    </p>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Nueva fecha <span class="text-danger">*</span></label>
+                            <input type="date" name="fecha_propuesta" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Nueva hora <span class="text-danger">*</span></label>
+                            <input type="time" name="hora_propuesta" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold small">Motivo (opcional)</label>
+                        <textarea name="motivo" class="form-control" rows="2"
+                                  placeholder="Ej. Tengo una urgencia personal ese día..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold text-white">
+                        <i class="bi bi-send me-1"></i>Enviar a Recepción
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    const modalReagendo = document.getElementById('modalReagendo');
+    if (!modalReagendo) return;
+    modalReagendo.addEventListener('show.bs.modal', function(e) {
+        const btn = e.relatedTarget;
+        document.getElementById('reagendo-paciente').textContent    = btn.dataset.paciente   || '—';
+        document.getElementById('reagendo-fecha-actual').textContent = btn.dataset.fechaActual || '—';
+        document.getElementById('reagendo-hora-actual').textContent  = btn.dataset.horaActual  || '—';
+        document.getElementById('formReagendo').action = '/citas/' + btn.dataset.citaId + '/solicitar-reagendo/';
+    });
+})();
+</script>
+
 {% endblock %}
 
 {% endblock %}

@@ -533,6 +533,39 @@ class SolicitudCita(models.Model):
         return f"{self.paciente_nombre} - {self.fecha_deseada} ({self.get_estado_display()})"
 
 
+class SolicitudReagendo(models.Model):
+    ESTADOS = [
+        ('pendiente', 'Pendiente'),
+        ('aprobada', 'Aprobada'),
+        ('rechazada', 'Rechazada'),
+    ]
+
+    cita = models.ForeignKey(
+        'Cita',
+        on_delete=models.CASCADE,
+        related_name='solicitudes_reagendo',
+    )
+    terapeuta = models.ForeignKey(
+        'Terapeuta',
+        on_delete=models.CASCADE,
+        related_name='solicitudes_reagendo',
+    )
+    fecha_propuesta = models.DateField()
+    hora_propuesta = models.TimeField()
+    motivo = models.TextField(blank=True)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
+    nota_recepcion = models.TextField(blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Reagendo de {self.terapeuta} para cita {self.cita_id} — {self.get_estado_display()}"
+
+    class Meta:
+        verbose_name = "Solicitud de Reagendo"
+        verbose_name_plural = "Solicitudes de Reagendo"
+        ordering = ['-creado_en']
+
+
 # =============================================================================
 # MÓDULO DE NÓMINA — Sprint 1
 # =============================================================================

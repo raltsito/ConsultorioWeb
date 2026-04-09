@@ -40,7 +40,9 @@
       "Bash(findstr :8000)",
       "Bash(taskkill:*)",
       "Bash(cmd:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(venv/Scripts/python.exe manage.py makemigrations clinica --name solicitud_reagendo)",
+      "Bash(venv/Scripts/python.exe manage.py migrate)"
     ]
   }
 }

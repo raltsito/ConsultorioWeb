@@ -33,6 +33,7 @@ from .models import (
     Cita,
     Horario,
     SolicitudCita,
+    SolicitudReagendo,
     obtener_bloqueo_terapeuta_en_fecha,
 )
 from .models import CorteSemanal, LineaNomina, BonoExtra
@@ -281,6 +282,10 @@ def home(request):
         'pacientes_adicionales'
     ).order_by('fecha', 'hora')
 
+    reagendos_pendientes = SolicitudReagendo.objects.filter(
+        estado='pendiente',
+    ).select_related('cita', 'cita__paciente', 'terapeuta').order_by('creado_en')
+
     bloqueos_vigentes = BloqueoAgendaTerapeuta.objects.filter(
         activo=True,
     ).filter(
@@ -300,6 +305,7 @@ def home(request):
         'form': CitaForm(),
         'solicitudes_pendientes': solicitudes_pendientes,
         'bloqueos_vigentes': bloqueos_vigentes,
+        'reagendos_pendientes': reagendos_pendientes,
     })
 # Asegúrate de tener esto arriba: from django.db.models import Q
 
@@ -1240,6 +1246,10 @@ def portal_terapeuta(request):
     mis_solicitudes = SolicitudCita.objects.filter(
         terapeuta=mi_perfil
     ).order_by('-fecha_creacion')[:5]
+
+    mis_reagendos = SolicitudReagendo.objects.filter(
+        terapeuta=mi_perfil
+    ).select_related('cita', 'cita__paciente').order_by('-creado_en')[:10]
     bloqueos_futuros = mi_perfil.bloqueos_agenda.filter(
         activo=True,
     ).filter(
@@ -1258,6 +1268,7 @@ def portal_terapeuta(request):
         'mostrar_agenda_semanal': request.GET.get('ver_agenda') == '1',
         'fecha_bonita': fecha_bonita, # <--- Pasamos la fecha arreglada
         'mis_solicitudes': mis_solicitudes,
+        'mis_reagendos': mis_reagendos,
         'bloqueos_agenda': bloqueos_futuros,
         'bloqueo_form': BloqueoAgendaTerapeutaForm(),
     }
@@ -2415,3 +2426,86 @@ def agendar_cita_empresa(request):
         'empresa': mi_empresa,
         'terapeutas': terapeutas,
     })
+
+
+# ---------------------------------------------------------------------------
+# REAGENDOS — flujo terapeuta propone, recepción decide
+# ---------------------------------------------------------------------------
+
+@login_required
+def solicitar_reagendo(request, cita_id):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    mi_perfil = request.user.perfil_terapeuta
+    cita = get_object_or_404(Cita, id=cita_id, terapeuta=mi_perfil)
+
+    if request.method != 'POST':
+        return redirect('portal_terapeuta')
+
+    # Evitar duplicados: solo una solicitud pendiente por cita
+    if SolicitudReagendo.objects.filter(cita=cita, estado='pendiente').exists():
+        messages.warning(request, 'Ya existe una solicitud de reagendo pendiente para esa cita.')
+        return redirect('portal_terapeuta')
+
+    fecha_str = request.POST.get('fecha_propuesta', '').strip()
+    hora_str  = request.POST.get('hora_propuesta', '').strip()
+    motivo    = request.POST.get('motivo', '').strip()
+
+    from datetime import datetime as dt
+    try:
+        fecha = dt.strptime(fecha_str, '%Y-%m-%d').date()
+        hora  = dt.strptime(hora_str,  '%H:%M').time()
+    except ValueError:
+        messages.error(request, 'Fecha u hora inválida. Intenta de nuevo.')
+        return redirect('portal_terapeuta')
+
+    SolicitudReagendo.objects.create(
+        cita=cita,
+        terapeuta=mi_perfil,
+        fecha_propuesta=fecha,
+        hora_propuesta=hora,
+        motivo=motivo,
+    )
+    cita.estatus = Cita.ESTATUS_REAGENDO
+    cita.save(update_fields=['estatus'])
+    messages.success(request, 'Solicitud de reagendo enviada a Recepción.')
+    return redirect('portal_terapeuta')
+
+
+@login_required
+def aprobar_reagendo(request, solicitud_id):
+    if request.method != 'POST':
+        return redirect('home')
+
+    solicitud = get_object_or_404(SolicitudReagendo, id=solicitud_id, estado='pendiente')
+    cita = solicitud.cita
+    cita.fecha  = solicitud.fecha_propuesta
+    cita.hora   = solicitud.hora_propuesta
+    cita.estatus = Cita.ESTATUS_CONFIRMADA
+    cita.save(update_fields=['fecha', 'hora', 'estatus'])
+
+    solicitud.estado = 'aprobada'
+    solicitud.nota_recepcion = request.POST.get('nota_recepcion', '').strip()
+    solicitud.save(update_fields=['estado', 'nota_recepcion'])
+
+    messages.success(request, f'Reagendo aprobado. Cita movida al {cita.fecha:%d/%m/%Y} a las {cita.hora:%H:%M}.')
+    return redirect('home')
+
+
+@login_required
+def rechazar_reagendo(request, solicitud_id):
+    if request.method != 'POST':
+        return redirect('home')
+
+    solicitud = get_object_or_404(SolicitudReagendo, id=solicitud_id, estado='pendiente')
+    solicitud.estado = 'rechazada'
+    solicitud.nota_recepcion = request.POST.get('nota_recepcion', '').strip()
+    solicitud.save(update_fields=['estado', 'nota_recepcion'])
+
+    cita = solicitud.cita
+    cita.estatus = Cita.ESTATUS_CONFIRMADA
+    cita.save(update_fields=['estatus'])
+
+    messages.info(request, 'Solicitud de reagendo rechazada. La cita se mantuvo en su fecha original.')
+    return redirect('home')

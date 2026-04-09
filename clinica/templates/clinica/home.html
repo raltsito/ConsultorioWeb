@@ -590,6 +590,99 @@
 
 
 
+{% if reagendos_pendientes %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header border-0 py-3 d-flex justify-content-between align-items-center gap-2 flex-wrap"
+                 style="background: linear-gradient(90deg, #b45309 0%, #d97706 100%); color: white;">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-arrow-repeat me-2"></i>Solicitudes de Reagendo
+                </h5>
+                <span class="badge bg-white text-warning fw-bold">{{ reagendos_pendientes.count }} pendiente{{ reagendos_pendientes.count|pluralize }}</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for sr in reagendos_pendientes %}
+                    <div class="list-group-item p-4">
+                        <div class="row align-items-center g-3">
+                            <div class="col-md-4">
+                                <p class="fw-bold mb-1 text-dark fs-6">
+                                    <i class="bi bi-person-circle me-1 text-muted"></i>{{ sr.cita.pacientes_display_natural }}
+                                </p>
+                                <p class="text-muted mb-0 small">
+                                    <i class="bi bi-person-badge me-1"></i>{{ sr.terapeuta }}
+                                </p>
+                            </div>
+                            <div class="col-md-4 border-start px-4">
+                                <p class="mb-1 small text-muted">Fecha actual</p>
+                                <p class="fw-semibold text-dark mb-1">
+                                    {{ sr.cita.fecha|date:"d M Y" }} &nbsp;·&nbsp; {{ sr.cita.hora|time:"H:i" }}
+                                </p>
+                                <p class="mb-1 small text-muted">Propone mover a</p>
+                                <p class="fw-bold text-warning mb-1">
+                                    {{ sr.fecha_propuesta|date:"d M Y" }} &nbsp;·&nbsp; {{ sr.hora_propuesta|time:"H:i" }}
+                                </p>
+                                {% if sr.motivo %}
+                                <p class="text-muted small fst-italic mb-0">"{{ sr.motivo }}"</p>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 text-md-end d-flex flex-column gap-2">
+                                <form method="POST" action="{% url 'aprobar_reagendo' sr.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success fw-bold w-100 shadow-sm">
+                                        <i class="bi bi-check-circle me-1"></i>Aprobar y Mover
+                                    </button>
+                                </form>
+                                <button type="button" class="btn btn-outline-danger fw-bold w-100"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalRechazarReagendo{{ sr.id }}">
+                                    <i class="bi bi-x-circle me-1"></i>Rechazar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Modal de rechazo #}
+                    <div class="modal fade" id="modalRechazarReagendo{{ sr.id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content border-0 shadow">
+                                <div class="modal-header bg-danger text-white border-0">
+                                    <h5 class="modal-title fw-bold">
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Rechazar Reagendo
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="POST" action="{% url 'rechazar_reagendo' sr.id %}">
+                                    {% csrf_token %}
+                                    <div class="modal-body p-4">
+                                        <p class="text-secondary mb-3">
+                                            Se rechaza el reagendo propuesto por <strong>{{ sr.terapeuta }}</strong>
+                                            para la cita de <strong>{{ sr.cita.pacientes_display_natural }}</strong>.
+                                            La cita permanecerá el <strong>{{ sr.cita.fecha|date:"d M Y" }} a las {{ sr.cita.hora|time:"H:i" }}</strong>.
+                                        </p>
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Nota para el terapeuta (opcional)</label>
+                                            <textarea name="nota_recepcion" class="form-control bg-light" rows="2"
+                                                      placeholder="Ej. Ya hay otra cita en ese horario..."></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer bg-light border-0">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        <button type="submit" class="btn btn-danger fw-bold">Confirmar Rechazo</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row mt-4">
     <div class="col-12">
         <div class="card shadow-sm border-0">
