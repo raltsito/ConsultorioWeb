@@ -352,6 +352,36 @@ class Paciente(models.Model):
         verbose_name_plural = "Pacientes"
 
 
+class PacienteTerapeutaAcceso(models.Model):
+    terapeuta = models.ForeignKey(
+        'Terapeuta',
+        on_delete=models.CASCADE,
+        related_name='pacientes_vinculados',
+    )
+    paciente = models.ForeignKey(
+        'Paciente',
+        on_delete=models.CASCADE,
+        related_name='terapeutas_vinculados',
+    )
+    creado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vinculos_terapeuta_paciente_creados',
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.terapeuta} <-> {self.paciente}"
+
+    class Meta:
+        verbose_name = "Vinculo Terapeuta Paciente"
+        verbose_name_plural = "Vinculos Terapeuta Paciente"
+        unique_together = [('terapeuta', 'paciente')]
+        ordering = ['-creado_en']
+
+
 class Cita(models.Model):
     ESTATUS_CONFIRMADA = 'confirmada'
     ESTATUS_SIN_CONFIRMAR = 'sin_confirmar'

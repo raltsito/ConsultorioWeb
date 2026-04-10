@@ -27,6 +27,7 @@ from .models import (
     DocumentoPaciente,
     Empresa,
     Paciente,
+    PacienteTerapeutaAcceso,
     NotaTerapeutaPaciente,
     ReporteSesion,
     Terapeuta,
@@ -337,7 +338,13 @@ def registrar_paciente(request):
             return redirect('lista_pacientes')
     else:
         form = PacienteForm()
-    return render(request, 'clinica/registro_paciente.html', {'form': form})
+    return render(request, 'clinica/registro_paciente.html', {
+        'form': form,
+        'cancel_url': reverse('lista_pacientes'),
+        'navbar_url': reverse('home'),
+        'titulo_form': 'Nuevo Expediente',
+        'subtitulo_form': 'Ingresa los datos del paciente',
+    })
 # En clinica/views.py
 
 # En clinica/views.py (dentro de detalle_paciente)
@@ -534,7 +541,41 @@ def _pacientes_ids_terapeuta(terapeuta):
             pacientes_adicionales__isnull=False,
         ).values_list('pacientes_adicionales__id', flat=True)
     )
+    ids.update(
+        PacienteTerapeutaAcceso.objects.filter(
+            terapeuta=terapeuta,
+        ).values_list('paciente_id', flat=True)
+    )
     return {pid for pid in ids if pid}
+
+
+@login_required
+def registrar_paciente_terapeuta(request):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    terapeuta = request.user.perfil_terapeuta
+    if request.method == 'POST':
+        form = PacienteForm(request.POST)
+        if form.is_valid():
+            paciente = form.save()
+            PacienteTerapeutaAcceso.objects.get_or_create(
+                terapeuta=terapeuta,
+                paciente=paciente,
+                defaults={'creado_por': request.user},
+            )
+            messages.success(request, 'Paciente agregado a tus expedientes correctamente.')
+            return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
+    else:
+        form = PacienteForm()
+
+    return render(request, 'clinica/registro_paciente.html', {
+        'form': form,
+        'cancel_url': reverse('expedientes_terapeuta'),
+        'navbar_url': reverse('portal_terapeuta'),
+        'titulo_form': 'Nuevo expediente desde portal medico',
+        'subtitulo_form': 'Crea el paciente y quedara vinculado a tus expedientes.',
+    })
 
 
 @login_required

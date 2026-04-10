@@ -79,7 +79,7 @@
 
     <nav class="navbar navbar-expand-lg mb-5">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+            <a class="navbar-brand d-flex align-items-center" href="{{ navbar_url|default:'/' }}">
                 <img src="{% static 'clinica/images/logo.png' %}" alt="Logo" style="height: 35px;" class="me-2">
             </a>
         </div>
@@ -88,8 +88,8 @@
     <div class="container">
         <div class="form-card p-5">
             <div class="text-center mb-4">
-                <h2 class="fw-bold mb-1">Nuevo Expediente</h2>
-                <p class="text-muted">Ingresa los datos del paciente</p>
+                <h2 class="fw-bold mb-1">{{ titulo_form|default:"Nuevo Expediente" }}</h2>
+                <p class="text-muted">{{ subtitulo_form|default:"Ingresa los datos del paciente" }}</p>
             </div>
 
             <form method="post">
@@ -130,7 +130,7 @@
                     <button type="submit" class="btn btn-primary btn-lg shadow-sm">
                         Guardar Paciente
                     </button>
-                    <a href="{% url 'lista_pacientes' %}" class="btn btn-link text-muted text-decoration-none">
+                    <a href="{{ cancel_url|default:'/pacientes/' }}" class="btn btn-link text-muted text-decoration-none">
                         Cancelar
                     </a>
                     
