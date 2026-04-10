@@ -100,6 +100,52 @@
         padding: 1rem;
     }
 
+    .portal-header-actions .btn {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .portal-hero-body {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1.25rem;
+        flex-wrap: nowrap;
+    }
+
+    .portal-hero-copy {
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .portal-header-actions {
+        flex: 0 0 auto;
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+        align-items: center;
+        gap: .75rem;
+        margin-left: auto;
+    }
+
+    @media (max-width: 991px) {
+        .portal-hero-body {
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+
+        .portal-header-actions {
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            margin-left: 0;
+        }
+
+        .portal-header-actions .btn {
+            min-width: 100%;
+        }
+    }
+
     .portal-fab {
         position: fixed;
         right: 1.35rem;
@@ -236,25 +282,25 @@
 <div class="row mb-4">
     <div class="col-12">
         <div class="card bg-primary text-white shadow-sm border-0 rounded-4">
-            <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <div class="d-flex align-items-center">
+            <div class="card-body p-4 portal-hero-body">
+                <div class="d-flex align-items-center portal-hero-copy">
                     <div class="me-4 d-none d-md-block">
                         <i class="bi bi-person-badge" style="font-size: 3rem;"></i>
                     </div>
                     <div>
                         <h2 class="fw-bold mb-1">Bienvenido, {{ terapeuta.nombre }}</h2>
-                        <p class="mb-0 fs-5 text-white-50">Portal Médico | Tu agenda para hoy: {{ fecha_bonita }}</p>
+                        <p class="mb-0 fs-5 text-white-50">Tu agenda para hoy: {{ fecha_bonita }}</p>
                     </div>
                 </div>
-                <div class="d-flex flex-wrap gap-2">
+                <div class="portal-header-actions">
                     <a href="{% url 'registrar_paciente_terapeuta' %}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm d-flex align-items-center">
                         <i class="bi bi-person-plus fs-5 me-2"></i>Nuevo Expediente
                     </a>
-                    <a href="{% url 'expedientes_terapeuta' %}" class="btn btn-outline-light btn-lg fw-bold shadow-sm d-flex align-items-center">
+                    <a href="{% url 'expedientes_terapeuta' %}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm d-flex align-items-center">
                         <i class="bi bi-folder2-open fs-5 me-2"></i>Mis Expedientes
                     </a>
                     <a href="{% url 'solicitar_cita_terapeuta' %}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm d-flex align-items-center">
-                        <i class="bi bi-calendar-plus fs-5 me-2"></i>Solicitar Cita a Recepción
+                        <i class="bi bi-calendar-plus fs-5 me-2"></i>Solicitar Cita
                     </a>
                 </div>
             </div>
