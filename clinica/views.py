@@ -22,6 +22,7 @@ from openpyxl.utils import get_column_letter
 
 #Modelos, Formularios y Utilidades de nuestra App
 from .models import (
+    AccesoDirectoPortal,
     AperturaExpediente,
     BloqueoAgendaTerapeuta,
     DocumentoPaciente,
@@ -46,6 +47,7 @@ from .forms import (
     PacienteForm,
     CitaForm,
     DocumentoPacienteForm,
+    ManualPortalForm,
     NotaTerapeutaPacienteForm,
     CheckoutCitaForm,
     ReporteSesionForm,
@@ -239,7 +241,6 @@ def home(request):
         return redirect('portal_empresa')
 
     from django.utils import timezone
-    from .forms import CitaForm 
     from .models import SolicitudCita # <-- Importamos la sala de espera por si acaso
     
     hoy = timezone.now().date()
@@ -293,6 +294,13 @@ def home(request):
         Q(tipo_bloqueo=BloqueoAgendaTerapeuta.TIPO_PERMANENTE) |
         Q(fecha_fin__gte=hoy)
     ).select_related('terapeuta').order_by('fecha_inicio', 'terapeuta__nombre')
+    manual_portal = AccesoDirectoPortal.objects.filter(
+        clave=AccesoDirectoPortal.CLAVE_MANUAL_PORTAL_MEDICO,
+    ).first()
+
+    manual_form = ManualPortalForm(initial={
+        'titulo': manual_portal.titulo if manual_portal else 'Manual del sistema',
+    })
 
     return render(request, 'clinica/home.html', {
         'citas_hoy': citas_hoy_count,
@@ -307,7 +315,39 @@ def home(request):
         'solicitudes_pendientes': solicitudes_pendientes,
         'bloqueos_vigentes': bloqueos_vigentes,
         'reagendos_pendientes': reagendos_pendientes,
+        'manual_portal': manual_portal,
+        'manual_form': manual_form,
     })
+
+
+@login_required
+def actualizar_manual_portal(request):
+    if not request.user.is_superuser:
+        messages.error(request, 'Solo administracion puede actualizar el manual del sistema.')
+        return redirect('home')
+
+    if request.method != 'POST':
+        return redirect('home')
+
+    form = ManualPortalForm(request.POST, request.FILES)
+    if not form.is_valid():
+        messages.error(request, 'Revisa el archivo del manual antes de guardarlo.')
+        return redirect('home')
+
+    archivo = form.cleaned_data['archivo']
+    manual, _ = AccesoDirectoPortal.objects.get_or_create(
+        clave=AccesoDirectoPortal.CLAVE_MANUAL_PORTAL_MEDICO,
+        defaults={'titulo': 'Manual del sistema'},
+    )
+    manual.titulo = form.cleaned_data.get('titulo') or manual.titulo or 'Manual del sistema'
+    manual.nombre_archivo = archivo.name
+    manual.tipo_mime = getattr(archivo, 'content_type', '') or 'application/octet-stream'
+    manual.contenido = archivo.read()
+    manual.activo = True
+    manual.save()
+
+    messages.success(request, 'Manual del sistema actualizado correctamente.')
+    return redirect('home')
 # Asegúrate de tener esto arriba: from django.db.models import Q
 
 @login_required
@@ -1347,6 +1387,10 @@ def portal_terapeuta(request):
         Q(fecha_fin__gte=hoy) |
         Q(fecha_fin__isnull=True, fecha_inicio__gte=hoy)
     ).order_by('alcance', 'dia_semana', 'fecha_inicio', 'hora_inicio')
+    manual_portal = AccesoDirectoPortal.objects.filter(
+        clave=AccesoDirectoPortal.CLAVE_MANUAL_PORTAL_MEDICO,
+        activo=True,
+    ).first()
     context = {
         'terapeuta': mi_perfil,
         'citas_hoy': citas_hoy,
@@ -1361,9 +1405,31 @@ def portal_terapeuta(request):
         'mis_reagendos': mis_reagendos,
         'bloqueos_agenda': bloqueos_futuros,
         'bloqueo_form': BloqueoAgendaTerapeutaForm(),
+        'manual_portal': manual_portal,
     }
     
     return render(request, 'clinica/portal_terapeuta.html', context)
+
+
+@login_required
+def descargar_manual_portal_medico(request):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    manual = AccesoDirectoPortal.objects.filter(
+        clave=AccesoDirectoPortal.CLAVE_MANUAL_PORTAL_MEDICO,
+        activo=True,
+    ).first()
+    if not manual or not manual.tiene_archivo:
+        messages.error(request, 'El manual del sistema no esta disponible por el momento.')
+        return redirect('portal_terapeuta')
+
+    response = HttpResponse(
+        bytes(manual.contenido),
+        content_type=manual.tipo_mime or 'application/octet-stream',
+    )
+    response['Content-Disposition'] = f'attachment; filename="{manual.nombre_archivo or "manual_sistema"}"'
+    return response
 
 
 @login_required

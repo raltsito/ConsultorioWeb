@@ -161,6 +161,22 @@
                         <span class="dock-sub">Cancelaciones e inasistencias</span>
                     </span>
                 </a>
+
+                <a href="#" class="dock-tile" data-bs-toggle="modal" data-bs-target="#modalManualPortal">
+                    <span class="dock-chip" style="--c1:#0EA5E9;--c2:#1D4ED8;">
+                        <i class="bi bi-cloud-arrow-up-fill"></i>
+                    </span>
+                    <span class="dock-text">
+                        <span class="dock-label">Actualizar Manual</span>
+                        <span class="dock-sub">
+                            {% if manual_portal and manual_portal.nombre_archivo %}
+                                {{ manual_portal.nombre_archivo|truncatechars:24 }}
+                            {% else %}
+                                Subir archivo vigente
+                            {% endif %}
+                        </span>
+                    </span>
+                </a>
                 {% endif %}
 
             </div>
@@ -427,6 +443,50 @@
         </div>
     </div>
 </div>
+
+{% if user.is_superuser %}
+<div class="modal fade" id="modalManualPortal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-journal-arrow-up me-2"></i>Actualizar manual del sistema
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'actualizar_manual_portal' %}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">{{ manual_form.titulo.label }}</label>
+                        {{ manual_form.titulo }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">{{ manual_form.archivo.label }}</label>
+                        {{ manual_form.archivo }}
+                    </div>
+                    {% if manual_portal and manual_portal.nombre_archivo %}
+                    <div class="alert alert-info small mb-0">
+                        <strong>Archivo actual:</strong> {{ manual_portal.nombre_archivo }}<br>
+                        <strong>Ultima actualizacion:</strong> {{ manual_portal.actualizado_en|date:"d/m/Y H:i" }}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning small mb-0">
+                        Aun no hay un manual cargado. El boton del portal medico se activara cuando subas el primer archivo.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-cloud-upload me-1"></i>Guardar manual
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>

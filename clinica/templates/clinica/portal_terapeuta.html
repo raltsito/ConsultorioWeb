@@ -118,6 +118,37 @@
         flex: 1 1 auto;
     }
 
+    .portal-manual-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .6rem;
+        margin-top: .85rem;
+        padding: .8rem 1rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.16);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+        border: 1px solid rgba(255, 255, 255, 0.26);
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+        backdrop-filter: blur(10px);
+        transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+
+    .portal-manual-btn:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.22);
+        transform: translateY(-1px);
+        box-shadow: 0 16px 30px rgba(15, 23, 42, 0.16);
+    }
+
+    .portal-manual-btn.disabled,
+    .portal-manual-btn[aria-disabled="true"] {
+        opacity: .7;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
     .portal-header-actions {
         flex: 0 0 auto;
         display: flex;
@@ -290,6 +321,17 @@
                     <div>
                         <h2 class="fw-bold mb-1">Bienvenido, {{ terapeuta.nombre }}</h2>
                         <p class="mb-0 fs-5 text-white-50">Tu agenda para hoy: {{ fecha_bonita }}</p>
+                        {% if manual_portal and manual_portal.tiene_archivo %}
+                        <a href="{% url 'descargar_manual_portal_medico' %}" class="portal-manual-btn">
+                            <i class="bi bi-cloud-arrow-down-fill"></i>
+                            <span>Descarga aqui el manual del sistema.</span>
+                        </a>
+                        {% else %}
+                        <span class="portal-manual-btn disabled" aria-disabled="true">
+                            <i class="bi bi-journal-x"></i>
+                            <span>Manual del sistema no disponible.</span>
+                        </span>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="portal-header-actions">

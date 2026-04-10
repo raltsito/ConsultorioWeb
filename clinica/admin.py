@@ -1,5 +1,6 @@
+from django import forms
 from django.contrib import admin
-from .models import Empresa, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta
+from .models import AccesoDirectoPortal, Empresa, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta
 from .models import Horario
 
 admin.site.register(Terapeuta)
@@ -38,3 +39,71 @@ class BloqueoAgendaTerapeutaAdmin(admin.ModelAdmin):
     list_display = ('terapeuta', 'tipo_bloqueo', 'fecha_inicio', 'fecha_fin', 'activo')
     list_filter = ('tipo_bloqueo', 'activo', 'terapeuta')
     search_fields = ('terapeuta__nombre', 'motivo')
+
+
+class AccesoDirectoPortalAdminForm(forms.ModelForm):
+    archivo = forms.FileField(
+        required=False,
+        help_text='Sube aqui el archivo vigente del manual del sistema.',
+    )
+
+    class Meta:
+        model = AccesoDirectoPortal
+        fields = ('clave', 'titulo', 'activo')
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        archivo = self.cleaned_data.get('archivo')
+        if archivo:
+            instance.nombre_archivo = archivo.name
+            instance.tipo_mime = getattr(archivo, 'content_type', '') or 'application/octet-stream'
+            instance.contenido = archivo.read()
+        if commit:
+            instance.save()
+        return instance
+
+
+@admin.register(AccesoDirectoPortal)
+class AccesoDirectoPortalAdmin(admin.ModelAdmin):
+    form = AccesoDirectoPortalAdminForm
+    list_display = ('clave', 'titulo', 'activo', 'actualizado_en')
+    list_filter = ('activo', 'clave')
+    search_fields = ('titulo', 'nombre_archivo')
+    fieldsets = (
+        ('Acceso directo', {
+            'fields': ('clave', 'titulo', 'activo'),
+        }),
+        ('Actualizar manual', {
+            'fields': ('archivo',),
+            'description': 'Sube aqui el archivo que descargaran los terapeutas desde el portal medico.',
+        }),
+    )
+    readonly_fields = ('resumen_archivo',)
+
+    def has_add_permission(self, request):
+        return not AccesoDirectoPortal.objects.exists() or super().has_add_permission(request)
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.nombre_archivo:
+            return ('resumen_archivo',)
+        return ()
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = [
+            ('Acceso directo', {
+                'fields': ('clave', 'titulo', 'activo'),
+            }),
+            ('Actualizar manual', {
+                'fields': ('archivo',),
+                'description': 'Sube aqui el archivo que descargaran los terapeutas desde el portal medico.',
+            }),
+        ]
+        if obj and obj.nombre_archivo:
+            fieldsets.append(('Archivo actual', {'fields': ('resumen_archivo',)}))
+        return fieldsets
+
+    @admin.display(description='Archivo actual')
+    def resumen_archivo(self, obj):
+        if not obj or not obj.nombre_archivo:
+            return 'No hay archivo cargado.'
+        return f'{obj.nombre_archivo} | {obj.actualizado_en:%d/%m/%Y %H:%M}'

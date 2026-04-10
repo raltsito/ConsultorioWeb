@@ -12,6 +12,7 @@ urlpatterns = [
     
     
     path('', clinica_views.home, name='home'),
+    path('manual/actualizar/', clinica_views.actualizar_manual_portal, name='actualizar_manual_portal'),
     path('pacientes/', clinica_views.lista_pacientes, name='lista_pacientes'),
     path('pacientes/nuevo/', clinica_views.registrar_paciente, name='registrar_paciente'),
     path('pacientes/<int:paciente_id>/', clinica_views.detalle_paciente, name='detalle_paciente'),
@@ -28,6 +29,7 @@ urlpatterns = [
     path('api/terapeutas-paciente/', clinica_views.api_terapeutas_paciente, name='api_terapeutas_paciente'),
     path('api/pacientes-relacionados/', clinica_views.api_pacientes_relacionados, name='api_pacientes_relacionados'),
     path('portal-medico/', clinica_views.portal_terapeuta, name='portal_terapeuta'),
+    path('portal-medico/manual/', clinica_views.descargar_manual_portal_medico, name='descargar_manual_portal_medico'),
     path('portal-medico/expedientes/', clinica_views.expedientes_terapeuta, name='expedientes_terapeuta'),
     path('portal-medico/expedientes/nuevo/', clinica_views.registrar_paciente_terapeuta, name='registrar_paciente_terapeuta'),
     path('portal-medico/expedientes/<int:paciente_id>/', clinica_views.expediente_terapeuta_detalle, name='expediente_terapeuta_detalle'),

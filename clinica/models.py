@@ -382,6 +382,33 @@ class PacienteTerapeutaAcceso(models.Model):
         ordering = ['-creado_en']
 
 
+class AccesoDirectoPortal(models.Model):
+    CLAVE_MANUAL_PORTAL_MEDICO = 'manual_portal_medico'
+
+    CLAVE_CHOICES = [
+        (CLAVE_MANUAL_PORTAL_MEDICO, 'Manual del sistema para portal medico'),
+    ]
+
+    clave = models.CharField(max_length=50, choices=CLAVE_CHOICES, unique=True)
+    titulo = models.CharField(max_length=120, default='Manual del sistema')
+    nombre_archivo = models.CharField(max_length=255, blank=True)
+    tipo_mime = models.CharField(max_length=100, blank=True)
+    contenido = models.BinaryField(blank=True)
+    activo = models.BooleanField(default=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.get_clave_display()
+
+    @property
+    def tiene_archivo(self):
+        return bool(self.contenido and self.nombre_archivo)
+
+    class Meta:
+        verbose_name = "Acceso directo"
+        verbose_name_plural = "Accesos directos"
+
+
 class Cita(models.Model):
     ESTATUS_CONFIRMADA = 'confirmada'
     ESTATUS_SIN_CONFIRMAR = 'sin_confirmar'

@@ -77,6 +77,24 @@ class CheckoutCitaForm(forms.Form):
         if cleaned_data.get('solicitar_siguiente') and not cleaned_data.get('siguiente_fecha'):
             self.add_error('siguiente_fecha', 'Indica la fecha propuesta para la próxima cita.')
         return cleaned_data
+
+
+class ManualPortalForm(forms.Form):
+    titulo = forms.CharField(
+        required=False,
+        max_length=120,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Manual del sistema',
+        }),
+        label='Titulo visible',
+    )
+    archivo = forms.FileField(
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        label='Archivo del manual',
+    )
+
+
 class PacienteForm(forms.ModelForm):
     class Meta:
         model = Paciente
