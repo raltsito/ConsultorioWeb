@@ -410,6 +410,8 @@ class ReporteSesionForm(forms.ModelForm):
     class Meta:
         model = ReporteSesion
         fields = [
+            'fecha',
+            'hora_inicio',
             'hora_fin',
             'objetivo_sesion',
             'revision_tareas',
@@ -420,6 +422,17 @@ class ReporteSesionForm(forms.ModelForm):
             'comentarios_finales',
         ]
         widgets = {
+            'fecha': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'class': 'form-control',
+                    'type': 'date',
+                }
+            ),
+            'hora_inicio': forms.TimeInput(attrs={
+                'class': 'form-control',
+                'type': 'time',
+            }),
             'hora_fin': forms.TimeInput(attrs={
                 'class': 'form-control',
                 'type': 'time',
@@ -433,6 +446,8 @@ class ReporteSesionForm(forms.ModelForm):
             'comentarios_finales': _TEXTAREA('Comentarios finales, observaciones del terapeuta...', 3),
         }
         labels = {
+            'fecha':               'Fecha',
+            'hora_inicio':         'Hora de inicio',
             'hora_fin':            'Hora de finalización',
             'objetivo_sesion':     'Objetivo de la sesión',
             'revision_tareas':     'Revisión de tareas',

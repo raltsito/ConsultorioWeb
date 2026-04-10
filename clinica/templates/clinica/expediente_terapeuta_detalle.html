@@ -518,23 +518,12 @@
         <!-- Auto-fill strip -->
         <div class="af-strip">
           <div>
-            <div class="af-lbl"><i class="bi bi-calendar3 me-1"></i>Fecha</div>
-            <div class="af-val">{{ fecha_hoy|date:"l d M Y" }}</div>
-          </div>
-          <div>
             <div class="af-lbl"><i class="bi bi-person me-1"></i>Paciente</div>
             <div class="af-val">{{ paciente.nombre }}</div>
           </div>
           <div>
             <div class="af-lbl"><i class="bi bi-person-badge me-1"></i>Terapeuta</div>
             <div class="af-val">{{ terapeuta.nombre }}</div>
-          </div>
-          <div>
-            <div class="af-lbl"><i class="bi bi-clock me-1"></i>Hora inicio</div>
-            <div class="af-val">
-              {% if hora_inicio_sugerida %}{{ hora_inicio_sugerida|time:"H:i" }}
-              {% else %}<span style="color:var(--muted);font-weight:400;font-style:italic;">Sin cita hoy</span>{% endif %}
-            </div>
           </div>
         </div>
 
@@ -543,12 +532,20 @@
           <input type="hidden" name="accion" value="guardar_reporte">
           <div class="row g-3 mb-3">
             <div class="col-md-4">
+              <label class="form-label small fw-semibold">{{ form_reporte.fecha.label }}</label>
+              {{ form_reporte.fecha }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{{ form_reporte.hora_inicio.label }}</label>
+              {{ form_reporte.hora_inicio }}
+            </div>
+            <div class="col-md-4">
               <label class="form-label small fw-semibold">{{ form_reporte.hora_fin.label }}</label>
               {{ form_reporte.hora_fin }}
             </div>
           </div>
           {% for field in form_reporte %}
-            {% if field.name != 'hora_fin' %}
+            {% if field.name != 'fecha' and field.name != 'hora_inicio' and field.name != 'hora_fin' %}
             <div class="mb-3">
               <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
               {{ field }}
@@ -592,33 +589,47 @@
         </button>
         <div class="collapse" id="rpt{{ reporte.id }}">
           <div class="rpt-body">
-            <div class="row g-2 mb-3">
-              <div class="col-6 col-md-3"><div class="rfl">Fecha</div><div class="rfv">{{ reporte.fecha|date:"d/m/Y" }}</div></div>
-              <div class="col-6 col-md-3"><div class="rfl">Inicio</div><div class="rfv">{{ reporte.hora_inicio|time:"H:i"|default:"—" }}</div></div>
-              <div class="col-6 col-md-3"><div class="rfl">Fin</div><div class="rfv">{{ reporte.hora_fin|time:"H:i"|default:"—" }}</div></div>
-              <div class="col-6 col-md-3"><div class="rfl"># Sesión</div><div class="rfv">{{ reporte.numero_sesion }}</div></div>
-            </div>
-            {% if reporte.objetivo_sesion %}<div><div class="rfl">Objetivo</div><div class="rfv">{{ reporte.objetivo_sesion|linebreaks }}</div></div>{% endif %}
-            {% if reporte.revision_tareas %}<div><div class="rfl">Revisión de tareas</div><div class="rfv">{{ reporte.revision_tareas|linebreaks }}</div></div>{% endif %}
-            {% if reporte.desarrollo_sesion %}<div><div class="rfl">Desarrollo</div><div class="rfv">{{ reporte.desarrollo_sesion|linebreaks }}</div></div>{% endif %}
-            {% if reporte.tecnicas_utilizadas %}<div><div class="rfl">Técnicas</div><div class="rfv">{{ reporte.tecnicas_utilizadas|linebreaks }}</div></div>{% endif %}
-            {% if reporte.resultados_sesion %}<div><div class="rfl">Resultados</div><div class="rfv">{{ reporte.resultados_sesion|linebreaks }}</div></div>{% endif %}
-            {% if reporte.tareas or reporte.comentarios_finales %}
-            <div class="row g-2 mt-1">
-              <div class="col-md-6">
-                <div style="background:#fff;border:1px solid var(--border);border-radius:9px;padding:.75rem;">
-                  <div class="rfl">Tareas</div>
-                  <div style="font-size:.85rem;">{{ reporte.tareas|linebreaks|default:"—" }}</div>
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="accion" value="editar_reporte">
+              <input type="hidden" name="reporte_id" value="{{ reporte.id }}">
+              <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                  <div class="rfl">Paciente</div>
+                  <div class="fro">{{ paciente.nombre }}</div>
+                </div>
+                <div class="col-md-3">
+                  <div class="rfl">Terapeuta</div>
+                  <div class="fro">{{ terapeuta.nombre }}</div>
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label small fw-semibold">{{ reporte.form_edicion.fecha.label }}</label>
+                  {{ reporte.form_edicion.fecha }}
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label small fw-semibold">{{ reporte.form_edicion.hora_inicio.label }}</label>
+                  {{ reporte.form_edicion.hora_inicio }}
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label small fw-semibold">{{ reporte.form_edicion.hora_fin.label }}</label>
+                  {{ reporte.form_edicion.hora_fin }}
                 </div>
               </div>
-              <div class="col-md-6">
-                <div style="background:#fff;border:1px solid var(--border);border-radius:9px;padding:.75rem;">
-                  <div class="rfl">Comentarios finales</div>
-                  <div style="font-size:.85rem;">{{ reporte.comentarios_finales|linebreaks|default:"—" }}</div>
+              {% for field in reporte.form_edicion %}
+                {% if field.name != 'fecha' and field.name != 'hora_inicio' and field.name != 'hora_fin' %}
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                  {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|join:", " }}</div>{% endif %}
                 </div>
+                {% endif %}
+              {% endfor %}
+              <div class="d-flex justify-content-end">
+                <button type="submit" class="btn-ghost">
+                  <i class="bi bi-pencil-square"></i>Guardar cambios
+                </button>
               </div>
-            </div>
-            {% endif %}
+            </form>
           </div>
         </div>
       </div>

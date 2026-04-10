@@ -621,6 +621,8 @@ def expediente_terapeuta_detalle(request, paciente_id):
         terapeuta=terapeuta,
         paciente=paciente,
     ).order_by('-fecha', '-creado_en')
+    for reporte in reportes_historial:
+        reporte.form_edicion = ReporteSesionForm(instance=reporte, prefix=f'reporte_{reporte.id}')
 
     apertura = getattr(paciente, 'apertura_expediente_obj', None)
 
@@ -698,16 +700,60 @@ def expediente_terapeuta_detalle(request, paciente_id):
                 reporte = form_reporte.save(commit=False)
                 reporte.paciente = paciente
                 reporte.terapeuta = terapeuta
-                reporte.fecha = hoy
+                reporte.fecha = form_reporte.cleaned_data.get('fecha') or hoy
                 reporte.numero_sesion = numero_sesion_sugerido
-                reporte.hora_inicio = hora_inicio_sugerida
-                if cita_sugerida:
-                    reporte.cita = cita_sugerida
+                reporte.hora_inicio = form_reporte.cleaned_data.get('hora_inicio') or hora_inicio_sugerida
+                cita_relacionada = historial.filter(fecha=reporte.fecha).order_by('hora').last()
+                if reporte.hora_inicio:
+                    cita_relacionada = historial.filter(
+                        fecha=reporte.fecha,
+                        hora=reporte.hora_inicio,
+                    ).first() or cita_relacionada
+                if cita_relacionada:
+                    reporte.cita = cita_relacionada
                 reporte.save()
                 messages.success(request, f'Reporte de sesión #{reporte.numero_sesion} guardado correctamente.')
                 return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
             else:
                 messages.error(request, 'Revisa los campos del reporte.')
+
+        elif accion == 'editar_reporte':
+            reporte_id = request.POST.get('reporte_id')
+            reporte = get_object_or_404(
+                ReporteSesion,
+                id=reporte_id,
+                terapeuta=terapeuta,
+                paciente=paciente,
+            )
+            form_apertura = AperturaExpedienteForm(instance=apertura)
+            form_reporte = ReporteSesionForm(initial={
+                'fecha': hoy,
+                'hora_inicio': hora_inicio_sugerida,
+            })
+            form = NotaTerapeutaPacienteForm()
+            form_documento = DocumentoPacienteForm()
+            form_editar = ReporteSesionForm(
+                request.POST,
+                instance=reporte,
+                prefix=f'reporte_{reporte.id}',
+            )
+            if form_editar.is_valid():
+                reporte_editado = form_editar.save(commit=False)
+                reporte_editado.paciente = paciente
+                reporte_editado.terapeuta = terapeuta
+                cita_relacionada = historial.filter(fecha=reporte_editado.fecha).order_by('hora').last()
+                if reporte_editado.hora_inicio:
+                    cita_relacionada = historial.filter(
+                        fecha=reporte_editado.fecha,
+                        hora=reporte_editado.hora_inicio,
+                    ).first() or cita_relacionada
+                reporte_editado.cita = cita_relacionada
+                reporte_editado.save()
+                messages.success(request, f'Reporte de sesión #{reporte_editado.numero_sesion} actualizado correctamente.')
+                return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
+
+            reporte.form_edicion = form_editar
+            messages.error(request, f'Revisa los campos del reporte #{reporte.numero_sesion}.')
 
         elif accion == 'subir_documento':
             form_apertura = AperturaExpedienteForm(instance=apertura)
@@ -742,7 +788,10 @@ def expediente_terapeuta_detalle(request, paciente_id):
     else:
         form = NotaTerapeutaPacienteForm()
         form_documento = DocumentoPacienteForm()
-        form_reporte = ReporteSesionForm()
+        form_reporte = ReporteSesionForm(initial={
+            'fecha': hoy,
+            'hora_inicio': hora_inicio_sugerida,
+        })
         form_apertura = AperturaExpedienteForm(instance=apertura)
 
     return render(request, 'clinica/expediente_terapeuta_detalle.html', {
