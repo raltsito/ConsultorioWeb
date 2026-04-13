@@ -1130,28 +1130,30 @@ def verificar_disponibilidad(request):
                 'available': False,
                 'msg': f'El terapeuta no tiene horario configurado los {_DIAS[dia_semana]}.',
             })
-        horario_activo = next(
-            (h for h in horarios_dia if h.hora_inicio <= hora_obj <= h.hora_fin), None
-        )
-        if not horario_activo:
+        horarios_activos = [h for h in horarios_dia if h.hora_inicio <= hora_obj <= h.hora_fin]
+        if not horarios_activos:
             return JsonResponse({
                 'available': False,
                 'msg': f'Las {hora_str} está fuera del horario del terapeuta los {_DIAS[dia_semana]}.',
             })
 
-        # 3. Validar que el consultorio pertenezca a la sede del horario activo
-        if horario_activo.sede and consultorio_id:
+        # 3. Validar que el consultorio pertenezca a ALGUNA de las sedes activas
+        if consultorio_id:
             from .models import Consultorio as ConsultorioModel
             _SEDES = dict(Horario.SEDE_CHOICES)
             try:
                 cons = ConsultorioModel.objects.get(id=consultorio_id)
-                if cons.sede and cons.sede != horario_activo.sede:
-                    sede_t = _SEDES.get(horario_activo.sede, horario_activo.sede)
-                    sede_c = _SEDES.get(cons.sede, cons.sede)
-                    return JsonResponse({
-                        'available': False,
-                        'msg': f'El consultorio "{cons}" es de {sede_c}, pero el terapeuta trabaja en {sede_t} a esa hora.',
-                    })
+                if cons.sede:
+                    match = any(not h.sede or h.sede == cons.sede for h in horarios_activos)
+                    if not match:
+                        sedes = ' o '.join(
+                            _SEDES.get(h.sede, h.sede) for h in horarios_activos if h.sede
+                        )
+                        sede_c = _SEDES.get(cons.sede, cons.sede)
+                        return JsonResponse({
+                            'available': False,
+                            'msg': f'El consultorio "{cons}" es de {sede_c}, pero el terapeuta trabaja en {sedes} a esa hora.',
+                        })
             except ConsultorioModel.DoesNotExist:
                 pass
 
@@ -1701,39 +1703,38 @@ def api_disponibilidad_terapeuta(request):
         if not horarios_laborales.exists():
             return JsonResponse({'mensaje': 'El terapeuta no tiene horario laboral registrado para este dia.', 'horarios': []})
 
-        # 2. Generar todos los bloques de 1 hora posibles en su turno
-        slots_posibles = []
+        # 2. Calcular capacidad por slot (cuántos horarios cubren esa hora)
+        from collections import Counter
+        capacidad = Counter()
         for hl in horarios_laborales:
             hora_actual = datetime.combine(fecha_obj, hl.hora_inicio)
-            hora_fin = datetime.combine(fecha_obj, hl.hora_fin)
-            
-            while hora_actual <= hora_fin:
-                slots_posibles.append(hora_actual.time())
+            hora_fin_dt = datetime.combine(fecha_obj, hl.hora_fin)
+            while hora_actual <= hora_fin_dt:
+                capacidad[hora_actual.time()] += 1
                 hora_actual += timedelta(minutes=60)
 
-        # 3. Buscar las horas que ya tiene ocupadas
-        citas_ocupadas = Cita.objects.filter(
+        # 3. Contar citas activas por hora
+        citas_ocupadas = list(Cita.objects.filter(
             terapeuta_id=terapeuta_id,
             fecha=fecha_obj,
             estatus__in=Cita.ESTATUS_ACTIVOS,
-        ).values_list('hora', flat=True)
+        ).values_list('hora', flat=True))
+        citas_por_hora = Counter(citas_ocupadas)
 
-        # 4. Restar las ocupadas a las posibles
+        # 4. Un slot es libre si citas_ocupadas < capacidad y no está bloqueado
         horarios_libres = []
-        for slot in slots_posibles:
-            if slot in citas_ocupadas:
+        for slot, cap in capacidad.items():
+            if citas_por_hora.get(slot, 0) >= cap:
                 continue
             bloqueo_slot = obtener_bloqueo_terapeuta_en_fecha(terapeuta_id, fecha_obj, slot)
             if bloqueo_slot:
                 continue
-            if slot not in citas_ocupadas:
-                horarios_libres.append(slot.strftime('%H:%M'))
+            horarios_libres.append(slot.strftime('%H:%M'))
 
         mensaje = ''
         if any(b.es_bloqueo_parcial() and b.aplica_en_fecha(fecha_obj) for b in bloqueos):
             mensaje = 'Hay horas bloqueadas por el terapeuta en esta fecha.'
 
-        # Devolver la lista ordenada y sin duplicados
         return JsonResponse({'horarios': sorted(list(set(horarios_libres))), 'mensaje': mensaje})
 
     except Exception as e:

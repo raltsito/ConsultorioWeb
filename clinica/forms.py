@@ -228,10 +228,8 @@ class CitaForm(forms.ModelForm):
                     self.add_error('fecha', msg)
                     self.add_error('hora', msg)
                     raise ValidationError(msg)
-                horario_activo = next(
-                    (h for h in horarios_dia if h.hora_inicio <= hora <= h.hora_fin), None
-                )
-                if not horario_activo:
+                horarios_activos = [h for h in horarios_dia if h.hora_inicio <= hora <= h.hora_fin]
+                if not horarios_activos:
                     msg = (
                         f'Las {hora.strftime("%H:%M")} está fuera del horario de '
                         f'{terapeuta.nombre} los {_DIAS[dia_semana]}.'
@@ -239,18 +237,21 @@ class CitaForm(forms.ModelForm):
                     self.add_error('hora', msg)
                     raise ValidationError(msg)
 
-                # Validar que el consultorio coincida con la sede del horario activo
+                # Validar que el consultorio coincida con ALGUNA de las sedes activas
                 consultorio = cleaned_data.get('consultorio')
-                if horario_activo.sede and consultorio and consultorio.sede:
-                    if consultorio.sede != horario_activo.sede:
-                        sede_terapeuta = _SEDES.get(horario_activo.sede, horario_activo.sede)
+                if consultorio and consultorio.sede:
+                    match = any(not h.sede or h.sede == consultorio.sede for h in horarios_activos)
+                    if not match:
+                        sedes = ' o '.join(
+                            _SEDES.get(h.sede, h.sede) for h in horarios_activos if h.sede
+                        )
                         sede_consultorio = _SEDES.get(consultorio.sede, consultorio.sede)
                         msg = (
-                            f'{terapeuta.nombre} trabaja en {sede_terapeuta} a esa hora, '
+                            f'{terapeuta.nombre} trabaja en {sedes} a esa hora, '
                             f'pero el consultorio "{consultorio}" pertenece a {sede_consultorio}.'
                         )
                         self.add_error('consultorio', msg)
-                        return cleaned_data  # add_error invalida el form; no duplicar en __all__
+                        return cleaned_data
 
         return cleaned_data
 
