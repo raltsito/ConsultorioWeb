@@ -46,7 +46,8 @@
       "Bash(venv/Scripts/python.exe manage.py shell -c ':*)",
       "Bash(tasklist /FI \"PID eq 49428\")",
       "Bash(tasklist /FI \"PID eq 41884\")",
-      "Bash(wmic process:*)"
+      "Bash(wmic process:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

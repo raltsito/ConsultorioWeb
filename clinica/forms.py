@@ -229,7 +229,7 @@ class CitaForm(forms.ModelForm):
                     self.add_error('hora', msg)
                     raise ValidationError(msg)
                 horario_activo = next(
-                    (h for h in horarios_dia if h.hora_inicio <= hora < h.hora_fin), None
+                    (h for h in horarios_dia if h.hora_inicio <= hora <= h.hora_fin), None
                 )
                 if not horario_activo:
                     msg = (
