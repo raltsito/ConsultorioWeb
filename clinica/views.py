@@ -1412,6 +1412,54 @@ def portal_terapeuta(request):
 
 
 @login_required
+def mi_disponibilidad_terapeuta(request):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    mi_perfil = request.user.perfil_terapeuta
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'agregar':
+            dia = request.POST.get('dia')
+            hora_inicio = request.POST.get('hora_inicio')
+            hora_fin = request.POST.get('hora_fin')
+            sede = request.POST.get('sede') or None
+            if not (dia and hora_inicio and hora_fin and sede):
+                messages.error(request, 'Completa todos los campos, incluyendo la sede.')
+            elif hora_fin <= hora_inicio:
+                messages.error(request, 'La hora de fin debe ser mayor que la de inicio.')
+            else:
+                Horario.objects.create(
+                    terapeuta=mi_perfil,
+                    dia=int(dia),
+                    hora_inicio=hora_inicio,
+                    hora_fin=hora_fin,
+                    sede=sede,
+                )
+                messages.success(request, 'Franja horaria agregada correctamente.')
+        elif action == 'eliminar':
+            horario_id = request.POST.get('horario_id')
+            horario = get_object_or_404(Horario, id=horario_id, terapeuta=mi_perfil)
+            horario.delete()
+            messages.success(request, 'Franja horaria eliminada.')
+        return redirect('mi_disponibilidad_terapeuta')
+
+    horarios_qs = list(Horario.objects.filter(terapeuta=mi_perfil).order_by('dia', 'hora_inicio'))
+    dias_data = []
+    for dia_num, dia_nombre in Horario.DIAS_SEMANA:
+        slots = [h for h in horarios_qs if h.dia == dia_num]
+        dias_data.append({'num': dia_num, 'nombre': dia_nombre, 'slots': slots})
+
+    return render(request, 'clinica/mi_disponibilidad_terapeuta.html', {
+        'terapeuta': mi_perfil,
+        'dias_data': dias_data,
+        'sede_choices': Horario.SEDE_CHOICES,
+        'total': len(horarios_qs),
+    })
+
+
+@login_required
 def descargar_manual_portal_medico(request):
     if not hasattr(request.user, 'perfil_terapeuta'):
         return redirect('home')
@@ -1605,6 +1653,7 @@ def solicitar_cita_terapeuta(request):
     return render(request, 'clinica/solicitar_cita_terapeuta.html', {
         'pacientes': pacientes,
         'consultorios': consultorios,
+        'mi_perfil': mi_perfil,
     })
 
 def api_disponibilidad_terapeuta(request):

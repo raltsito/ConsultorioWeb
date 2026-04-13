@@ -151,11 +151,9 @@
 
     .portal-header-actions {
         flex: 0 0 auto;
-        display: flex;
-        flex-wrap: nowrap;
-        justify-content: flex-end;
-        align-items: center;
-        gap: .75rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .6rem;
         margin-left: auto;
     }
 
@@ -167,13 +165,13 @@
 
         .portal-header-actions {
             width: 100%;
-            flex-wrap: wrap;
-            justify-content: flex-start;
             margin-left: 0;
         }
+    }
 
-        .portal-header-actions .btn {
-            min-width: 100%;
+    @media (max-width: 479px) {
+        .portal-header-actions {
+            grid-template-columns: 1fr;
         }
     }
 
@@ -344,12 +342,33 @@
                     <a href="{% url 'solicitar_cita_terapeuta' %}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm d-flex align-items-center">
                         <i class="bi bi-calendar-plus fs-5 me-2"></i>Solicitar Cita
                     </a>
+                    <a href="{% url 'mi_disponibilidad_terapeuta' %}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm d-flex align-items-center">
+                        <i class="bi bi-clock-history fs-5 me-2"></i>Mi Disponibilidad
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+
+{# ─────────────────────────── AVISO DISPONIBILIDAD ─────────────────────────── #}
+<div class="border-0 rounded-4 shadow-sm mb-4 d-flex align-items-start gap-3 p-4"
+     style="background:linear-gradient(135deg,#e0f2fe,#ede9fe); border-left: 5px solid #6366f1 !important;">
+    <span style="font-size:1.6rem; line-height:1; flex-shrink:0; margin-top:.1rem;">📣</span>
+    <div>
+        <p class="fw-bold mb-1" style="color:#3730a3;">¡Nueva función disponible: gestiona tus horarios!</p>
+        <p class="mb-2" style="color:#4338ca; font-size:.9rem;">
+            Ya puedes revisar, agregar y modificar tus franjas de disponibilidad directamente desde tu portal.
+            Por favor revisa que tus bloques estén correctos y <strong>asegúrate de que la sede esté bien configurada</strong> en cada franja.
+        </p>
+        <a href="{% url 'mi_disponibilidad_terapeuta' %}"
+           class="btn btn-sm fw-bold px-3"
+           style="background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border-radius:999px; border:0;">
+            <i class="bi bi-clock-history me-1"></i> Ver mi disponibilidad
+        </a>
+    </div>
+</div>
 
 {# ─────────────────────────── SOLICITUDES ENVIADAS ─────────────────────────── #}
 {% if mis_solicitudes or mis_reagendos %}

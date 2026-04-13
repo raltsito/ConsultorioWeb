@@ -35,7 +35,7 @@
                             <input type="text" class="form-control bg-light" id="telefono" name="telefono">
                         </div>
 
-                        <div class="row mb-3">
+                        <div class="row mb-1">
                             <div class="col-6">
                                 <label for="fecha_deseada" class="form-label text-muted fw-semibold">Fecha <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control bg-light" id="fecha_deseada" name="fecha_deseada" required>
@@ -45,6 +45,7 @@
                                 <input type="time" class="form-control bg-light" id="hora_deseada" name="hora_deseada" required>
                             </div>
                         </div>
+                        <div id="disp-indicator" class="mb-3" style="min-height:1.6rem;"></div>
 
                         <div class="mb-3">
                             <label for="consultorio" class="form-label text-muted fw-semibold">Consultorio (Opcional)</label>
@@ -78,11 +79,13 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
+    const TERAPEUTA_ID = {{ mi_perfil.id }};
+
     $(document).ready(function() {
         $('#paciente_nombre').select2({
             placeholder: "Escribe para buscar paciente...",
             allowClear: true,
-            width: '100%', // Para que no se encoja y respete el grid de Bootstrap
+            width: '100%',
             language: {
                 noResults: function() {
                     return "No se encontró ningún paciente con ese nombre";
@@ -90,5 +93,47 @@
             }
         });
     });
+
+    let _slots = [];
+    let _bloqueado = false;
+
+    async function checkDisponibilidad() {
+        const fecha = document.getElementById('fecha_deseada').value;
+        const hora  = document.getElementById('hora_deseada').value;
+        const el    = document.getElementById('disp-indicator');
+
+        if (!fecha) { el.innerHTML = ''; return; }
+
+        // Consultar la API solo cuando cambia la fecha
+        if (checkDisponibilidad._lastFecha !== fecha) {
+            checkDisponibilidad._lastFecha = fecha;
+            _slots = [];
+            _bloqueado = false;
+            try {
+                const res  = await fetch(`/api/disponibilidad-terapeuta/?fecha=${fecha}&terapeuta=${TERAPEUTA_ID}`);
+                const data = await res.json();
+                _slots    = data.horarios || [];
+                _bloqueado = !!data.bloqueado;
+            } catch(e) { el.innerHTML = ''; return; }
+        }
+
+        if (!hora) { el.innerHTML = ''; return; }
+
+        // Normalizar hora a HH:MM
+        const horaNorm = hora.slice(0, 5);
+
+        if (_bloqueado) {
+            el.innerHTML = `<small class="text-danger fw-semibold"><i class="bi bi-x-circle-fill me-1"></i>Tienes la agenda bloqueada ese día.</small>`;
+        } else if (_slots.length === 0) {
+            el.innerHTML = `<small class="text-danger fw-semibold"><i class="bi bi-x-circle-fill me-1"></i>No tienes disponibilidad configurada ese día.</small>`;
+        } else if (_slots.includes(horaNorm)) {
+            el.innerHTML = `<small class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Dentro de tu disponibilidad.</small>`;
+        } else {
+            el.innerHTML = `<small class="text-danger fw-semibold"><i class="bi bi-x-circle-fill me-1"></i>Fuera de tu disponibilidad (tu horario: ${_slots[0]}–${_slots[_slots.length-1]}).</small>`;
+        }
+    }
+
+    document.getElementById('fecha_deseada').addEventListener('change', checkDisponibilidad);
+    document.getElementById('hora_deseada').addEventListener('change', checkDisponibilidad);
 </script>
 {% endblock %}

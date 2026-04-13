@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/pacientes-relacionados/', clinica_views.api_pacientes_relacionados, name='api_pacientes_relacionados'),
     path('portal-medico/', clinica_views.portal_terapeuta, name='portal_terapeuta'),
     path('portal-medico/manual/', clinica_views.descargar_manual_portal_medico, name='descargar_manual_portal_medico'),
+    path('portal-medico/mi-disponibilidad/', clinica_views.mi_disponibilidad_terapeuta, name='mi_disponibilidad_terapeuta'),
     path('portal-medico/expedientes/', clinica_views.expedientes_terapeuta, name='expedientes_terapeuta'),
     path('portal-medico/expedientes/nuevo/', clinica_views.registrar_paciente_terapeuta, name='registrar_paciente_terapeuta'),
     path('portal-medico/expedientes/<int:paciente_id>/', clinica_views.expediente_terapeuta_detalle, name='expediente_terapeuta_detalle'),

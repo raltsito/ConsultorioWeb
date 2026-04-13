@@ -1,0 +1,414 @@
+{% extends 'clinica/base.html' %}
+{% block content %}
+
+<style>
+/* ── VARIABLES ───────────────────────────────────────── */
+:root {
+    --disp-blue:      #0d6efd;
+    --disp-cyan:      #35c2d8;
+    --disp-dark:      #0f172a;
+    --disp-surface:   #ffffff;
+    --disp-border:    rgba(15,23,42,.08);
+    --disp-muted:     #64748b;
+    --disp-bg:        #f4f7fb;
+}
+
+/* ── HERO ───────────────────────────────────────────── */
+.mdisp-hero {
+    background: linear-gradient(135deg, var(--disp-blue) 0%, var(--disp-cyan) 100%);
+    border-radius: 1.4rem;
+    padding: 2rem 2.25rem;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    box-shadow: 0 12px 40px rgba(13,110,253,.28);
+    position: relative;
+    overflow: hidden;
+}
+.mdisp-hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.08);
+    pointer-events: none;
+}
+.mdisp-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 20%;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.05);
+    pointer-events: none;
+}
+.mdisp-hero-icon {
+    width: 64px; height: 64px;
+    border-radius: 1.15rem;
+    background: rgba(255,255,255,.18);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.85rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(0,0,0,.12);
+}
+.mdisp-hero-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0 0 .2rem;
+    letter-spacing: -.02em;
+}
+.mdisp-hero-sub {
+    opacity: .82;
+    font-size: .95rem;
+    margin: 0;
+}
+.mdisp-hero-badge {
+    margin-left: auto;
+    flex-shrink: 0;
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 999px;
+    padding: .55rem 1.1rem;
+    font-weight: 700;
+    font-size: .9rem;
+    backdrop-filter: blur(6px);
+    white-space: nowrap;
+}
+@media (max-width: 576px) {
+    .mdisp-hero { flex-wrap: wrap; }
+    .mdisp-hero-badge { margin-left: 0; width: 100%; text-align: center; }
+}
+
+/* ── WEEK GRID ──────────────────────────────────────── */
+.mdisp-week {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: .875rem;
+}
+@media (max-width: 1199px) { .mdisp-week { grid-template-columns: repeat(4, minmax(0,1fr)); } }
+@media (max-width: 767px)  { .mdisp-week { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 479px)  { .mdisp-week { grid-template-columns: 1fr; } }
+
+/* ── DAY CARD ───────────────────────────────────────── */
+.mdisp-day {
+    background: var(--disp-surface);
+    border: 1px solid var(--disp-border);
+    border-radius: 1.1rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow .2s, transform .2s;
+}
+.mdisp-day:hover {
+    box-shadow: 0 8px 28px rgba(13,110,253,.1);
+    transform: translateY(-2px);
+}
+.mdisp-day.is-weekend {
+    background: #fafbff;
+    border-color: rgba(13,110,253,.06);
+}
+
+.mdisp-day-head {
+    padding: .75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--disp-border);
+    background: linear-gradient(135deg, rgba(13,110,253,.04), rgba(53,194,216,.04));
+}
+.mdisp-day-name {
+    font-weight: 800;
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--disp-blue);
+}
+.mdisp-day-count {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--disp-blue);
+    color: #fff;
+    font-size: .68rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+}
+.mdisp-day-count.empty {
+    background: #e2e8f0;
+    color: #94a3b8;
+}
+
+.mdisp-day-body {
+    padding: .75rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+/* ── SLOT PILL ──────────────────────────────────────── */
+.mdisp-slot {
+    border-radius: .75rem;
+    padding: .55rem .7rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    border: 1px solid transparent;
+    position: relative;
+}
+.mdisp-slot-info { flex: 1; min-width: 0; }
+.mdisp-slot-time {
+    font-size: .78rem;
+    font-weight: 800;
+    display: block;
+    line-height: 1.2;
+}
+.mdisp-slot-sede {
+    font-size: .68rem;
+    font-weight: 600;
+    opacity: .75;
+    display: block;
+    margin-top: .1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mdisp-del-btn {
+    border: 0;
+    background: rgba(0,0,0,.07);
+    color: inherit;
+    width: 22px; height: 22px;
+    border-radius: .4rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .65rem;
+    flex-shrink: 0;
+    cursor: pointer;
+    opacity: .6;
+    transition: opacity .15s, background .15s;
+}
+.mdisp-del-btn:hover { opacity: 1; background: rgba(0,0,0,.14); }
+
+/* sede colours */
+.mdisp-slot.sede-republica      { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+.mdisp-slot.sede-morelos        { background: #fdf4ff; border-color: #e9d5ff; color: #7e22ce; }
+.mdisp-slot.sede-colinas        { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+.mdisp-slot.sede-trabajo_social { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+.mdisp-slot.sede-zoom           { background: #f0f9ff; border-color: #bae6fd; color: #0369a1; }
+.mdisp-slot.sede-externo        { background: #fefce8; border-color: #fde68a; color: #b45309; }
+.mdisp-slot.sede-sin_sede       { background: #f8fafc; border-color: #e2e8f0; color: #475569; }
+
+/* empty state */
+.mdisp-empty {
+    text-align: center;
+    padding: .75rem .5rem;
+    color: #cbd5e1;
+    font-size: .78rem;
+    font-weight: 600;
+}
+.mdisp-empty i { display: block; font-size: 1.3rem; margin-bottom: .3rem; opacity: .5; }
+
+/* ── ADD FORM (collapsed by default) ───────────────── */
+.mdisp-add-toggle {
+    width: 100%;
+    border: 1px dashed rgba(13,110,253,.25);
+    background: rgba(13,110,253,.03);
+    border-radius: .75rem;
+    color: var(--disp-blue);
+    font-size: .75rem;
+    font-weight: 700;
+    padding: .45rem .6rem;
+    display: flex; align-items: center; justify-content: center; gap: .35rem;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    margin-top: auto;
+}
+.mdisp-add-toggle:hover {
+    background: rgba(13,110,253,.07);
+    border-color: rgba(13,110,253,.4);
+}
+
+.mdisp-add-form {
+    display: none;
+    flex-direction: column;
+    gap: .45rem;
+    padding: .7rem;
+    background: rgba(13,110,253,.04);
+    border-radius: .85rem;
+    border: 1px solid rgba(13,110,253,.12);
+    margin-top: .25rem;
+    animation: mdisp-slide-in .18s ease;
+}
+.mdisp-add-form.open { display: flex; }
+@keyframes mdisp-slide-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.mdisp-add-form .form-control,
+.mdisp-add-form .form-select {
+    font-size: .78rem;
+    border-radius: .55rem;
+    border-color: rgba(13,110,253,.15);
+}
+.mdisp-add-form .form-control:focus,
+.mdisp-add-form .form-select:focus {
+    border-color: var(--disp-blue);
+    box-shadow: 0 0 0 3px rgba(13,110,253,.12);
+}
+.mdisp-save-btn {
+    background: linear-gradient(135deg, var(--disp-blue), var(--disp-cyan));
+    color: #fff;
+    border: 0;
+    border-radius: .55rem;
+    font-size: .78rem;
+    font-weight: 700;
+    padding: .45rem .7rem;
+    cursor: pointer;
+    transition: opacity .15s;
+}
+.mdisp-save-btn:hover { opacity: .88; }
+
+/* ── MESSAGES ───────────────────────────────────────── */
+.mdisp-alert {
+    border-radius: .9rem;
+    border: 0;
+    padding: .85rem 1.1rem;
+    font-weight: 600;
+    font-size: .9rem;
+}
+</style>
+
+
+{# ── HERO ────────────────────────────────────────────────────── #}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="mdisp-hero">
+            <div class="mdisp-hero-icon">
+                <i class="bi bi-clock-history"></i>
+            </div>
+            <div>
+                <p class="mdisp-hero-title">Mi Disponibilidad</p>
+                <p class="mdisp-hero-sub">{{ terapeuta.nombre }} &mdash; Franjas horarias permanentes</p>
+            </div>
+            <div class="mdisp-hero-badge">
+                <i class="bi bi-grid-3x3-gap-fill me-1"></i>
+                {{ total }} franja{% if total != 1 %}s{% endif %} configurada{% if total != 1 %}s{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── MENSAJES ──────────────────────────────────────────────────── #}
+{% for msg in messages %}
+<div class="alert mdisp-alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show shadow-sm mb-3" role="alert">
+    <i class="bi bi-{% if msg.tags == 'success' %}check-circle-fill{% elif msg.tags == 'error' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %} me-2"></i>
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+
+{# ── INFO BANNER ───────────────────────────────────────────────── #}
+<div class="alert border-0 rounded-3 mb-4 d-flex align-items-center gap-2 shadow-sm"
+     style="background:linear-gradient(90deg,#e8f5e9,#f1f8e9);border-left:4px solid #43a047 !important;color:#2e7d32;font-size:.88rem;">
+    <i class="bi bi-shield-check fs-5 flex-shrink-0"></i>
+    <span><strong>Horarios permanentes.</strong> Solo se podrán agendar citas dentro de las franjas que configures aquí.</span>
+</div>
+
+{# ── GRID SEMANAL ──────────────────────────────────────────────── #}
+<div class="mdisp-week mb-4">
+    {% for dia in dias_data %}
+    <div class="mdisp-day{% if dia.num >= 5 %} is-weekend{% endif %}">
+
+        {# Cabecera del día #}
+        <div class="mdisp-day-head">
+            <span class="mdisp-day-name">{{ dia.nombre }}</span>
+            <span class="mdisp-day-count {% if not dia.slots %}empty{% endif %}">{{ dia.slots|length }}</span>
+        </div>
+
+        {# Slots existentes #}
+        <div class="mdisp-day-body">
+            {% for slot in dia.slots %}
+            <div class="mdisp-slot sede-{{ slot.sede|default:'sin_sede' }}">
+                <div class="mdisp-slot-info">
+                    <span class="mdisp-slot-time">{{ slot.hora_inicio|time:"H:i" }} – {{ slot.hora_fin|time:"H:i" }}</span>
+                    {% if slot.sede %}
+                    <span class="mdisp-slot-sede">
+                        <i class="bi bi-geo-alt-fill"></i> {{ slot.get_sede_display }}
+                    </span>
+                    {% endif %}
+                </div>
+                <form method="post" style="display:contents;"
+                      onsubmit="return confirm('¿Eliminar esta franja del {{ dia.nombre }}?')">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="eliminar">
+                    <input type="hidden" name="horario_id" value="{{ slot.id }}">
+                    <button type="submit" class="mdisp-del-btn" title="Eliminar franja">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </form>
+            </div>
+            {% empty %}
+            <div class="mdisp-empty">
+                <i class="bi bi-moon-stars"></i>
+                Sin franjas
+            </div>
+            {% endfor %}
+
+            {# Botón toggle formulario #}
+            <button type="button" class="mdisp-add-toggle mt-auto"
+                    onclick="toggleAddForm(this)">
+                <i class="bi bi-plus-lg"></i> Agregar
+            </button>
+
+            {# Formulario agregar #}
+            <form method="post" class="mdisp-add-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="agregar">
+                <input type="hidden" name="dia" value="{{ dia.num }}">
+                <input type="time" name="hora_inicio"
+                       class="form-control form-control-sm"
+                       placeholder="Inicio" required title="Hora inicio">
+                <input type="time" name="hora_fin"
+                       class="form-control form-control-sm"
+                       placeholder="Fin" required title="Hora fin">
+                <select name="sede" class="form-select form-select-sm" required>
+                    <option value="" disabled selected>Sede…</option>
+                    {% for val, label in sede_choices %}
+                    <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="mdisp-save-btn">
+                    <i class="bi bi-check-lg me-1"></i>Guardar
+                </button>
+            </form>
+        </div>
+
+    </div>
+    {% endfor %}
+</div>
+
+{# ── BOTÓN VOLVER ──────────────────────────────────────────────── #}
+<div class="mb-5">
+    <a href="{% url 'portal_terapeuta' %}" class="btn btn-outline-primary rounded-pill px-4 fw-semibold">
+        <i class="bi bi-arrow-left me-1"></i> Volver al Portal
+    </a>
+</div>
+
+
+<script>
+function toggleAddForm(btn) {
+    const form = btn.nextElementSibling;
+    const isOpen = form.classList.contains('open');
+    if (isOpen) {
+        form.classList.remove('open');
+        btn.innerHTML = '<i class="bi bi-plus-lg"></i> Agregar';
+    } else {
+        form.classList.add('open');
+        btn.innerHTML = '<i class="bi bi-x-lg"></i> Cancelar';
+        form.querySelector('input[type="time"]').focus();
+    }
+}
+</script>
+
+{% endblock %}
