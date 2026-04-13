@@ -256,6 +256,27 @@
                     </table>
                 </div>
             </div>
+
+            {% if sin_regla %}
+            <div class="card-footer bg-white border-top px-4 py-3">
+                <p class="fw-semibold text-danger mb-2" style="font-size:.85rem;">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    {{ sin_regla|length }} terapeuta{% if sin_regla|length != 1 %}s{% endif %} sin regla configurada:
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for t in sin_regla %}
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger rounded-pill btn-nueva-regla"
+                            data-nombre="{{ t.nombre|escapejs }}"
+                            data-url="{% url 'tabuladores_crear_regla' t.id %}"
+                            data-bs-toggle="modal" data-bs-target="#modalRegla">
+                        <i class="bi bi-plus-lg me-1"></i>{{ t.nombre }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
         </div>
     </div>
 

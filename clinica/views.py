@@ -2391,9 +2391,12 @@ def tabuladores_config(request):
         .select_related('terapeuta', 'tabulador_base')
         .order_by('terapeuta__nombre')
     )
+    ids_con_regla = reglas.values_list('terapeuta_id', flat=True)
+    sin_regla = Terapeuta.objects.filter(activo=True).exclude(id__in=ids_con_regla).order_by('nombre')
     return render(request, 'clinica/tabuladores_config.html', {
         'categorias': categorias,
         'reglas': reglas,
+        'sin_regla': sin_regla,
     })
 
 
@@ -2411,6 +2414,35 @@ def tabuladores_editar_categoria(request, categoria_id):
     if form.is_valid():
         form.save()
         messages.success(request, f'Categoría {categoria.numero} actualizada correctamente.')
+    else:
+        errores = '; '.join(
+            f'{field}: {", ".join(errs)}'
+            for field, errs in form.errors.items()
+        )
+        messages.error(request, f'Error al guardar: {errores}')
+    return redirect('tabuladores_config')
+
+
+@login_required
+@login_required
+def tabuladores_crear_regla(request, terapeuta_id):
+    """POST: crea una ReglaTerapeuta nueva para un terapeuta que aún no tiene."""
+    if not request.user.is_staff or request.method != 'POST':
+        return redirect('tabuladores_config')
+
+    from .models import ReglaTerapeuta
+    from .forms import ReglaTerapeutaForm
+
+    terapeuta = get_object_or_404(Terapeuta, id=terapeuta_id)
+    if hasattr(terapeuta, 'regla_pago'):
+        messages.error(request, f'{terapeuta.nombre} ya tiene una regla configurada.')
+        return redirect('tabuladores_config')
+
+    regla = ReglaTerapeuta(terapeuta=terapeuta)
+    form = ReglaTerapeutaForm(request.POST, instance=regla)
+    if form.is_valid():
+        form.save()
+        messages.success(request, f'Regla creada para {terapeuta.nombre}.')
     else:
         errores = '; '.join(
             f'{field}: {", ".join(errs)}'

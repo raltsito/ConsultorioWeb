@@ -51,6 +51,7 @@ urlpatterns = [
     path('nomina/tabuladores/', clinica_views.tabuladores_config, name='tabuladores_config'),
     path('nomina/tabuladores/categoria/<int:categoria_id>/editar/', clinica_views.tabuladores_editar_categoria, name='tabuladores_editar_categoria'),
     path('nomina/tabuladores/regla/<int:regla_id>/editar/', clinica_views.tabuladores_editar_regla, name='tabuladores_editar_regla'),
+    path('nomina/tabuladores/regla/<int:terapeuta_id>/crear/', clinica_views.tabuladores_crear_regla, name='tabuladores_crear_regla'),
     path('nomina/<int:terapeuta_id>/', clinica_views.nomina_detalle, name='nomina_detalle'),
     path('nomina/<int:terapeuta_id>/calcular/', clinica_views.nomina_calcular, name='nomina_calcular'),
     path('nomina/corte/<int:corte_id>/aprobar/', clinica_views.nomina_aprobar, name='nomina_aprobar'),
