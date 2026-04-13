@@ -358,9 +358,14 @@
     <span style="font-size:1.6rem; line-height:1; flex-shrink:0; margin-top:.1rem;">📣</span>
     <div>
         <p class="fw-bold mb-1" style="color:#3730a3;">¡Nueva función disponible: gestiona tus horarios!</p>
-        <p class="mb-2" style="color:#4338ca; font-size:.9rem;">
+        <p class="mb-1" style="color:#4338ca; font-size:.9rem;">
             Ya puedes revisar, agregar y modificar tus franjas de disponibilidad directamente desde tu portal.
             Por favor revisa que tus bloques estén correctos y <strong>asegúrate de que la sede esté bien configurada</strong> en cada franja.
+        </p>
+        <p class="mb-2" style="color:#4338ca; font-size:.9rem;">
+            <i class="bi bi-exclamation-triangle-fill me-1" style="color:#6366f1;"></i>
+            El sistema <strong>bloqueará automáticamente</strong> cualquier cita que esté fuera de tu disponibilidad o de tu sede registrada —
+            <strong>es importante que lo tengas actualizado lo antes posible.</strong>
         </p>
         <a href="{% url 'mi_disponibilidad_terapeuta' %}"
            class="btn btn-sm fw-bold px-3"
