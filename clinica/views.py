@@ -2166,6 +2166,115 @@ def nomina_lista(request):
 
 
 @login_required
+def nomina_exportar_reporte_general(request):
+    """
+    Genera un Excel en formato "Reporte General" para un rango de fechas.
+    GET ?fecha_inicio=YYYY-MM-DD&fecha_fin=YYYY-MM-DD
+    Acceso exclusivo a superusuarios.
+    """
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    from datetime import date as date_type
+    hoy = date_type.today()
+
+    fecha_inicio_str = request.GET.get('fecha_inicio', '')
+    fecha_fin_str    = request.GET.get('fecha_fin', '')
+
+    try:
+        fecha_inicio = date_type.fromisoformat(fecha_inicio_str) if fecha_inicio_str else hoy.replace(day=1)
+    except ValueError:
+        fecha_inicio = hoy.replace(day=1)
+
+    try:
+        fecha_fin = date_type.fromisoformat(fecha_fin_str) if fecha_fin_str else hoy
+    except ValueError:
+        fecha_fin = hoy
+
+    meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+             'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+    citas = (
+        Cita.objects
+        .filter(
+            fecha__range=(fecha_inicio, fecha_fin),
+            estatus__in=(Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO),
+        )
+        .select_related('paciente', 'terapeuta', 'servicio', 'consultorio', 'division')
+        .order_by('fecha', 'hora')
+    )
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Datos"
+
+    _ALT2_FILL  = PatternFill("solid", fgColor="F0F4F8")
+
+    # Fila 1: encabezados
+    headers = [
+        'Dia', 'Periodo', 'Hora', 'División', 'Paciente', 'Sexo', 'Servicio',
+        'Terapeuta', 'Consultorio', 'Pago', 'Método de pago', 'Tarjeta',
+        'Folio fiscal', 'Notas', 'Fecha de pago',
+    ]
+    for col_idx, h in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=h)
+        cell.font   = _HEADER_FONT
+        cell.fill   = _TEAL_FILL
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 20
+
+    # Datos a partir de fila 2
+    for row_idx, c in enumerate(citas, start=2):
+        fill = _ALT2_FILL if row_idx % 2 == 0 else None
+        periodo = f"{meses[c.fecha.month - 1]} {c.fecha.year}"
+        valores = [
+            c.fecha.day,
+            periodo,
+            c.hora.strftime('%H:%M') if c.hora else '',
+            str(c.division)    if c.division    else '',
+            c.paciente.nombre  if c.paciente    else '',
+            c.paciente.sexo    if c.paciente    else '',
+            str(c.servicio)    if c.servicio    else '',
+            str(c.terapeuta)   if c.terapeuta   else '',
+            str(c.consultorio) if c.consultorio else '',
+            float(c.costo)     if c.costo is not None else 0,
+            c.metodo_pago      if c.metodo_pago else '',
+            '',                                              # Tarjeta (no en modelo)
+            c.folio_fiscal     if c.folio_fiscal else '',
+            c.notas            if c.notas        else '',
+            c.fecha,                                         # Fecha de pago = fecha cita
+        ]
+        for col_idx, val in enumerate(valores, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell.font = _BODY_FONT
+            if fill:
+                cell.fill = fill
+
+    # Formatear columna de Fecha de pago como fecha
+    for row_idx in range(2, ws.max_row + 1):
+        ws.cell(row=row_idx, column=15).number_format = 'DD/MM/YYYY'
+
+    # Anchos de columna
+    col_widths = [6, 14, 7, 16, 28, 10, 24, 24, 14, 10, 16, 16, 20, 30, 14]
+    for idx, w in enumerate(col_widths, start=1):
+        ws.column_dimensions[get_column_letter(idx)].width = w
+
+    ws.freeze_panes = "A2"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    filename = f"reporte_general_{fecha_inicio.isoformat()}_{fecha_fin.isoformat()}.xlsx"
+    response = HttpResponse(
+        buf.read(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
 def nomina_detalle(request, terapeuta_id):
     """
     Desglose de nómina de un terapeuta para una semana.
