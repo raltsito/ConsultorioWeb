@@ -249,6 +249,18 @@
                     <i class="bi bi-dash-circle me-1"></i>Sin bonos para este periodo.
                 </div>
                 {% endif %}
+                {# ── Comentarios de descuento/estudio socioeconómico ── #}
+                {% for linea in lineas_sesion %}
+                    {% if linea.cita and linea.cita.tiene_descuento %}
+                    <div class="px-4 py-2 d-flex align-items-center gap-2 border-top">
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle flex-shrink-0">Descuento</span>
+                        <span class="small text-muted">
+                            <strong>{% if linea.cita.paciente %}{{ linea.cita.paciente.nombre }}{% else %}—{% endif %}</strong>
+                            — tiene descuento / estudio socioeconómico activo
+                        </span>
+                    </div>
+                    {% endif %}
+                {% endfor %}
             </div>
             {% if total_bonos > 0 %}
             <div class="card-footer bg-warning-subtle border-0 px-4 py-2 d-flex justify-content-between">

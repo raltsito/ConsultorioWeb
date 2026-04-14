@@ -91,6 +91,18 @@
                     {{ form.notas }}
                 </div>
 
+                <div class="mb-4 p-3 rounded-3 border {% if form.tiene_descuento.errors %}border-danger{% else %}border-warning{% endif %}" style="background:#fffbeb;">
+                    <label class="fw-semibold mb-2 d-block" style="color:#92400e;">
+                        <i class="bi bi-tag-fill me-1" style="color:#d97706;"></i>
+                        ¿El paciente tiene descuento / estudio socioeconómico activo?
+                        <span class="text-danger">*</span>
+                    </label>
+                    {{ form.tiene_descuento }}
+                    {% if form.tiene_descuento.errors %}
+                    <div class="text-danger small mt-1">{{ form.tiene_descuento.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                     <a href="{% url 'detalle_paciente' paciente.id %}" class="btn btn-outline-secondary me-md-2 rounded-pill px-4">Cancelar</a>
                     <button type="submit" class="btn btn-primary shadow-sm px-5">Agendar Cita</button>

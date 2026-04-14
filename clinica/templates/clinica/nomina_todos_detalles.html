@@ -140,6 +140,19 @@
         </div>
         {% endif %}
 
+        {# ── Comentarios de descuento/estudio socioeconómico ── #}
+        {% for linea in bloque.lineas_sesion %}
+            {% if linea.cita and linea.cita.tiene_descuento %}
+            <div class="px-4 py-2 d-flex align-items-center gap-2 border-top bg-warning bg-opacity-10">
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle flex-shrink-0">Descuento</span>
+                <span class="small text-muted">
+                    <strong>{% if linea.cita.paciente %}{{ linea.cita.paciente.nombre }}{% else %}—{% endif %}</strong>
+                    — tiene descuento / estudio socioeconómico activo
+                </span>
+            </div>
+            {% endif %}
+        {% endfor %}
+
         {# ── Bonos (si hay) ── #}
         {% if bloque.lineas_bono or bloque.bonos_extra %}
         <div class="px-4 py-2 border-top bg-warning-subtle bg-opacity-25">

@@ -140,12 +140,12 @@ class CitaForm(forms.ModelForm):
     class Meta:
         model = Cita
         fields = [
-            'paciente', 'fecha', 'hora', 'tipo_paciente', 'division', 
-            'consultorio', 'servicio', 'terapeuta', 
-            'costo', 'metodo_pago', 'estatus', 
-            'folio_fiscal', 'notas'
+            'paciente', 'fecha', 'hora', 'tipo_paciente', 'division',
+            'consultorio', 'servicio', 'terapeuta',
+            'costo', 'metodo_pago', 'estatus',
+            'folio_fiscal', 'notas', 'tiene_descuento',
         ]
-        
+
         widgets = {
             'fecha': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
             'hora': forms.TimeInput(format='%H:%M', attrs={'type': 'time', 'class': 'form-control'}),
@@ -153,6 +153,7 @@ class CitaForm(forms.ModelForm):
             'paciente': forms.Select(attrs={'class': 'form-select select2-paciente'}),
             'tipo_paciente': forms.Select(attrs={'class': 'form-select'}),
             'metodo_pago': forms.Select(attrs={'class': 'form-select'}),
+            'tiene_descuento': forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -161,17 +162,38 @@ class CitaForm(forms.ModelForm):
         if self.instance and self.instance.pk:
             self.fields['pacientes_extra'].initial = self.instance.pacientes_adicionales.all()
 
+        # Reemplazar tiene_descuento por un ChoiceField con Sí/No obligatorio
+        # (BooleanField con required=True no funciona bien cuando el valor es False)
+        self.fields['tiene_descuento'] = forms.ChoiceField(
+            label='¿Tiene descuento / estudio socioeconómico activo?',
+            choices=[('', '— Selecciona —'), ('true', 'Sí'), ('false', 'No')],
+            required=True,
+            widget=forms.Select(attrs={'class': 'form-select'}),
+        )
+        # Pre-rellenar si la cita ya tiene valor guardado
+        if self.instance and self.instance.pk and self.instance.tiene_descuento is not None:
+            self.fields['tiene_descuento'].initial = (
+                'true' if self.instance.tiene_descuento else 'false'
+            )
+
         # Bucle para estilos Bootstrap
         for field_name, field in self.fields.items():
             if 'class' not in field.widget.attrs:
-                 field.widget.attrs['class'] = 'form-control'
-        
-        # Hacer TODOS los campos opcionales para flexibilidad máxima
+                field.widget.attrs['class'] = 'form-control'
+
+        # Hacer todos los campos opcionales excepto tiene_descuento (obligatorio)
         for field_name, field in self.fields.items():
+            if field_name == 'tiene_descuento':
+                continue
             field.required = False
-            # Remover atributos required del HTML
             if 'required' in field.widget.attrs:
                 del field.widget.attrs['required']
+
+    def clean_tiene_descuento(self):
+        val = self.cleaned_data.get('tiene_descuento')
+        if val == '':
+            raise forms.ValidationError('Este campo es obligatorio.')
+        return val == 'true'
 
     def clean_pacientes_extra(self):
 
