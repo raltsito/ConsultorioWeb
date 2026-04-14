@@ -49,6 +49,7 @@ urlpatterns = [
     path('ausentismo/', clinica_views.estadisticas_ausentismo, name='estadisticas_ausentismo'),
     path('nomina/', clinica_views.nomina_lista, name='nomina_lista'),
     path('nomina/exportar-reporte-general/', clinica_views.nomina_exportar_reporte_general, name='nomina_exportar_reporte_general'),
+    path('nomina/exportar-dispersion/', clinica_views.nomina_exportar_dispersion, name='nomina_exportar_dispersion'),
     path('nomina/tabuladores/', clinica_views.tabuladores_config, name='tabuladores_config'),
     path('nomina/tabuladores/categoria/<int:categoria_id>/editar/', clinica_views.tabuladores_editar_categoria, name='tabuladores_editar_categoria'),
     path('nomina/tabuladores/regla/<int:regla_id>/editar/', clinica_views.tabuladores_editar_regla, name='tabuladores_editar_regla'),

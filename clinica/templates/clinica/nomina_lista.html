@@ -21,6 +21,10 @@
                     data-bs-toggle="modal" data-bs-target="#modalReporteGeneral">
                 <i class="bi bi-file-earmark-excel me-1"></i>Exportar Reporte General
             </button>
+            <button type="button" class="btn btn-outline-success btn-sm rounded-pill px-3 mt-1"
+                    data-bs-toggle="modal" data-bs-target="#modalDispersion">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>Dispersión
+            </button>
         </div>
     </div>
 
@@ -277,6 +281,47 @@
         background: #26C6DA !important; color: white !important; border-color: #26C6DA !important;
     }
 </style>
+
+{# ═══════════════════ MODAL: Exportar Dispersión ═══════════════════ #}
+<div class="modal fade" id="modalDispersion" tabindex="-1" aria-labelledby="modalDispersionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalDispersionLabel">
+                    <i class="bi bi-file-earmark-spreadsheet text-success me-2"></i>Formato de Dispersión
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="text-muted small mb-3">
+                    Genera el formato "Relación Horas Pendientes de Pago" con el detalle por terapeuta.
+                </p>
+                <form id="formDispersion" method="get" action="{% url 'nomina_exportar_dispersion' %}">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small text-secondary">Fecha inicio</label>
+                            <input type="date" name="fecha_inicio" class="form-control rounded-3" required
+                                   value="{{ fecha_inicio_iso }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small text-secondary">Fecha fin</label>
+                            <input type="date" name="fecha_fin" class="form-control rounded-3" required
+                                   value="{{ fecha_fin_iso }}">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4"
+                        data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" form="formDispersion"
+                        class="btn btn-success rounded-pill px-4 fw-semibold">
+                    <i class="bi bi-download me-1"></i>Descargar Excel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {# ═══════════════════ MODAL: Exportar Reporte General ═══════════════════ #}
 <div class="modal fade" id="modalReporteGeneral" tabindex="-1" aria-labelledby="modalReporteGeneralLabel" aria-hidden="true">

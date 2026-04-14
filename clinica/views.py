@@ -2275,6 +2275,222 @@ def nomina_exportar_reporte_general(request):
 
 
 @login_required
+def nomina_exportar_dispersion(request):
+    """
+    Genera el "Formato de Relación Horas Pendientes de Pago" (dispersión) en Excel.
+    GET ?fecha_inicio=YYYY-MM-DD&fecha_fin=YYYY-MM-DD
+    Acceso exclusivo a superusuarios.
+    """
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    from datetime import date as date_type
+    hoy = date_type.today()
+
+    fecha_inicio_str = request.GET.get('fecha_inicio', '')
+    fecha_fin_str    = request.GET.get('fecha_fin', '')
+
+    try:
+        fecha_inicio = date_type.fromisoformat(fecha_inicio_str) if fecha_inicio_str else hoy.replace(day=1)
+    except ValueError:
+        fecha_inicio = hoy.replace(day=1)
+    try:
+        fecha_fin = date_type.fromisoformat(fecha_fin_str) if fecha_fin_str else hoy
+    except ValueError:
+        fecha_fin = hoy
+
+    from .models import Terapeuta as TerapeutaModel, ReglaTerapeuta
+
+    meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+             'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+    # ── Helpers de cálculo inline ─────────────────────────────────────────────
+    def _monto_sesion(cita, regla):
+        tiene_adicionales = cita.pacientes_adicionales.exists()
+        if tiene_adicionales and regla.pago_pareja is not None:
+            return regla.pago_pareja
+        if regla.pago_individual is not None:
+            return regla.pago_individual
+        if regla.pago_por_sesion is not None:
+            return regla.pago_por_sesion
+        if regla.tabulador_base and regla.tabulador_base.pago_base is not None:
+            return regla.tabulador_base.pago_base
+        return Decimal('0.00')
+
+    def _gasolina(total_sesiones, regla):
+        total = Decimal('0.00')
+        if regla.bono_umbral_monto and regla.bono_umbral_pacientes:
+            veces = total_sesiones // regla.bono_umbral_pacientes
+            if veces > 0:
+                total += regla.bono_umbral_monto * veces
+        if regla.bono_por_paciente:
+            total += regla.bono_por_paciente * total_sesiones
+        if not regla.bono_umbral_monto and regla.tabulador_base:
+            tab = regla.tabulador_base
+            if tab.bono_monto and tab.bono_umbral_pacientes:
+                veces = total_sesiones // tab.bono_umbral_pacientes
+                if veces > 0:
+                    total += tab.bono_monto * veces
+        return total
+
+    def _info_vales(regla):
+        if regla.bono_umbral_monto and regla.bono_umbral_pacientes:
+            return f"${int(regla.bono_umbral_monto)} / {regla.bono_umbral_pacientes}px"
+        if regla.tabulador_base and regla.tabulador_base.bono_monto and regla.tabulador_base.bono_umbral_pacientes:
+            return f"${int(regla.tabulador_base.bono_monto)} / {regla.tabulador_base.bono_umbral_pacientes}px"
+        return "NA"
+
+    # ── Construir filas agrupadas por terapeuta ───────────────────────────────
+    all_rows = []
+    grand_total    = Decimal('0.00')
+    grand_gasolina = Decimal('0.00')
+
+    terapeutas = TerapeutaModel.objects.filter(activo=True).order_by('nombre')
+
+    for terapeuta in terapeutas:
+        try:
+            regla = terapeuta.regla_pago
+        except ReglaTerapeuta.DoesNotExist:
+            continue
+
+        citas = (
+            Cita.objects
+            .filter(
+                terapeuta=terapeuta,
+                fecha__range=(fecha_inicio, fecha_fin),
+                estatus=Cita.ESTATUS_SI_ASISTIO,
+            )
+            .select_related('paciente', 'servicio', 'consultorio')
+            .prefetch_related('pacientes_adicionales')
+            .order_by('fecha', 'hora')
+        )
+
+        lista = list(citas)
+        if not lista:
+            continue
+
+        info = _info_vales(regla)
+        subtotal       = Decimal('0.00')
+        filas_terapeuta = []
+
+        for cita in lista:
+            monto = _monto_sesion(cita, regla)
+            subtotal += monto
+            periodo = f"{meses[cita.fecha.month - 1]} {cita.fecha.year}"
+            filas_terapeuta.append({
+                'dia':       cita.fecha.day,
+                'periodo':   periodo,
+                'hora':      cita.hora.strftime('%H:%M') if cita.hora else '',
+                'terapeuta': terapeuta.nombre,
+                'paciente':  cita.paciente.nombre if cita.paciente else '',
+                'info_vales': info,
+                'monto':     float(monto),
+                'total':     None,
+                'gasolina':  None,
+                'metodo':    '',
+            })
+
+        gas = _gasolina(len(lista), regla)
+        filas_terapeuta[-1]['total']    = float(subtotal)
+        filas_terapeuta[-1]['gasolina'] = float(gas) if gas else None
+
+        grand_total    += subtotal
+        grand_gasolina += gas
+        all_rows.extend(filas_terapeuta)
+
+    # ── Construir Excel ───────────────────────────────────────────────────────
+    _GREEN_FILL  = PatternFill("solid", fgColor="00B050")
+    _GREEN_FONT  = Font(bold=True, color="FFFFFF", name="Calibri", size=11)
+    _BOLD_FONT   = Font(bold=True, name="Calibri", size=11)
+    _TITLE_FONT  = Font(bold=True, underline="single", name="Calibri", size=13)
+    _ALT3_FILL   = PatternFill("solid", fgColor="F0F4F8")
+    _BORDER_THIN = openpyxl.styles.borders.Border(
+        bottom=openpyxl.styles.borders.Side(style='thin', color='CCCCCC')
+    )
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Dispersión"
+
+    COLS = 10  # A–J
+
+    # Fila 1: Título
+    ws.merge_cells(f'A1:{get_column_letter(COLS)}1')
+    title_cell = ws['A1']
+    title_cell.value     = "FORMATO DE RELACION HORAS PENDIENTES DE PAGO"
+    title_cell.font      = _TITLE_FONT
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 24
+
+    # Fila 2: Info periodo + totales
+    ws['A2'] = "Inicio del periodo:"
+    ws['A2'].font = Font(bold=True, name="Calibri", size=11)
+    ws['C2'] = fecha_inicio.strftime('%d/%m/%Y')
+    ws['C2'].font = Font(bold=True, color="0070C0", name="Calibri", size=11)
+
+    total_cell = ws.cell(row=2, column=8, value=f"${grand_total:,.2f}")
+    total_cell.font  = _GREEN_FONT
+    total_cell.fill  = _GREEN_FILL
+    total_cell.alignment = Alignment(horizontal="center")
+
+    gas_cell = ws.cell(row=2, column=9, value=f"${grand_gasolina:,.2f}" if grand_gasolina else "")
+    gas_cell.font  = _GREEN_FONT
+    gas_cell.fill  = _GREEN_FILL
+    gas_cell.alignment = Alignment(horizontal="center")
+    ws.row_dimensions[2].height = 20
+
+    # Fila 3: Encabezados de columna
+    col_headers = ['Dia', 'Periodo', 'Hora', 'Terapeuta', 'Paciente',
+                   'Info Vales', 'Monto', 'Total', 'Gasolina', 'Metodo']
+    _SUBHEADER_FILL = PatternFill("solid", fgColor="D9D9D9")
+    for col_idx, h in enumerate(col_headers, start=1):
+        cell = ws.cell(row=3, column=col_idx, value=h)
+        cell.font      = Font(bold=True, name="Calibri", size=10)
+        cell.fill      = _SUBHEADER_FILL
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[3].height = 18
+
+    # Filas de datos (desde fila 4)
+    for row_idx, r in enumerate(all_rows, start=4):
+        fill = _ALT3_FILL if row_idx % 2 == 0 else None
+        valores = [
+            r['dia'], r['periodo'], r['hora'], r['terapeuta'],
+            r['paciente'], r['info_vales'], r['monto'],
+            r['total'], r['gasolina'], r['metodo'],
+        ]
+        for col_idx, val in enumerate(valores, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell.font = _BODY_FONT
+            if fill:
+                cell.fill = fill
+            # Total y Gasolina en negrita
+            if col_idx in (8, 9) and val is not None:
+                cell.font = Font(bold=True, name="Calibri", size=10)
+            # Formatear montos como moneda
+            if col_idx in (7, 8, 9) and isinstance(val, float):
+                cell.number_format = '"$"#,##0.00'
+
+    # Anchos de columna
+    col_widths = [5, 13, 7, 22, 32, 13, 10, 12, 11, 10]
+    for idx, w in enumerate(col_widths, start=1):
+        ws.column_dimensions[get_column_letter(idx)].width = w
+
+    ws.freeze_panes = "A4"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    filename = f"dispersion_{fecha_inicio.isoformat()}_{fecha_fin.isoformat()}.xlsx"
+    response = HttpResponse(
+        buf.read(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
 def nomina_detalle(request, terapeuta_id):
     """
     Desglose de nómina de un terapeuta para una semana.
