@@ -1,0 +1,357 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+
+{# ═══════════════════ HEADER ═══════════════════ #}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <a href="{% url 'nomina_lista' %}?fecha_inicio={{ fecha_inicio_iso }}&fecha_fin={{ fecha_fin_iso }}"
+           class="text-decoration-none text-muted small d-inline-flex align-items-center gap-1 mb-2">
+            <i class="bi bi-arrow-left"></i> Volver a Nómina Semanal
+        </a>
+        <p class="nom-eyebrow">Desglose Consolidado</p>
+        <h2 class="nom-title"><i class="bi bi-people me-2"></i>Todos los Terapeutas</h2>
+        <p class="nom-subtitle">{{ semana_label }}</p>
+    </div>
+    <div class="total-global-badge">
+        <span class="small opacity-75">Total a pagar</span>
+        <span class="fs-3 fw-bold font-monospace d-block">${{ total_global|floatformat:2 }}</span>
+    </div>
+</div>
+
+{# ═══════════════════ MENSAJES ═══════════════════ #}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show rounded-3 border-0 mb-3" role="alert">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+
+{# ═══════════════════ BLOQUES POR TERAPEUTA ═══════════════════ #}
+{% if bloques %}
+    {% for bloque in bloques %}
+    <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+
+        {# ── Card header: nombre + estatus + total ── #}
+        <div class="card-header bloque-header px-4 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-3">
+                <div class="terapeuta-avatar-lg">
+                    {{ bloque.terapeuta.nombre|slice:":1"|upper }}
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark">{{ bloque.terapeuta.nombre }}</h5>
+                    <span class="small text-muted">{{ bloque.lineas_sesion|length }} sesión{{ bloque.lineas_sesion|length|pluralize:"es" }}</span>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                {# Estatus del corte #}
+                {% if not bloque.corte %}
+                    <span class="corte-badge corte-badge--preview"><i class="bi bi-eye me-1"></i>Vista previa</span>
+                {% elif bloque.corte.estatus == 'borrador' %}
+                    <span class="corte-badge corte-badge--borrador"><i class="bi bi-pencil me-1"></i>Borrador</span>
+                {% elif bloque.corte.estatus == 'aprobado' %}
+                    <span class="corte-badge corte-badge--aprobado"><i class="bi bi-shield-check me-1"></i>Aprobado</span>
+                {% elif bloque.corte.estatus == 'pagado' %}
+                    <span class="corte-badge corte-badge--pagado"><i class="bi bi-check2-all me-1"></i>Pagado</span>
+                {% endif %}
+                {# Total del terapeuta #}
+                <div class="total-terapeuta">
+                    <span class="total-terapeuta-label">Total</span>
+                    <span class="total-terapeuta-amount">${{ bloque.total_pago|floatformat:2 }}</span>
+                </div>
+                {# Enlace a detalle individual #}
+                <a href="{% url 'nomina_detalle' bloque.terapeuta.id %}?fecha_inicio={{ fecha_inicio_iso }}&fecha_fin={{ fecha_fin_iso }}"
+                   class="btn btn-sm btn-outline-primary rounded-pill px-3" title="Ver detalle">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                </a>
+            </div>
+        </div>
+
+        {# ── Tabla de sesiones ── #}
+        {% if bloque.lineas_sesion %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 tabla-sesiones">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Paciente / Concepto</th>
+                        <th>Servicio</th>
+                        <th class="text-end">Pago Terapeuta</th>
+                        {% if bloque.puede_editar %}<th class="text-center" style="width:50px;"></th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for linea in bloque.lineas_sesion %}
+                    <tr>
+                        <td class="text-muted small" style="white-space:nowrap;">
+                            {% if linea.cita %}{{ linea.cita.fecha|date:"d/m" }}
+                            {% elif linea.get %}{{ linea.cita.fecha|date:"d/m" }}
+                            {% else %}—{% endif %}
+                        </td>
+                        <td class="fw-semibold" style="max-width:220px;">
+                            {% if linea.cita %}
+                                {% if linea.cita.paciente %}{{ linea.cita.paciente.nombre }}
+                                {% else %}{{ linea.concepto }}{% endif %}
+                            {% else %}
+                                {# preview dict #}
+                                {% if linea.cita %}{{ linea.cita.paciente.nombre }}
+                                {% else %}{{ linea.concepto }}{% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="small text-muted">
+                            {% if linea.cita and linea.cita.servicio %}{{ linea.cita.servicio }}
+                            {% else %}—{% endif %}
+                        </td>
+                        <td class="text-end font-monospace fw-bold text-success">
+                            {% if linea.monto is not None %}
+                                ${{ linea.monto|floatformat:2 }}
+                            {% else %}
+                                ${{ linea.monto|floatformat:2 }}
+                            {% endif %}
+                        </td>
+                        {% if bloque.puede_editar %}
+                        <td class="text-center">
+                            <button type="button"
+                                    class="btn btn-sm btn-light rounded-circle btn-editar-linea"
+                                    style="width:30px;height:30px;padding:0;"
+                                    data-linea-id="{{ linea.id }}"
+                                    data-monto="{{ linea.monto }}"
+                                    data-concepto="{% if linea.cita and linea.cita.paciente %}{{ linea.cita.paciente.nombre }}{% else %}{{ linea.concepto }}{% endif %}"
+                                    data-bs-toggle="modal" data-bs-target="#modalEditarLinea"
+                                    title="Editar monto">
+                                <i class="bi bi-pencil-fill" style="font-size:0.7rem;color:#546E7A;"></i>
+                            </button>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="table-light">
+                        <td colspan="{% if bloque.puede_editar %}4{% else %}3{% endif %}" class="text-end fw-semibold text-secondary small px-3">
+                            Subtotal sesiones:
+                        </td>
+                        <td class="text-end font-monospace fw-bold text-dark px-3">
+                            ${{ bloque.subtotal|floatformat:2 }}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% endif %}
+
+        {# ── Bonos (si hay) ── #}
+        {% if bloque.lineas_bono or bloque.bonos_extra %}
+        <div class="px-4 py-2 border-top bg-warning-subtle bg-opacity-25">
+            {% for bono in bloque.lineas_bono %}
+            <div class="d-flex justify-content-between align-items-center py-1 gap-2">
+                <span class="small flex-grow-1">
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle me-1">Auto</span>
+                    {{ bono.concepto }}
+                </span>
+                <span class="font-monospace fw-bold text-warning-emphasis small">+${{ bono.monto|floatformat:2 }}</span>
+                {% if bloque.puede_editar %}
+                <button type="button"
+                        class="btn btn-sm btn-light rounded-circle btn-editar-linea flex-shrink-0"
+                        style="width:26px;height:26px;padding:0;"
+                        data-linea-id="{{ bono.id }}"
+                        data-monto="{{ bono.monto }}"
+                        data-concepto="{{ bono.concepto }}"
+                        data-bs-toggle="modal" data-bs-target="#modalEditarLinea"
+                        title="Editar bono">
+                    <i class="bi bi-pencil-fill" style="font-size:0.65rem;color:#546E7A;"></i>
+                </button>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% for bono in bloque.bonos_extra %}
+            <div class="d-flex justify-content-between align-items-center py-1 gap-2">
+                <span class="small flex-grow-1">
+                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle me-1">Manual</span>
+                    {{ bono.concepto }}
+                </span>
+                <span class="font-monospace fw-bold text-info-emphasis small">+${{ bono.monto|floatformat:2 }}</span>
+                {% if bloque.puede_editar %}
+                <button type="button"
+                        class="btn btn-sm btn-light rounded-circle flex-shrink-0"
+                        style="width:26px;height:26px;padding:0;"
+                        data-bono-id="{{ bono.id }}"
+                        data-monto="{{ bono.monto }}"
+                        data-concepto="{{ bono.concepto }}"
+                        data-bs-toggle="modal" data-bs-target="#modalEditarBonoExtra"
+                        title="Editar bono manual">
+                    <i class="bi bi-pencil-fill" style="font-size:0.65rem;color:#546E7A;"></i>
+                </button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {# ── Footer: total final del terapeuta ── #}
+        <div class="card-footer bg-white border-top d-flex justify-content-end align-items-center px-4 py-2 gap-3">
+            {% if bloque.total_bonos > 0 %}
+            <span class="small text-muted">Bonos: <strong class="text-warning-emphasis">+${{ bloque.total_bonos|floatformat:2 }}</strong></span>
+            {% endif %}
+            <span class="fw-bold text-dark">Total a pagar: <span class="font-monospace text-success fs-6">${{ bloque.total_pago|floatformat:2 }}</span></span>
+        </div>
+
+    </div>
+    {% endfor %}
+
+{% else %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-calendar-x fs-1 d-block mb-3 opacity-25"></i>
+    <p>No hay terapeutas con actividad registrada para esta semana.</p>
+</div>
+{% endif %}
+
+
+{# ═══════════════════ MODAL EDITAR LÍNEA ═══════════════════ #}
+<div class="modal fade" id="modalEditarLinea" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold">
+                    <i class="bi bi-pencil-fill text-primary me-2"></i>Editar monto
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="text-muted small mb-3" id="editarLineaConcepto">—</p>
+                <form id="formEditarLinea" method="post" action="">
+                    {% csrf_token %}
+                    <input type="hidden" name="fecha_inicio" value="{{ fecha_inicio_iso }}">
+                    <input type="hidden" name="fecha_fin"    value="{{ fecha_fin_iso }}">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light fw-bold">$</span>
+                        <input type="number" name="monto" id="editarLineaMonto"
+                               class="form-control form-control-sm"
+                               step="0.01" min="0" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                        data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" form="formEditarLinea"
+                        class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold">
+                    <i class="bi bi-check-lg me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{# ═══════════════════ MODAL EDITAR BONO EXTRA ═══════════════════ #}
+<div class="modal fade" id="modalEditarBonoExtra" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold">
+                    <i class="bi bi-pencil-fill text-info me-2"></i>Editar bono manual
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <form id="formEditarBonoExtra" method="post" action="">
+                    {% csrf_token %}
+                    <input type="hidden" name="fecha_inicio" value="{{ fecha_inicio_iso }}">
+                    <input type="hidden" name="fecha_fin"    value="{{ fecha_fin_iso }}">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Concepto</label>
+                        <input type="text" name="concepto" id="editarBonoConcepto"
+                               class="form-control form-control-sm" required>
+                    </div>
+                    <div>
+                        <label class="form-label small fw-semibold text-secondary">Monto ($)</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light fw-bold">$</span>
+                            <input type="number" name="monto" id="editarBonoMonto"
+                                   class="form-control" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                        data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" form="formEditarBonoExtra"
+                        class="btn btn-info btn-sm rounded-pill px-3 fw-semibold text-white">
+                    <i class="bi bi-check-lg me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .nom-eyebrow  { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #26C6DA; margin-bottom: 0.1rem; }
+    .nom-title    { font-family: 'Poppins', sans-serif; font-weight: 700; color: #1A237E; font-size: 1.9rem; margin-bottom: 0; }
+    .nom-subtitle { color: #78909C; font-size: 0.95rem; }
+
+    .total-global-badge {
+        background: #1A237E; color: white;
+        border-radius: 1rem; padding: 0.9rem 1.5rem;
+        text-align: right; line-height: 1.3;
+        box-shadow: 0 8px 24px rgba(26,35,126,0.2);
+    }
+
+    .bloque-header { background: #F8FBFD; border-bottom: 1px solid #E8EEF5; }
+
+    .terapeuta-avatar-lg {
+        width: 44px; height: 44px; border-radius: 12px;
+        background: linear-gradient(135deg, #26C6DA, #00ACC1);
+        color: white; font-family: 'Poppins', sans-serif; font-weight: 700;
+        font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .total-terapeuta { text-align: right; }
+    .total-terapeuta-label  { font-size: 0.7rem; color: #90A4AE; display: block; }
+    .total-terapeuta-amount { font-family: 'Courier New', monospace; font-weight: 700; font-size: 1.1rem; color: #1A237E; }
+
+    .corte-badge { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 50px; font-size: 0.75rem; font-weight: 600; }
+    .corte-badge--preview  { background: #E3F2FD; color: #1565C0; }
+    .corte-badge--borrador { background: #FFF8E1; color: #F57F17; border: 1px solid #FFE0B2; }
+    .corte-badge--aprobado { background: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9; }
+    .corte-badge--pagado   { background: #E3F2FD; color: #1565C0; border: 1px solid #BBDEFB; }
+
+    .tabla-sesiones thead th {
+        background: #F0F4F8; color: #78909C;
+        font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+        border-bottom: 1px solid #E0E7EF; padding: 0.6rem 1rem; white-space: nowrap;
+    }
+    .tabla-sesiones tbody td { padding: 0.6rem 1rem; border-bottom: 1px solid #F5F7FA; font-size: 0.86rem; }
+    .tabla-sesiones tbody tr:hover { background: #FAFCFF; }
+    .tabla-sesiones tfoot td { padding: 0.6rem 1rem; border-top: 1px solid #E0E7EF; }
+
+    .btn-editar-linea:hover { background: #E3F2FD !important; }
+</style>
+
+{% endblock %}
+
+{% block after_body %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Modal editar LineaNomina (sesiones y bonos automáticos)
+    document.getElementById('modalEditarLinea').addEventListener('show.bs.modal', function (e) {
+        const btn = e.relatedTarget;
+        document.getElementById('editarLineaConcepto').textContent = btn.dataset.concepto;
+        document.getElementById('editarLineaMonto').value = parseFloat(btn.dataset.monto).toFixed(2);
+        const url = "{% url 'nomina_editar_linea' 0 %}".replace('/0/', '/' + btn.dataset.lineaId + '/');
+        document.getElementById('formEditarLinea').action = url;
+    });
+
+    // Modal editar BonoExtra (bonos manuales)
+    document.getElementById('modalEditarBonoExtra').addEventListener('show.bs.modal', function (e) {
+        const btn = e.relatedTarget;
+        document.getElementById('editarBonoConcepto').value = btn.dataset.concepto;
+        document.getElementById('editarBonoMonto').value = parseFloat(btn.dataset.monto).toFixed(2);
+        const url = "{% url 'nomina_editar_bono_extra' 0 %}".replace('/0/', '/' + btn.dataset.bonoId + '/');
+        document.getElementById('formEditarBonoExtra').action = url;
+    });
+});
+</script>
+{% endblock %}

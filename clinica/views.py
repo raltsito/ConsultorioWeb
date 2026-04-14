@@ -2369,28 +2369,45 @@ def nomina_exportar_dispersion(request):
         if not lista:
             continue
 
+        # Montos desde LineaNomina si existen (respeta ediciones manuales)
+        lineas_map = {
+            l.cita_id: l.monto
+            for l in LineaNomina.objects.filter(
+                tipo=LineaNomina.TIPO_SESION,
+                cita__in=lista,
+            )
+        }
+
+        # Gasolina desde cortes existentes en el rango; si no, calcular
+        cortes_gas = CorteSemanal.objects.filter(
+            terapeuta=terapeuta,
+            fecha_inicio__lte=fecha_fin,
+            fecha_fin__gte=fecha_inicio,
+        ).aggregate(t=Sum('total_bonos'))['t'] or Decimal('0.00')
+        gas = cortes_gas if lineas_map else _gasolina(len(lista), regla)
+
         info = _info_vales(regla)
-        subtotal       = Decimal('0.00')
+        subtotal        = Decimal('0.00')
         filas_terapeuta = []
 
         for cita in lista:
-            monto = _monto_sesion(cita, regla)
+            # Usar monto guardado si existe; si no, calcular desde tabulador
+            monto = lineas_map.get(cita.id) or _monto_sesion(cita, regla)
             subtotal += monto
             periodo = f"{meses[cita.fecha.month - 1]} {cita.fecha.year}"
             filas_terapeuta.append({
-                'dia':       cita.fecha.day,
-                'periodo':   periodo,
-                'hora':      cita.hora.strftime('%H:%M') if cita.hora else '',
-                'terapeuta': terapeuta.nombre,
-                'paciente':  cita.paciente.nombre if cita.paciente else '',
+                'dia':        cita.fecha.day,
+                'periodo':    periodo,
+                'hora':       cita.hora.strftime('%H:%M') if cita.hora else '',
+                'terapeuta':  terapeuta.nombre,
+                'paciente':   cita.paciente.nombre if cita.paciente else '',
                 'info_vales': info,
-                'monto':     float(monto),
-                'total':     None,
-                'gasolina':  None,
-                'metodo':    '',
+                'monto':      float(monto),
+                'total':      None,
+                'gasolina':   None,
+                'metodo':     '',
             })
 
-        gas = _gasolina(len(lista), regla)
         filas_terapeuta[-1]['total']    = float(subtotal)
         filas_terapeuta[-1]['gasolina'] = float(gas) if gas else None
 
@@ -2692,6 +2709,196 @@ def nomina_agregar_bono(request, corte_id):
             messages.warning(request, f'Bono guardado pero no se pudo recalcular el total: {e}')
 
     url = reverse('nomina_detalle', args=[corte.terapeuta_id])
+    return redirect(f'{url}?fecha_inicio={fi_str}&fecha_fin={ff_str}')
+
+
+# =============================================================================
+# NÓMINA — Vista consolidada (todos los terapeutas)
+# =============================================================================
+
+@login_required
+def nomina_todos_detalles(request):
+    """
+    Vista consolidada: muestra el desglose de sesiones de TODOS los terapeutas
+    con actividad en la semana seleccionada.
+    Las líneas de cortes en borrador tienen un botón de edición.
+    """
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    fecha_inicio, fecha_fin = _parse_fechas_semana(request)
+
+    meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+             'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+    semana_label = (
+        f"{fecha_inicio.day} de {meses[fecha_inicio.month-1]}"
+        f" al {fecha_fin.day} de {meses[fecha_fin.month-1]} de {fecha_fin.year}"
+    )
+
+    terapeutas = Terapeuta.objects.filter(activo=True).order_by('nombre')
+
+    cortes_map = {
+        c.terapeuta_id: c
+        for c in CorteSemanal.objects.filter(
+            fecha_inicio=fecha_inicio,
+            terapeuta__in=terapeutas,
+        ).prefetch_related('lineas__cita__paciente', 'lineas__cita__servicio', 'bonos_extra')
+    }
+
+    bloques = []
+    total_global = Decimal('0')
+
+    for t in terapeutas:
+        corte = cortes_map.get(t.id)
+
+        if corte:
+            lineas_sesion = list(
+                corte.lineas.filter(tipo=LineaNomina.TIPO_SESION)
+                            .select_related('cita__paciente', 'cita__servicio')
+                            .order_by('cita__fecha', 'cita__hora')
+            )
+            lineas_bono  = list(corte.lineas.exclude(tipo=LineaNomina.TIPO_SESION))
+            bonos_extra  = list(corte.bonos_extra.all())
+            subtotal     = corte.subtotal_sesiones
+            total_bonos  = corte.total_bonos
+            total_pago   = corte.total_pago
+            puede_editar = corte.estatus == CorteSemanal.ESTATUS_BORRADOR
+        else:
+            prev = preview_nomina_semanal(t, fecha_inicio, fecha_fin)
+            if 'error' in prev or not prev.get('lineas'):
+                continue
+            lineas_sesion = [l for l in prev['lineas'] if l['tipo'] == LineaNomina.TIPO_SESION]
+            lineas_bono   = [l for l in prev['lineas'] if l['tipo'] != LineaNomina.TIPO_SESION]
+            bonos_extra   = []
+            subtotal      = prev['subtotal_sesiones']
+            total_bonos   = prev['total_bonos']
+            total_pago    = prev['total_pago']
+            puede_editar  = False
+
+        if not lineas_sesion and not lineas_bono:
+            continue
+
+        total_global += total_pago or Decimal('0')
+
+        bloques.append({
+            'terapeuta':    t,
+            'corte':        corte,
+            'lineas_sesion': lineas_sesion,
+            'lineas_bono':  lineas_bono,
+            'bonos_extra':  bonos_extra,
+            'subtotal':     subtotal,
+            'total_bonos':  total_bonos,
+            'total_pago':   total_pago,
+            'puede_editar': puede_editar,
+        })
+
+    return render(request, 'clinica/nomina_todos_detalles.html', {
+        'bloques':          bloques,
+        'total_global':     total_global,
+        'fecha_inicio':     fecha_inicio,
+        'fecha_fin':        fecha_fin,
+        'fecha_inicio_iso': fecha_inicio.isoformat(),
+        'fecha_fin_iso':    fecha_fin.isoformat(),
+        'semana_label':     semana_label,
+    })
+
+
+@login_required
+def nomina_editar_linea(request, linea_id):
+    """POST: edita el monto de una LineaNomina en borrador y recalcula el corte."""
+    if not request.user.is_superuser or request.method != 'POST':
+        return redirect('nomina_lista')
+
+    linea = get_object_or_404(LineaNomina, id=linea_id)
+    corte = linea.corte
+    fi_str = request.POST.get('fecha_inicio', corte.fecha_inicio.isoformat())
+    ff_str = request.POST.get('fecha_fin',    corte.fecha_fin.isoformat())
+
+    if corte.estatus != CorteSemanal.ESTATUS_BORRADOR:
+        messages.error(request, 'Solo se pueden editar líneas de cortes en borrador.')
+        url = reverse('nomina_todos_detalles')
+        return redirect(f'{url}?fecha_inicio={fi_str}&fecha_fin={ff_str}')
+
+    from decimal import InvalidOperation
+    monto_str = request.POST.get('monto', '').replace(',', '.')
+    try:
+        nuevo_monto = Decimal(monto_str)
+        if nuevo_monto < 0:
+            raise ValueError
+    except (InvalidOperation, ValueError):
+        messages.error(request, 'Monto inválido.')
+        url = reverse('nomina_todos_detalles')
+        return redirect(f'{url}?fecha_inicio={fi_str}&fecha_fin={ff_str}')
+
+    linea.monto = nuevo_monto
+    linea.save()
+
+    # Recalcular snapshot del corte
+    subtotal    = corte.lineas.filter(tipo=LineaNomina.TIPO_SESION).aggregate(t=Sum('monto'))['t'] or Decimal('0')
+    bonos_auto  = corte.lineas.exclude(tipo=LineaNomina.TIPO_SESION).aggregate(t=Sum('monto'))['t'] or Decimal('0')
+    bonos_extra = corte.bonos_extra.aggregate(t=Sum('monto'))['t'] or Decimal('0')
+    corte.subtotal_sesiones = subtotal
+    corte.total_bonos       = bonos_auto + bonos_extra
+    corte.total_pago        = subtotal + bonos_auto + bonos_extra
+    corte.save()
+
+    messages.success(request, f'Monto actualizado a ${nuevo_monto:,.2f}.')
+    next_view = request.POST.get('next_view', '')
+    if next_view == 'detalle':
+        url = reverse('nomina_detalle', args=[corte.terapeuta_id])
+    else:
+        url = reverse('nomina_todos_detalles')
+    return redirect(f'{url}?fecha_inicio={fi_str}&fecha_fin={ff_str}')
+
+
+@login_required
+def nomina_editar_bono_extra(request, bono_id):
+    """POST: edita concepto y monto de un BonoExtra y recalcula el corte."""
+    if not request.user.is_superuser or request.method != 'POST':
+        return redirect('nomina_lista')
+
+    bono  = get_object_or_404(BonoExtra, id=bono_id)
+    corte = bono.corte
+    fi_str = request.POST.get('fecha_inicio', corte.fecha_inicio.isoformat())
+    ff_str = request.POST.get('fecha_fin',    corte.fecha_fin.isoformat())
+
+    if corte.estatus != CorteSemanal.ESTATUS_BORRADOR:
+        messages.error(request, 'Solo se pueden editar bonos de cortes en borrador.')
+        url = reverse('nomina_todos_detalles')
+        return redirect(f'{url}?fecha_inicio={fi_str}&fecha_fin={ff_str}')
+
+    from decimal import InvalidOperation
+    concepto  = request.POST.get('concepto', '').strip()
+    monto_str = request.POST.get('monto', '').replace(',', '.')
+    try:
+        nuevo_monto = Decimal(monto_str)
+        if nuevo_monto < 0:
+            raise ValueError
+    except (InvalidOperation, ValueError):
+        messages.error(request, 'Monto inválido.')
+        url = reverse('nomina_todos_detalles')
+        return redirect(f'{url}?fecha_inicio={fi_str}&fecha_fin={ff_str}')
+
+    if concepto:
+        bono.concepto = concepto
+    bono.monto = nuevo_monto
+    bono.save()
+
+    # Recalcular snapshot del corte
+    subtotal    = corte.lineas.filter(tipo=LineaNomina.TIPO_SESION).aggregate(t=Sum('monto'))['t'] or Decimal('0')
+    bonos_auto  = corte.lineas.exclude(tipo=LineaNomina.TIPO_SESION).aggregate(t=Sum('monto'))['t'] or Decimal('0')
+    bonos_extra = corte.bonos_extra.aggregate(t=Sum('monto'))['t'] or Decimal('0')
+    corte.subtotal_sesiones = subtotal
+    corte.total_bonos       = bonos_auto + bonos_extra
+    corte.total_pago        = subtotal + bonos_auto + bonos_extra
+    corte.save()
+
+    messages.success(request, f'Bono actualizado a ${nuevo_monto:,.2f}.')
+    next_view = request.POST.get('next_view', '')
+    if next_view == 'detalle':
+        url = reverse('nomina_detalle', args=[corte.terapeuta_id])
+    else:
+        url = reverse('nomina_todos_detalles')
     return redirect(f'{url}?fecha_inicio={fi_str}&fecha_fin={ff_str}')
 
 

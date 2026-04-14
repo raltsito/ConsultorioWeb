@@ -117,6 +117,7 @@
                                 <th>Paciente / Concepto</th>
                                 <th>Servicio</th>
                                 <th class="text-end">Pago Terapeuta</th>
+                                {% if puede_editar %}<th style="width:40px;"></th>{% endif %}
                             </tr>
                         </thead>
                         <tbody>
@@ -129,25 +130,32 @@
                                 </td>
                                 <td class="fw-semibold" style="max-width:200px;">
                                     {% if linea.cita %}
-                                        {% if linea.cita.paciente %}
-                                            {{ linea.cita.paciente.nombre }}
-                                        {% else %}
-                                            {{ linea.concepto }}
-                                        {% endif %}
-                                    {% else %}
-                                        {{ linea.concepto }}
-                                    {% endif %}
+                                        {% if linea.cita.paciente %}{{ linea.cita.paciente.nombre }}
+                                        {% else %}{{ linea.concepto }}{% endif %}
+                                    {% else %}{{ linea.concepto }}{% endif %}
                                 </td>
                                 <td>
                                     {% if linea.cita and linea.cita.servicio %}
                                         <span class="small text-muted">{{ linea.cita.servicio }}</span>
-                                    {% else %}
-                                        <span class="small text-muted">—</span>
-                                    {% endif %}
+                                    {% else %}<span class="small text-muted">—</span>{% endif %}
                                 </td>
                                 <td class="text-end font-monospace fw-bold text-success">
                                     ${{ linea.monto|floatformat:2 }}
                                 </td>
+                                {% if puede_editar %}
+                                <td class="text-center">
+                                    <button type="button"
+                                            class="btn btn-sm btn-light rounded-circle btn-editar-linea"
+                                            style="width:28px;height:28px;padding:0;"
+                                            data-linea-id="{{ linea.id }}"
+                                            data-monto="{{ linea.monto }}"
+                                            data-concepto="{% if linea.cita and linea.cita.paciente %}{{ linea.cita.paciente.nombre }}{% else %}{{ linea.concepto }}{% endif %}"
+                                            data-bs-toggle="modal" data-bs-target="#modalEditarLinea"
+                                            title="Editar monto">
+                                        <i class="bi bi-pencil-fill" style="font-size:0.65rem;color:#546E7A;"></i>
+                                    </button>
+                                </td>
+                                {% endif %}
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -190,25 +198,49 @@
                 <ul class="list-group list-group-flush">
                     {# Bonos automáticos (del motor) #}
                     {% for bono in lineas_bono %}
-                    <li class="list-group-item px-4 py-3 d-flex justify-content-between align-items-start">
-                        <div>
+                    <li class="list-group-item px-4 py-3 d-flex justify-content-between align-items-center gap-2">
+                        <div class="flex-grow-1">
                             <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle me-2 small">Auto</span>
                             <span class="text-dark small">{{ bono.concepto }}</span>
                         </div>
-                        <span class="font-monospace fw-bold text-warning-emphasis ms-3">+${{ bono.monto|floatformat:2 }}</span>
+                        <span class="font-monospace fw-bold text-warning-emphasis">+${{ bono.monto|floatformat:2 }}</span>
+                        {% if puede_editar %}
+                        <button type="button"
+                                class="btn btn-sm btn-light rounded-circle btn-editar-linea flex-shrink-0"
+                                style="width:26px;height:26px;padding:0;"
+                                data-linea-id="{{ bono.id }}"
+                                data-monto="{{ bono.monto }}"
+                                data-concepto="{{ bono.concepto }}"
+                                data-bs-toggle="modal" data-bs-target="#modalEditarLinea"
+                                title="Editar bono">
+                            <i class="bi bi-pencil-fill" style="font-size:0.65rem;color:#546E7A;"></i>
+                        </button>
+                        {% endif %}
                     </li>
                     {% endfor %}
                     {# Bonos manuales (BonoExtra) #}
                     {% for bono in bonos_extra %}
-                    <li class="list-group-item px-4 py-3 d-flex justify-content-between align-items-start">
-                        <div>
+                    <li class="list-group-item px-4 py-3 d-flex justify-content-between align-items-center gap-2">
+                        <div class="flex-grow-1">
                             <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle me-2 small">Manual</span>
                             <span class="text-dark small">{{ bono.concepto }}</span>
                             {% if bono.registrado_por %}
                             <br><span class="text-muted" style="font-size:0.72rem;">por {{ bono.registrado_por.username }}</span>
                             {% endif %}
                         </div>
-                        <span class="font-monospace fw-bold text-info-emphasis ms-3">+${{ bono.monto|floatformat:2 }}</span>
+                        <span class="font-monospace fw-bold text-info-emphasis">+${{ bono.monto|floatformat:2 }}</span>
+                        {% if puede_editar %}
+                        <button type="button"
+                                class="btn btn-sm btn-light rounded-circle flex-shrink-0"
+                                style="width:26px;height:26px;padding:0;"
+                                data-bono-id="{{ bono.id }}"
+                                data-monto="{{ bono.monto }}"
+                                data-concepto="{{ bono.concepto }}"
+                                data-bs-toggle="modal" data-bs-target="#modalEditarBonoExtra"
+                                title="Editar bono manual">
+                            <i class="bi bi-pencil-fill" style="font-size:0.65rem;color:#0891b2;"></i>
+                        </button>
+                        {% endif %}
                     </li>
                     {% endfor %}
                 </ul>
@@ -328,6 +360,74 @@
 </div>
 {% endif %}
 
+{# ═══════════════════ MODAL EDITAR LÍNEA (sesión / bono auto) ═══════════════════ #}
+<div class="modal fade" id="modalEditarLinea" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold"><i class="bi bi-pencil-fill text-primary me-2"></i>Editar monto</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="text-muted small mb-3" id="editarLineaConcepto">—</p>
+                <form id="formEditarLinea" method="post" action="">
+                    {% csrf_token %}
+                    <input type="hidden" name="fecha_inicio" value="{{ fecha_inicio_iso }}">
+                    <input type="hidden" name="fecha_fin"    value="{{ fecha_fin_iso }}">
+                    <input type="hidden" name="next_view"    value="detalle">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light fw-bold">$</span>
+                        <input type="number" name="monto" id="editarLineaMonto"
+                               class="form-control form-control-sm" step="0.01" min="0" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" form="formEditarLinea" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold">
+                    <i class="bi bi-check-lg me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ═══════════════════ MODAL EDITAR BONO EXTRA ═══════════════════ #}
+<div class="modal fade" id="modalEditarBonoExtra" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold"><i class="bi bi-pencil-fill text-info me-2"></i>Editar bono manual</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <form id="formEditarBonoExtra" method="post" action="">
+                    {% csrf_token %}
+                    <input type="hidden" name="fecha_inicio" value="{{ fecha_inicio_iso }}">
+                    <input type="hidden" name="fecha_fin"    value="{{ fecha_fin_iso }}">
+                    <input type="hidden" name="next_view"    value="detalle">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Concepto</label>
+                        <input type="text" name="concepto" id="editarBonoConcepto" class="form-control form-control-sm" required>
+                    </div>
+                    <div>
+                        <label class="form-label small fw-semibold text-secondary">Monto ($)</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light fw-bold">$</span>
+                            <input type="number" name="monto" id="editarBonoMonto" class="form-control" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" form="formEditarBonoExtra" class="btn btn-info btn-sm rounded-pill px-3 fw-semibold text-white">
+                    <i class="bi bi-check-lg me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <style>
     /* ── Header ── */
@@ -429,4 +529,29 @@
     .btn-aprobar-confirmar:hover { color: white; transform: translateY(-1px); }
 </style>
 
+{% endblock %}
+
+{% block after_body %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('modalEditarLinea').addEventListener('show.bs.modal', function (e) {
+        const btn = e.relatedTarget;
+        document.getElementById('editarLineaConcepto').textContent = btn.dataset.concepto;
+        document.getElementById('editarLineaMonto').value = parseFloat(btn.dataset.monto).toFixed(2);
+        const url = "{% url 'nomina_editar_linea' 0 %}".replace('/0/', '/' + btn.dataset.lineaId + '/');
+        document.getElementById('formEditarLinea').action = url;
+    });
+
+    const modalBono = document.getElementById('modalEditarBonoExtra');
+    if (modalBono) {
+        modalBono.addEventListener('show.bs.modal', function (e) {
+            const btn = e.relatedTarget;
+            document.getElementById('editarBonoConcepto').value = btn.dataset.concepto;
+            document.getElementById('editarBonoMonto').value = parseFloat(btn.dataset.monto).toFixed(2);
+            const url = "{% url 'nomina_editar_bono_extra' 0 %}".replace('/0/', '/' + btn.dataset.bonoId + '/');
+            document.getElementById('formEditarBonoExtra').action = url;
+        });
+    }
+});
+</script>
 {% endblock %}

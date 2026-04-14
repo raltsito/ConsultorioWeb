@@ -11,6 +11,10 @@
             <h2 class="nom-title"><i class="bi bi-cash-coin me-2"></i>Nómina Semanal</h2>
         </div>
         <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'nomina_todos_detalles' %}?fecha_inicio={{ fecha_inicio_iso }}&fecha_fin={{ fecha_fin_iso }}"
+               class="btn btn-primary btn-sm rounded-pill px-3 mt-1">
+                <i class="bi bi-list-ul me-1"></i>Ver todos los detalles
+            </a>
             <a href="{% url 'tabuladores_config' %}" class="btn btn-outline-primary btn-sm rounded-pill px-3 mt-1">
                 <i class="bi bi-sliders me-1"></i>Configurar Tabuladores
             </a>
