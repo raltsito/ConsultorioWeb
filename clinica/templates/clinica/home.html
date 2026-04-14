@@ -142,16 +142,6 @@
                     </span>
                 </a>
 
-                <a href="{% url 'nomina_lista' %}" class="dock-tile">
-                    <span class="dock-chip" style="--c1:#FFA726;--c2:#BF360C;">
-                        <i class="bi bi-cash-coin"></i>
-                    </span>
-                    <span class="dock-text">
-                        <span class="dock-label">Nómina Semanal</span>
-                        <span class="dock-sub">Control de pagos</span>
-                    </span>
-                </a>
-
                 <a href="{% url 'estadisticas_ausentismo' %}" class="dock-tile">
                     <span class="dock-chip" style="--c1:#EF5350;--c2:#880E4F;">
                         <i class="bi bi-person-x"></i>
@@ -161,6 +151,21 @@
                         <span class="dock-sub">Cancelaciones e inasistencias</span>
                     </span>
                 </a>
+                {% endif %}
+
+                {% if user.is_superuser or user.is_staff %}
+                <a href="{% url 'nomina_lista' %}" class="dock-tile">
+                    <span class="dock-chip" style="--c1:#FFA726;--c2:#BF360C;">
+                        <i class="bi bi-cash-coin"></i>
+                    </span>
+                    <span class="dock-text">
+                        <span class="dock-label">Nómina Semanal</span>
+                        <span class="dock-sub">Control de pagos</span>
+                    </span>
+                </a>
+                {% endif %}
+
+                {% if user.is_superuser %}
 
                 <a href="#" class="dock-tile" data-bs-toggle="modal" data-bs-target="#modalManualPortal">
                     <span class="dock-chip" style="--c1:#0EA5E9;--c2:#1D4ED8;">

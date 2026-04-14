@@ -2080,7 +2080,7 @@ def nomina_lista(request):
     Panel de nómina semanal: muestra todos los terapeutas activos con
     sus sesiones, ingreso clínica, pago calculado y estado del corte.
     """
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_staff):
         return redirect('home')
 
     fecha_inicio, fecha_fin = _parse_fechas_semana(request)
@@ -2170,9 +2170,9 @@ def nomina_exportar_reporte_general(request):
     """
     Genera un Excel en formato "Reporte General" para un rango de fechas.
     GET ?fecha_inicio=YYYY-MM-DD&fecha_fin=YYYY-MM-DD
-    Acceso exclusivo a superusuarios.
+    Acceso exclusivo a superusuarios y staff.
     """
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_staff):
         return redirect('home')
 
     from datetime import date as date_type
@@ -2279,9 +2279,9 @@ def nomina_exportar_dispersion(request):
     """
     Genera el "Formato de Relación Horas Pendientes de Pago" (dispersión) en Excel.
     GET ?fecha_inicio=YYYY-MM-DD&fecha_fin=YYYY-MM-DD
-    Acceso exclusivo a superusuarios.
+    Acceso exclusivo a superusuarios y staff.
     """
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_staff):
         return redirect('home')
 
     from datetime import date as date_type
@@ -2514,7 +2514,7 @@ def nomina_detalle(request, terapeuta_id):
     Si el CorteSemanal aún no existe, muestra un preview sin persistir.
     Si existe en borrador, permite agregar BonoExtra y aprobarlo.
     """
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_staff):
         return redirect('home')
 
     terapeuta    = get_object_or_404(Terapeuta, id=terapeuta_id)
@@ -2723,7 +2723,7 @@ def nomina_todos_detalles(request):
     con actividad en la semana seleccionada.
     Las líneas de cortes en borrador tienen un botón de edición.
     """
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_staff):
         return redirect('home')
 
     fecha_inicio, fecha_fin = _parse_fechas_semana(request)
