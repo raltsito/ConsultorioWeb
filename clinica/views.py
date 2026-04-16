@@ -52,7 +52,7 @@ from .forms import (
     CheckoutCitaForm,
     ReporteSesionForm,
 )
-from .services import calcular_nomina_semanal, preview_nomina_semanal, aprobar_corte_semanal
+from .services import calcular_nomina_semanal, preview_nomina_semanal, aprobar_corte_semanal, registrar_pago_penalizacion_terapeuta
 #from .utils import sincronizar_google_sheet
 
 def quitar_tildes(texto):
@@ -922,7 +922,8 @@ def agendar_cita(request, paciente_id):
 
             cita.save()
 
-            # Marcar penalización como cobrada en esta cita
+            # Marcar penalización como cobrada.
+            # El pago al terapeuta se registra en nómina cuando la cita se marque como 'si_asistio'.
             if penalizacion_pendiente:
                 penalizacion_pendiente.pagada = True
                 penalizacion_pendiente.cita_cobro = cita
@@ -1021,7 +1022,8 @@ def crear_cita(request):
 
             cita.save()
 
-            # Marcar penalización como cobrada
+            # Marcar penalización como cobrada.
+            # El pago al terapeuta se registra en nómina cuando la cita se marque como 'si_asistio'.
             if pen:
                 pen.pagada = True
                 pen.cita_cobro = cita
@@ -2602,7 +2604,12 @@ def nomina_detalle(request, terapeuta_id):
                         .order_by('cita__fecha', 'cita__hora')
         )
         lineas_bono = list(
-            corte.lineas.exclude(tipo=LineaNomina.TIPO_SESION)
+            corte.lineas.filter(tipo__in=[LineaNomina.TIPO_BONO_UMBRAL, LineaNomina.TIPO_BONO_POR_PACIENTE])
+        )
+        lineas_penalizacion = list(
+            corte.lineas.filter(tipo=LineaNomina.TIPO_PENALIZACION)
+                        .select_related('cita__paciente', 'cita__servicio')
+                        .order_by('cita__fecha')
         )
         bonos_extra = list(corte.bonos_extra.select_related('registrado_por').order_by('creado_en'))
         subtotal    = corte.subtotal_sesiones
@@ -2612,12 +2619,13 @@ def nomina_detalle(request, terapeuta_id):
         preview = preview_nomina_semanal(terapeuta, fecha_inicio, fecha_fin)
         if 'error' in preview:
             error_preview = preview['error']
-            lineas_sesion = lineas_bono = bonos_extra = []
+            lineas_sesion = lineas_bono = lineas_penalizacion = bonos_extra = []
             subtotal = total_bonos = total_pago = Decimal('0')
         else:
-            lineas_sesion = [l for l in preview['lineas'] if l['tipo'] == LineaNomina.TIPO_SESION]
-            lineas_bono   = [l for l in preview['lineas'] if l['tipo'] != LineaNomina.TIPO_SESION]
-            bonos_extra   = []
+            lineas_sesion       = [l for l in preview['lineas'] if l['tipo'] == LineaNomina.TIPO_SESION]
+            lineas_bono         = [l for l in preview['lineas'] if l['tipo'] in (LineaNomina.TIPO_BONO_UMBRAL, LineaNomina.TIPO_BONO_POR_PACIENTE)]
+            lineas_penalizacion = []
+            bonos_extra         = []
             subtotal      = preview['subtotal_sesiones']
             total_bonos   = preview['total_bonos']
             total_pago    = preview['total_pago']
@@ -2662,22 +2670,23 @@ def nomina_detalle(request, terapeuta_id):
     # ─────────────────────────────────────────────────────────────────────────
 
     return render(request, 'clinica/nomina_detalle.html', {
-        'terapeuta':      terapeuta,
-        'corte':          corte,
-        'lineas_sesion':  lineas_sesion,
-        'lineas_bono':    lineas_bono,
-        'bonos_extra':    bonos_extra,
-        'subtotal':       subtotal,
-        'total_bonos':    total_bonos,
-        'total_pago':     total_pago,
-        'fecha_inicio':   fecha_inicio,
-        'fecha_fin':      fecha_fin,
-        'fecha_inicio_iso': fecha_inicio.isoformat(),
-        'fecha_fin_iso':    fecha_fin.isoformat(),
-        'semana_label':   semana_label,
-        'puede_editar':   puede_editar,
-        'puede_aprobar':  puede_aprobar,
-        'error_preview':  error_preview,
+        'terapeuta':           terapeuta,
+        'corte':               corte,
+        'lineas_sesion':       lineas_sesion,
+        'lineas_bono':         lineas_bono,
+        'lineas_penalizacion': lineas_penalizacion,
+        'bonos_extra':         bonos_extra,
+        'subtotal':            subtotal,
+        'total_bonos':         total_bonos,
+        'total_pago':          total_pago,
+        'fecha_inicio':        fecha_inicio,
+        'fecha_fin':           fecha_fin,
+        'fecha_inicio_iso':    fecha_inicio.isoformat(),
+        'fecha_fin_iso':       fecha_fin.isoformat(),
+        'semana_label':        semana_label,
+        'puede_editar':        puede_editar,
+        'puede_aprobar':       puede_aprobar,
+        'error_preview':       error_preview,
     })
 
 

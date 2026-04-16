@@ -27,7 +27,6 @@ def crear_penalizacion_por_inasistencia(sender, instance, created, **kwargs):
         return
 
     base = instance.servicio.precio
-
     monto = (base * Decimal("0.50")).quantize(Decimal("0.01"))
 
     PenalizacionPaciente.objects.create(
@@ -35,3 +34,33 @@ def crear_penalizacion_por_inasistencia(sender, instance, created, **kwargs):
         cita_origen=instance,
         monto=monto,
     )
+
+
+@receiver(post_save, sender='clinica.Cita')
+def pagar_penalizacion_al_terapeuta_si_asistio(sender, instance, created, **kwargs):
+    """
+    Cuando la cita de cobro de una penalización se marca como 'si_asistio',
+    registra el pago al terapeuta en su nómina (50% de su tarifa de sesión).
+    Es idempotente: verifica que no exista ya una LineaNomina para esa cita origen.
+    """
+    if instance.estatus != 'si_asistio':
+        return
+
+    from clinica.models import PenalizacionPaciente, LineaNomina
+    from clinica.services import registrar_pago_penalizacion_terapeuta
+
+    penalizaciones = PenalizacionPaciente.objects.filter(
+        cita_cobro=instance,
+        pagada=True,
+    ).select_related('cita_origen__terapeuta', 'cita_origen__servicio', 'paciente')
+
+    for pen in penalizaciones:
+        ya_registrada = LineaNomina.objects.filter(
+            tipo=LineaNomina.TIPO_PENALIZACION,
+            cita=pen.cita_origen,
+        ).exists()
+        if not ya_registrada:
+            try:
+                registrar_pago_penalizacion_terapeuta(pen)
+            except Exception:
+                pass

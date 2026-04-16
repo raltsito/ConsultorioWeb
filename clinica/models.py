@@ -795,11 +795,13 @@ class LineaNomina(models.Model):
     TIPO_SESION = 'sesion'
     TIPO_BONO_UMBRAL = 'bono_umbral'
     TIPO_BONO_POR_PACIENTE = 'bono_por_paciente'
+    TIPO_PENALIZACION = 'penalizacion'
 
     TIPO_CHOICES = [
         (TIPO_SESION, 'Sesión'),
         (TIPO_BONO_UMBRAL, 'Bono por volumen'),
         (TIPO_BONO_POR_PACIENTE, 'Bono por paciente'),
+        (TIPO_PENALIZACION, 'Penalización inasistencia'),
     ]
 
     corte = models.ForeignKey(CorteSemanal, on_delete=models.CASCADE, related_name='lineas')

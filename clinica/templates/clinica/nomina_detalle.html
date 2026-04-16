@@ -194,8 +194,18 @@
                 </h5>
             </div>
             <div class="card-body p-0">
-                {% if lineas_bono or bonos_extra %}
+                {% if lineas_bono or lineas_penalizacion or bonos_extra %}
                 <ul class="list-group list-group-flush">
+                    {# Penalizaciones por inasistencia cobradas al paciente #}
+                    {% for pen in lineas_penalizacion %}
+                    <li class="list-group-item px-4 py-3 d-flex justify-content-between align-items-center gap-2">
+                        <div class="flex-grow-1">
+                            <span class="badge me-2 small" style="background:#fde8e8; color:#b91c1c; border:1px solid #fca5a5;">Penalización</span>
+                            <span class="text-dark small">{{ pen.concepto }}</span>
+                        </div>
+                        <span class="font-monospace fw-bold" style="color:#b91c1c;">+${{ pen.monto|floatformat:2 }}</span>
+                    </li>
+                    {% endfor %}
                     {# Bonos automáticos (del motor) #}
                     {% for bono in lineas_bono %}
                     <li class="list-group-item px-4 py-3 d-flex justify-content-between align-items-center gap-2">
@@ -250,6 +260,7 @@
                 </div>
                 {% endif %}
                 {# ── Comentarios de descuento/estudio socioeconómico ── #}
+
                 {% for linea in lineas_sesion %}
                     {% if linea.cita and linea.cita.tiene_descuento %}
                     <div class="px-4 py-2 d-flex align-items-center gap-2 border-top">

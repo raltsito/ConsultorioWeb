@@ -26,6 +26,7 @@ CREDENTIALS = {
     "Lucía Sánchez": ("lucia.sanchez", "Intra!X9p3B6"),
     "Magda Charles": ("magda.charles", "Intra!Y4q8C1"),
     "Maria de la Luz": ("maria.de.la.luz", "Intra!Z7r2D5"),
+    "María Amancio": ("maria.amancio", "Intra!C9m4N7"),
     "Maricela Sena": ("maricela.sena", "Intra!B3t9F7"),
     "María Amancio - Par": ("maria.amancio.par", "Intra!D7v8H1"),
     "Perla Realme": ("perla.realme", "Intra!E2w5J9"),

@@ -14,6 +14,8 @@ from decimal import Decimal
 from django.db import transaction
 from django.db.models import Sum
 
+from datetime import timedelta
+
 from .models import (
     Cita,
     CorteSemanal,
@@ -194,8 +196,10 @@ def calcular_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
                 "Solo los borradores pueden recalcularse."
             )
 
-        # Borrar únicamente las líneas automáticas previas (respetar BonoExtra manuales)
-        corte.lineas.all().delete()
+        # Borrar líneas automáticas (sesión y bonos).
+        # Las líneas de penalización se conservan — son pagos ya registrados,
+        # no se recalculan y deben seguir sumándose al total_pago del corte.
+        corte.lineas.exclude(tipo=LineaNomina.TIPO_PENALIZACION).delete()
 
         # Crear líneas de sesión
         LineaNomina.objects.bulk_create([
@@ -224,12 +228,18 @@ def calcular_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
         # Sumar BonoExtra manuales existentes en este corte
         bonos_extra = corte.bonos_extra.aggregate(total=Sum("monto"))["total"] or Decimal("0.00")
 
+        # Sumar líneas de penalización ya registradas (sobreviven al recalculo)
+        total_penalizaciones = (
+            corte.lineas.filter(tipo=LineaNomina.TIPO_PENALIZACION)
+            .aggregate(total=Sum("monto"))["total"] or Decimal("0.00")
+        )
+
         # Actualizar snapshot del corte
         corte.fecha_fin = fecha_fin
         corte.total_sesiones = total_sesiones
         corte.subtotal_sesiones = subtotal_sesiones
-        corte.total_bonos = total_bonos_automaticos + bonos_extra
-        corte.total_pago = subtotal_sesiones + total_bonos_automaticos + bonos_extra
+        corte.total_bonos = total_bonos_automaticos + bonos_extra + total_penalizaciones
+        corte.total_pago = subtotal_sesiones + total_bonos_automaticos + bonos_extra + total_penalizaciones
         corte.save()
 
     return corte
@@ -330,3 +340,76 @@ def aprobar_corte_semanal(corte, aprobado_por):
     corte.save()
 
     return corte
+
+
+# =============================================================================
+# PENALIZACIÓN → PAGO AL TERAPEUTA
+# =============================================================================
+
+def registrar_pago_penalizacion_terapeuta(penalizacion):
+    """
+    Cuando una penalización de inasistencia es cobrada al paciente, el terapeuta
+    recibe el 50% de lo que habría ganado en esa sesión.
+
+    - Calcula el monto usando la ReglaTerapeuta del terapeuta de la cita original.
+    - Agrega una LineaNomina de tipo 'penalizacion' al CorteSemanal de la semana
+      en que se cobró la penalización (fecha de la cita_cobro).
+    - Si no existe CorteSemanal para esa semana, lo crea en borrador.
+    - Si el corte de esa semana ya está aprobado/pagado, busca el corte de la
+      semana actual como alternativa.
+    - Si el terapeuta no tiene ReglaTerapeuta configurada, no hace nada (silencioso).
+
+    Retorna: LineaNomina creada, o None si no fue posible registrarla.
+    """
+    cita_origen = penalizacion.cita_origen
+    cita_cobro = penalizacion.cita_cobro
+    terapeuta = cita_origen.terapeuta
+
+    if not terapeuta or not cita_cobro:
+        return None
+
+    try:
+        regla = terapeuta.regla_pago
+    except ReglaTerapeuta.DoesNotExist:
+        return None  # Sin regla de pago configurada — no se puede calcular
+
+    # Monto: 50% del pago que habría ganado el terapeuta por esa sesión
+    monto_sesion, concepto_sesion = _resolver_monto_sesion(cita_origen, regla)
+    monto = (monto_sesion * Decimal("0.50")).quantize(Decimal("0.01"))
+
+    if monto <= Decimal("0.00"):
+        return None
+
+    # Semana del cobro (lunes–domingo)
+    fecha_ref = cita_cobro.fecha
+    lunes = fecha_ref - timedelta(days=fecha_ref.weekday())
+    domingo = lunes + timedelta(days=6)
+
+    with transaction.atomic():
+        # Obtenemos o creamos el corte de la semana del cobro.
+        # La línea de penalización se registra en ese corte sin importar
+        # su estatus (borrador o aprobado): no modifica líneas automáticas.
+        corte, _ = CorteSemanal.objects.get_or_create(
+            terapeuta=terapeuta,
+            fecha_inicio=lunes,
+            defaults={"fecha_fin": domingo, "estatus": CorteSemanal.ESTATUS_BORRADOR},
+        )
+
+        paciente_nombre = cita_origen.paciente.nombre if cita_origen.paciente else "paciente"
+        linea = LineaNomina.objects.create(
+            corte=corte,
+            cita=cita_origen,
+            tipo=LineaNomina.TIPO_PENALIZACION,
+            concepto=(
+                f"Penalización inasistencia — {paciente_nombre} "
+                f"({cita_origen.fecha:%d/%m/%Y}) — 50% de {concepto_sesion.lower()}"
+            ),
+            monto=monto,
+        )
+
+        # Actualizar totales del corte sumando esta línea
+        corte.total_bonos = (corte.total_bonos or Decimal("0.00")) + monto
+        corte.total_pago = (corte.total_pago or Decimal("0.00")) + monto
+        corte.save(update_fields=["total_bonos", "total_pago"])
+
+    return linea
