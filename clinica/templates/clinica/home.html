@@ -163,6 +163,16 @@
                         <span class="dock-sub">Control de pagos</span>
                     </span>
                 </a>
+
+                <a href="{% url 'precios_servicios' %}" class="dock-tile">
+                    <span class="dock-chip" style="--c1:#10B981;--c2:#065F46;">
+                        <i class="bi bi-tag-fill"></i>
+                    </span>
+                    <span class="dock-text">
+                        <span class="dock-label">Precios</span>
+                        <span class="dock-sub">Tarifas de servicios</span>
+                    </span>
+                </a>
                 {% endif %}
 
                 {% if user.is_superuser %}
@@ -391,7 +401,17 @@
             <form method="POST" action="{% url 'crear_cita' %}">
                 <div class="modal-body">
                     {% csrf_token %}
-                    {{ form.as_p }} </div>
+                    {{ form.as_p }}
+                    <div id="aviso-penalizacion-modal" style="display:none; background:#fff3cd; border:1.5px solid #f59e0b; border-radius:10px; padding:12px 16px; margin-top:-8px; margin-bottom:8px;">
+                        <div class="d-flex align-items-start gap-2">
+                            <span style="font-size:1.1rem; line-height:1.3;">⚠️</span>
+                            <div>
+                                <p class="mb-1 fw-semibold" style="color:#92400e; font-size:0.87rem;">Penalización por inasistencia pendiente</p>
+                                <p class="mb-0" id="texto-penalizacion-modal" style="color:#78350f; font-size:0.83rem;"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                     <button type="submit" class="btn btn-success">Agendar</button>
@@ -587,15 +607,40 @@
             });
         }
 
+        function verificarPenalizacionModal() {
+            const pacienteId = $paciente.val();
+            const $aviso = $('#aviso-penalizacion-modal');
+            const $texto = $('#texto-penalizacion-modal');
+            if (!pacienteId) {
+                $aviso.hide();
+                return;
+            }
+            $.get('/api/penalizacion-paciente/', { paciente_id: pacienteId }, function(data) {
+                if (data.penalizacion) {
+                    const p = data.penalizacion;
+                    $texto.html(
+                        'No asistió a su cita del <strong>' + p.fecha_cita + '</strong>' +
+                        (p.servicio ? ' (' + p.servicio + ')' : '') +
+                        '. Se añadirán <strong>$' + p.monto + '</strong> al costo de esta cita.'
+                    );
+                    $aviso.show();
+                } else {
+                    $aviso.hide();
+                }
+            }).fail(function() { $aviso.hide(); });
+        }
+
         $wrapperPacientesExtra.hide();
         $paciente.on('change', function() {
             actualizarTerapeutasPrevios();
             actualizarPacientesRelacionados();
+            verificarPenalizacionModal();
         });
         $servicio.on('change', actualizarPacientesRelacionados);
         $modal.on('shown.bs.modal', function() {
             actualizarTerapeutasPrevios();
             actualizarPacientesRelacionados();
+            verificarPenalizacionModal();
         });
     });
 </script>

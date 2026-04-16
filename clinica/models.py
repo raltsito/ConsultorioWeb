@@ -279,7 +279,12 @@ class Division(models.Model):
 
 class Servicio(models.Model):
     nombre = models.CharField(max_length=100)
-    
+    precio = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        verbose_name="Precio estándar",
+        help_text="Precio público del servicio. Se usa para calcular penalizaciones por inasistencia."
+    )
+
     def __str__(self):
         return self.nombre
 
@@ -981,3 +986,36 @@ def obtener_bloqueo_terapeuta_en_fecha(terapeuta_id, fecha_obj, hora_obj=None):
         if bloqueo.bloquea_fecha_hora(fecha_obj, hora_obj):
             return bloqueo
     return None
+
+
+class PenalizacionPaciente(models.Model):
+    """
+    Penalización por inasistencia. Se genera automáticamente cuando una cita
+    se marca como 'no_asistio'. El monto es el 50% del precio estándar del servicio
+    (o del costo registrado si el servicio no tiene precio configurado).
+    Se cobra en la siguiente cita del paciente sumándose automáticamente al costo.
+    """
+    paciente = models.ForeignKey(
+        'Paciente', on_delete=models.CASCADE, related_name='penalizaciones'
+    )
+    cita_origen = models.OneToOneField(
+        'Cita', on_delete=models.CASCADE, related_name='penalizacion_generada',
+        help_text="Cita de inasistencia que generó esta penalización."
+    )
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    pagada = models.BooleanField(default=False)
+    cita_cobro = models.ForeignKey(
+        'Cita', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='penalizacion_cobrada',
+        help_text="Cita en la que se cobró la penalización."
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        estado = "Pagada" if self.pagada else "Pendiente"
+        return f"Penalización {estado} — {self.paciente} | ${self.monto} ({self.cita_origen.fecha})"
+
+    class Meta:
+        verbose_name = "Penalización por Inasistencia"
+        verbose_name_plural = "Penalizaciones por Inasistencia"
+        ordering = ['-fecha_creacion']

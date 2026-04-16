@@ -19,6 +19,13 @@
                             <label class="form-label text-muted mb-1">Paciente</label>
                             {{ form.paciente }}
                             <div id="caja-terapeutas" class="mt-2 d-none p-2 bg-light border rounded-3 border-info border-start border-4"></div>
+                            <div id="aviso-penalizacion" class="d-none mt-2 d-flex align-items-start gap-2 p-3 rounded-3" style="background:#fff3cd; border:1.5px solid #f59e0b;">
+                                <span style="font-size:1.1rem;">⚠️</span>
+                                <div>
+                                    <p class="mb-1 fw-semibold" style="color:#92400e; font-size:0.88rem;">Penalización por inasistencia pendiente</p>
+                                    <p class="mb-0" id="texto-penalizacion" style="color:#78350f; font-size:0.84rem;"></p>
+                                </div>
+                            </div>
                         </div>
 
                         <div id="grupo-pacientes-relacionados" class="mb-3 d-none">
@@ -245,7 +252,36 @@
         $terapeuta.on('change', filtrarConsultorios);
         // ────────────────────────────────────────────────────────────────
 
+        // ── Penalización por inasistencia ─────────────────────────────
+        const $avisoPen = $('#aviso-penalizacion');
+        const $textoPen = $('#texto-penalizacion');
+
+        function verificarPenalizacion() {
+            const pacienteId = $paciente.val();
+            if (!pacienteId) {
+                $avisoPen.addClass('d-none');
+                return;
+            }
+            $.get('/api/penalizacion-paciente/', { paciente_id: pacienteId }, function(data) {
+                if (data.penalizacion) {
+                    const p = data.penalizacion;
+                    $textoPen.html(
+                        'No asistió a su cita del <strong>' + p.fecha_cita + '</strong>' +
+                        (p.servicio ? ' (' + p.servicio + ')' : '') +
+                        '. Se añadirán <strong>$' + p.monto + '</strong> al costo de esta cita como penalización (50% del precio del servicio).'
+                    );
+                    $avisoPen.removeClass('d-none');
+                } else {
+                    $avisoPen.addClass('d-none');
+                }
+            }).fail(function() {
+                $avisoPen.addClass('d-none');
+            });
+        }
+        // ────────────────────────────────────────────────────────────────
+
         $paciente.on('change', cargarRelacionados);
+        $paciente.on('change', verificarPenalizacion);
         $servicio.on('change', cargarRelacionados);
         $fecha.on('change', actualizarRadar);
         $terapeuta.on('change', actualizarRadar);
@@ -253,6 +289,7 @@
         cargarRelacionados();
         actualizarRadar();
         filtrarConsultorios();
+        verificarPenalizacion();
     });
 </script>
 {% endblock %}

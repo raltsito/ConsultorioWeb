@@ -897,14 +897,37 @@ def editar_paciente(request, paciente_id):
     return render(request, 'clinica/editar_paciente.html', {'form': form, 'paciente': paciente})
 @login_required
 def agendar_cita(request, paciente_id):
+    from clinica.models import PenalizacionPaciente
     paciente = get_object_or_404(Paciente, id=paciente_id)
-    
+
+    # Penalización pendiente del paciente (la más reciente no pagada)
+    penalizacion_pendiente = (
+        PenalizacionPaciente.objects
+        .filter(paciente=paciente, pagada=False)
+        .select_related('cita_origen__servicio')
+        .order_by('-fecha_creacion')
+        .first()
+    )
+
     if request.method == 'POST':
         form = CitaForm(request.POST)
         if form.is_valid():
             cita = form.save(commit=False)
             cita.paciente = paciente
+
+            # Sumar penalización al costo si existe una pendiente
+            if penalizacion_pendiente:
+                costo_actual = cita.costo or 0
+                cita.costo = costo_actual + penalizacion_pendiente.monto
+
             cita.save()
+
+            # Marcar penalización como cobrada en esta cita
+            if penalizacion_pendiente:
+                penalizacion_pendiente.pagada = True
+                penalizacion_pendiente.cita_cobro = cita
+                penalizacion_pendiente.save(update_fields=['pagada', 'cita_cobro'])
+
             if es_servicio_grupal(cita.servicio):
                 pacientes_extra = form.cleaned_data.get('pacientes_extra')
                 cita.pacientes_adicionales.set(
@@ -912,20 +935,22 @@ def agendar_cita(request, paciente_id):
                 )
             else:
                 cita.pacientes_adicionales.clear()
-            
-           
+
             try:
                 sincronizar_google_sheet(cita)
                 print("✅ Sincronización exitosa")
             except Exception as e:
                 print(f" Error al sincronizar con Google: {e}")
-            
 
             return redirect('detalle_paciente', paciente_id=paciente.id)
     else:
         form = CitaForm(initial={'costo': 500})
-    
-    return render(request, 'clinica/agendar_cita.html', {'form': form, 'paciente': paciente})
+
+    return render(request, 'clinica/agendar_cita.html', {
+        'form': form,
+        'paciente': paciente,
+        'penalizacion_pendiente': penalizacion_pendiente,
+    })
 
 # --- Agrega esto al final de clinica/views.py ---
 
@@ -976,10 +1001,31 @@ def calendario_citas(request):
 
 @login_required
 def crear_cita(request):
+    from clinica.models import PenalizacionPaciente
     if request.method == 'POST':
         form = CitaForm(request.POST)
         if form.is_valid():
-            cita = form.save()
+            cita = form.save(commit=False)
+
+            # Aplicar penalización pendiente del paciente si existe
+            pen = None
+            if cita.paciente_id:
+                pen = (
+                    PenalizacionPaciente.objects
+                    .filter(paciente_id=cita.paciente_id, pagada=False)
+                    .order_by('-fecha_creacion')
+                    .first()
+                )
+                if pen:
+                    cita.costo = (cita.costo or 0) + pen.monto
+
+            cita.save()
+
+            # Marcar penalización como cobrada
+            if pen:
+                pen.pagada = True
+                pen.cita_cobro = cita
+                pen.save(update_fields=['pagada', 'cita_cobro'])
 
             # Para servicios grupales guardamos pacientes adicionales en la misma cita.
             if es_servicio_grupal(cita.servicio):
@@ -990,22 +1036,18 @@ def crear_cita(request):
                     )
             else:
                 cita.pacientes_adicionales.clear()
-            
+
             # --- NUEVA MAGIA: Limpieza de la bandeja de entrada ---
-            # Atrapamos el ID de la solicitud que sigue en la URL
             solicitud_id = request.GET.get('solicitud')
             if solicitud_id:
                 try:
-                  
-                    # Buscamos el ticket en la sala de espera
                     solicitud = SolicitudCita.objects.get(id=solicitud_id)
-                    # Lo marcamos como aceptado para que desaparezca del Dashboard
                     solicitud.estado = 'aceptada'
                     solicitud.save()
                 except SolicitudCita.DoesNotExist:
                     pass
             # ------------------------------------------------------
-            
+
             messages.success(request, 'Cita agendada correctamente.')
             return redirect('home')
         else:
@@ -1077,6 +1119,32 @@ def crear_cita(request):
     # ESTO ES VITAL: Renderizamos la plantilla HTML en lugar de redirigir.
     # Asi el usuario puede ver el formulario para llenarlo o corregirlo.
     return render(request, 'clinica/crear_cita.html', {'form': form})
+
+
+@login_required
+def api_penalizacion_paciente(request):
+    """Devuelve la penalización pendiente de un paciente, si existe."""
+    from clinica.models import PenalizacionPaciente
+    from django.http import JsonResponse
+    paciente_id = request.GET.get('paciente_id')
+    if not paciente_id:
+        return JsonResponse({'penalizacion': None})
+    pen = (
+        PenalizacionPaciente.objects
+        .filter(paciente_id=paciente_id, pagada=False)
+        .select_related('cita_origen__servicio')
+        .order_by('-fecha_creacion')
+        .first()
+    )
+    if not pen:
+        return JsonResponse({'penalizacion': None})
+    return JsonResponse({
+        'penalizacion': {
+            'monto': str(pen.monto),
+            'fecha_cita': pen.cita_origen.fecha.strftime('%d/%m/%Y'),
+            'servicio': pen.cita_origen.servicio.nombre if pen.cita_origen.servicio else '',
+        }
+    })
 
 
 @login_required
@@ -3279,3 +3347,35 @@ def rechazar_reagendo(request, solicitud_id):
 
     messages.info(request, 'Solicitud de reagendo rechazada. La cita se mantuvo en su fecha original.')
     return redirect('home')
+
+
+@login_required
+def precios_servicios(request):
+    if not (request.user.is_superuser or request.user.is_staff):
+        return redirect('home')
+
+    from clinica.models import Servicio
+    servicios = Servicio.objects.all().order_by('nombre')
+
+    if request.method == 'POST':
+        errores = []
+        for servicio in servicios:
+            key = f'precio_{servicio.id}'
+            valor = request.POST.get(key, '').strip()
+            if valor == '':
+                servicio.precio = None
+                servicio.save(update_fields=['precio'])
+            else:
+                try:
+                    servicio.precio = Decimal(valor)
+                    servicio.save(update_fields=['precio'])
+                except Exception:
+                    errores.append(f'Precio inválido para "{servicio.nombre}": {valor}')
+        if errores:
+            for e in errores:
+                messages.error(request, e)
+        else:
+            messages.success(request, 'Precios actualizados correctamente.')
+        return redirect('precios_servicios')
+
+    return render(request, 'clinica/precios_servicios.html', {'servicios': servicios})
