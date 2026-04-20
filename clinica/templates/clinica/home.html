@@ -173,6 +173,16 @@
                         <span class="dock-sub">Tarifas de servicios</span>
                     </span>
                 </a>
+
+                <a href="{% url 'lista_incidentes' %}" class="dock-tile">
+                    <span class="dock-chip" style="--c1:#f59e0b;--c2:#b45309;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </span>
+                    <span class="dock-text">
+                        <span class="dock-label">Incidentes</span>
+                        <span class="dock-sub">Quejas y sugerencias</span>
+                    </span>
+                </a>
                 {% endif %}
 
                 {% if user.is_superuser %}

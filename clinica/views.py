@@ -37,6 +37,7 @@ from .models import (
     SolicitudCita,
     SolicitudReagendo,
     obtener_bloqueo_terapeuta_en_fecha,
+    ReporteIncidente,
 )
 from .models import CorteSemanal, LineaNomina, BonoExtra
 from .forms import (
@@ -834,10 +835,19 @@ def expediente_terapeuta_detalle(request, paciente_id):
         })
         form_apertura = AperturaExpedienteForm(instance=apertura)
 
+    historial_completo = (
+        Cita.objects
+        .filter(Q(paciente=paciente) | Q(pacientes_adicionales=paciente))
+        .distinct()
+        .select_related('terapeuta', 'servicio', 'consultorio')
+        .order_by('-fecha', '-hora')
+    )
+
     return render(request, 'clinica/expediente_terapeuta_detalle.html', {
         'terapeuta': terapeuta,
         'paciente': paciente,
         'historial': historial,
+        'historial_completo': historial_completo,
         'form_notas': form,
         'notas_historial': notas_historial,
         'form_documento': form_documento,
@@ -3388,3 +3398,58 @@ def precios_servicios(request):
         return redirect('precios_servicios')
 
     return render(request, 'clinica/precios_servicios.html', {'servicios': servicios})
+
+
+@login_required
+def reportar_incidente(request):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    if request.method != 'POST':
+        return redirect('portal_terapeuta')
+
+    tipo = request.POST.get('tipo', '').strip()
+    titulo = request.POST.get('titulo', '').strip()
+    descripcion = request.POST.get('descripcion', '').strip()
+
+    tipos_validos = [ReporteIncidente.TIPO_QUEJA, ReporteIncidente.TIPO_SUGERENCIA, ReporteIncidente.TIPO_INCIDENTE]
+    if tipo not in tipos_validos or not titulo or not descripcion:
+        messages.error(request, 'Por favor completa todos los campos del reporte.')
+        return redirect('portal_terapeuta')
+
+    ReporteIncidente.objects.create(
+        terapeuta=request.user.perfil_terapeuta,
+        tipo=tipo,
+        titulo=titulo,
+        descripcion=descripcion,
+    )
+    messages.success(request, 'Tu reporte fue enviado correctamente. El equipo lo revisará pronto.')
+    return redirect('portal_terapeuta')
+
+
+@login_required
+def lista_incidentes(request):
+    if not (request.user.is_superuser or request.user.is_staff):
+        return redirect('home')
+
+    incidentes = ReporteIncidente.objects.select_related('terapeuta').all()
+
+    estado_filter = request.GET.get('estado', '')
+    if estado_filter in [ReporteIncidente.ESTADO_PENDIENTE, ReporteIncidente.ESTADO_REVISADO]:
+        incidentes = incidentes.filter(estado=estado_filter)
+
+    if request.method == 'POST':
+        incidente_id = request.POST.get('incidente_id')
+        nuevo_estado = request.POST.get('estado')
+        incidente = get_object_or_404(ReporteIncidente, id=incidente_id)
+        if nuevo_estado in [ReporteIncidente.ESTADO_PENDIENTE, ReporteIncidente.ESTADO_REVISADO]:
+            incidente.estado = nuevo_estado
+            incidente.save(update_fields=['estado'])
+        return redirect('lista_incidentes')
+
+    pendientes_count = ReporteIncidente.objects.filter(estado=ReporteIncidente.ESTADO_PENDIENTE).count()
+    return render(request, 'clinica/lista_incidentes.html', {
+        'incidentes': incidentes,
+        'estado_filter': estado_filter,
+        'pendientes_count': pendientes_count,
+    })

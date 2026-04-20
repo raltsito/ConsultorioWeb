@@ -1021,3 +1021,38 @@ class PenalizacionPaciente(models.Model):
         verbose_name = "Penalización por Inasistencia"
         verbose_name_plural = "Penalizaciones por Inasistencia"
         ordering = ['-fecha_creacion']
+
+
+class ReporteIncidente(models.Model):
+    TIPO_QUEJA = 'queja'
+    TIPO_SUGERENCIA = 'sugerencia'
+    TIPO_INCIDENTE = 'incidente'
+    TIPO_CHOICES = [
+        (TIPO_QUEJA, 'Queja'),
+        (TIPO_SUGERENCIA, 'Sugerencia'),
+        (TIPO_INCIDENTE, 'Incidente en consultorio'),
+    ]
+
+    ESTADO_PENDIENTE = 'pendiente'
+    ESTADO_REVISADO = 'revisado'
+    ESTADO_CHOICES = [
+        (ESTADO_PENDIENTE, 'Pendiente'),
+        (ESTADO_REVISADO, 'Revisado'),
+    ]
+
+    terapeuta = models.ForeignKey(
+        Terapeuta, on_delete=models.CASCADE, related_name='reportes_incidente'
+    )
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    titulo = models.CharField(max_length=200)
+    descripcion = models.TextField()
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default=ESTADO_PENDIENTE)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"[{self.get_tipo_display()}] {self.titulo} — {self.terapeuta}"
+
+    class Meta:
+        verbose_name = "Reporte / Incidente"
+        verbose_name_plural = "Reportes e Incidentes"
+        ordering = ['-fecha_creacion']

@@ -72,6 +72,10 @@ urlpatterns = [
     path('reagendo/<int:solicitud_id>/aprobar/', clinica_views.aprobar_reagendo, name='aprobar_reagendo'),
     path('reagendo/<int:solicitud_id>/rechazar/', clinica_views.rechazar_reagendo, name='rechazar_reagendo'),
 
+    # Reportes e Incidentes
+    path('incidentes/reportar/', clinica_views.reportar_incidente, name='reportar_incidente'),
+    path('incidentes/', clinica_views.lista_incidentes, name='lista_incidentes'),
+
     # Portal Empresa
     path('empresa/', clinica_views.portal_empresa, name='portal_empresa'),
     path('empresa/registrar-paciente/', clinica_views.registrar_paciente_empresa, name='registrar_paciente_empresa'),

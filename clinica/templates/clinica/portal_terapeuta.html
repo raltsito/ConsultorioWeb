@@ -347,6 +347,10 @@
                     <a href="{% url 'mi_disponibilidad_terapeuta' %}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm d-flex align-items-center">
                         <i class="bi bi-clock-history fs-5 me-2"></i>Mi Disponibilidad
                     </a>
+                    <button type="button" class="btn btn-warning btn-lg fw-bold shadow-sm d-flex align-items-center"
+                            data-bs-toggle="modal" data-bs-target="#modalReporteIncidente">
+                        <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i>Reportar Incidente
+                    </button>
                 </div>
             </div>
         </div>
@@ -1351,6 +1355,83 @@ ivo</option>
     });
 })();
 </script>
+
+{# ─── MODAL REPORTAR INCIDENTE ─── #}
+<div class="modal fade" id="modalReporteIncidente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow" style="border-radius:1.25rem; overflow:hidden;">
+            <div class="modal-header text-white border-0"
+                 style="background:linear-gradient(135deg,#f59e0b,#d97706); padding:1.25rem 1.5rem;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+                    <h5 class="modal-title fw-bold mb-0">Reportar Queja, Sugerencia o Incidente</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{% url 'reportar_incidente' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-4">
+                        Usa este formulario para reportar cualquier situación que hayas vivido en el consultorio:
+                        una queja, una sugerencia de mejora o un incidente ocurrido durante tu jornada.
+                        El equipo administrativo lo revisará a la brevedad.
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tipo de reporte <span class="text-danger">*</span></label>
+                        <div class="d-flex gap-3 flex-wrap">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipo" id="tipo_queja"
+                                       value="queja" required>
+                                <label class="form-check-label" for="tipo_queja">
+                                    <span class="badge text-bg-danger me-1">Queja</span>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipo" id="tipo_sugerencia"
+                                       value="sugerencia">
+                                <label class="form-check-label" for="tipo_sugerencia">
+                                    <span class="badge text-bg-info me-1">Sugerencia</span>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipo" id="tipo_incidente"
+                                       value="incidente">
+                                <label class="form-check-label" for="tipo_incidente">
+                                    <span class="badge text-bg-warning text-dark me-1">Incidente en consultorio</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="incidente_titulo" class="form-label fw-semibold">
+                            Título breve <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="titulo" id="incidente_titulo"
+                               class="form-control" maxlength="200"
+                               placeholder="Ej. Problema con el consultorio 3" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="incidente_descripcion" class="form-label fw-semibold">
+                            Descripción detallada <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="descripcion" id="incidente_descripcion"
+                                  class="form-control" rows="5" required
+                                  placeholder="Describe con detalle lo que ocurrió, cuándo y cómo afecta tu trabajo..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold text-dark">
+                        <i class="bi bi-send-fill me-1"></i>Enviar reporte
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 

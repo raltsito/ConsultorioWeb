@@ -49,7 +49,15 @@
       "Bash(wmic process:*)",
       "Bash(xargs grep:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m ':*)"
+      "Bash(git commit -m ':*)",
+      "Bash(venv/Scripts/python manage.py runserver)",
+      "Bash(grep -E \"\\\\.py$|^d\")",
+      "Bash(venv/Scripts/python.exe -c \"import django; import os; os.environ.setdefault\\('DJANGO_SETTINGS_MODULE', 'core.settings'\\); django.setup\\(\\); from django.conf import settings; print\\('URLCONF:', settings.ROOT_URLCONF\\)\")",
+      "Bash(kill -f 8476)",
+      "Bash(kill -f 29084)",
+      "Bash(venv/Scripts/python.exe -c ' *)",
+      "Bash(python3 -c \"import sys; data = sys.stdin.read\\(\\); print\\(data\\)\")",
+      "Bash(venv/Scripts/python.exe manage.py makemigrations clinica --name reporte_incidente)"
     ]
   }
 }

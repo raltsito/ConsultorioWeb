@@ -349,17 +349,14 @@ def aprobar_corte_semanal(corte, aprobado_por):
 def registrar_pago_penalizacion_terapeuta(penalizacion):
     """
     Cuando una penalización de inasistencia es cobrada al paciente, el terapeuta
-    recibe el 50% de lo que habría ganado en esa sesión.
+    recibe DOS pagos:
+      1. El pago completo de la sesión según su tabulador (por haber asistido).
+      2. Un 50% adicional como compensación por la inasistencia del paciente.
 
-    - Calcula el monto usando la ReglaTerapeuta del terapeuta de la cita original.
-    - Agrega una LineaNomina de tipo 'penalizacion' al CorteSemanal de la semana
-      en que se cobró la penalización (fecha de la cita_cobro).
-    - Si no existe CorteSemanal para esa semana, lo crea en borrador.
-    - Si el corte de esa semana ya está aprobado/pagado, busca el corte de la
-      semana actual como alternativa.
-    - Si el terapeuta no tiene ReglaTerapeuta configurada, no hace nada (silencioso).
+    Ambas líneas se crean como TIPO_PENALIZACION para que sobrevivan el recálculo
+    de calcular_nomina_semanal.
 
-    Retorna: LineaNomina creada, o None si no fue posible registrarla.
+    Retorna: primera LineaNomina creada, o None si no fue posible registrarla.
     """
     cita_origen = penalizacion.cita_origen
     cita_cobro = penalizacion.cita_cobro
@@ -373,11 +370,10 @@ def registrar_pago_penalizacion_terapeuta(penalizacion):
     except ReglaTerapeuta.DoesNotExist:
         return None  # Sin regla de pago configurada — no se puede calcular
 
-    # Monto: 50% del pago que habría ganado el terapeuta por esa sesión
     monto_sesion, concepto_sesion = _resolver_monto_sesion(cita_origen, regla)
-    monto = (monto_sesion * Decimal("0.50")).quantize(Decimal("0.01"))
+    monto_penalizacion = (monto_sesion * Decimal("0.50")).quantize(Decimal("0.01"))
 
-    if monto <= Decimal("0.00"):
+    if monto_sesion <= Decimal("0.00"):
         return None
 
     # Semana del cobro (lunes–domingo)
@@ -385,31 +381,42 @@ def registrar_pago_penalizacion_terapeuta(penalizacion):
     lunes = fecha_ref - timedelta(days=fecha_ref.weekday())
     domingo = lunes + timedelta(days=6)
 
+    paciente_nombre = cita_origen.paciente.nombre if cita_origen.paciente else "paciente"
+
     with transaction.atomic():
-        # Obtenemos o creamos el corte de la semana del cobro.
-        # La línea de penalización se registra en ese corte sin importar
-        # su estatus (borrador o aprobado): no modifica líneas automáticas.
         corte, _ = CorteSemanal.objects.get_or_create(
             terapeuta=terapeuta,
             fecha_inicio=lunes,
             defaults={"fecha_fin": domingo, "estatus": CorteSemanal.ESTATUS_BORRADOR},
         )
 
-        paciente_nombre = cita_origen.paciente.nombre if cita_origen.paciente else "paciente"
+        # Línea 1: pago completo de la sesión según tabulador
         linea = LineaNomina.objects.create(
             corte=corte,
             cita=cita_origen,
             tipo=LineaNomina.TIPO_PENALIZACION,
             concepto=(
-                f"Penalización inasistencia — {paciente_nombre} "
-                f"({cita_origen.fecha:%d/%m/%Y}) — 50% de {concepto_sesion.lower()}"
+                f"{concepto_sesion} — {paciente_nombre} "
+                f"({cita_origen.fecha:%d/%m/%Y}) — sesión cobrada por inasistencia"
             ),
-            monto=monto,
+            monto=monto_sesion,
         )
 
-        # Actualizar totales del corte sumando esta línea
-        corte.total_bonos = (corte.total_bonos or Decimal("0.00")) + monto
-        corte.total_pago = (corte.total_pago or Decimal("0.00")) + monto
+        # Línea 2: 50% adicional por penalización
+        LineaNomina.objects.create(
+            corte=corte,
+            cita=cita_origen,
+            tipo=LineaNomina.TIPO_PENALIZACION,
+            concepto=(
+                f"Penalización inasistencia — {paciente_nombre} "
+                f"({cita_origen.fecha:%d/%m/%Y}) — 50% adicional de {concepto_sesion.lower()}"
+            ),
+            monto=monto_penalizacion,
+        )
+
+        total_agregado = monto_sesion + monto_penalizacion
+        corte.total_bonos = (corte.total_bonos or Decimal("0.00")) + total_agregado
+        corte.total_pago = (corte.total_pago or Decimal("0.00")) + total_agregado
         corte.save(update_fields=["total_bonos", "total_pago"])
 
     return linea

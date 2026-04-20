@@ -650,7 +650,15 @@
             <div class="xcard-icon"><i class="bi bi-calendar-check"></i></div>
             <span class="xcard-title">Citas Contigo</span>
           </div>
-          <span class="badge-ok">{{ historial|length }}</span>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge-ok">{{ historial|length }}</span>
+            <button type="button"
+                    class="btn btn-sm fw-semibold"
+                    style="background:linear-gradient(135deg,#2A72EA,#1F5FCA);color:#fff;border:0;border-radius:8px;font-size:.72rem;padding:.3rem .75rem;"
+                    data-bs-toggle="modal" data-bs-target="#modalHistorialCompleto">
+              <i class="bi bi-clock-history me-1"></i>Ver historial completo
+            </button>
+          </div>
         </div>
         {% if historial %}
           {% for cita in historial %}
@@ -797,4 +805,82 @@ document.getElementById('colApertura').addEventListener('hide.bs.collapse', func
   document.getElementById('chevApertura').className = 'bi bi-chevron-down';
 });
 </script>
+
+{# ─── MODAL HISTORIAL COMPLETO DE CITAS ─── #}
+<div class="modal fade" id="modalHistorialCompleto" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow" style="border-radius:1.25rem;overflow:hidden;">
+      <div class="modal-header border-0 text-white"
+           style="background:linear-gradient(135deg,#2A72EA,#1F5FCA);padding:1.25rem 1.5rem;">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-clock-history fs-5"></i>
+          <h5 class="modal-title fw-bold mb-0">Historial completo de citas — {{ paciente.nombre }}</h5>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        {% if historial_completo %}
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0" style="font-size:.83rem;">
+            <thead>
+              <tr style="background:#EAF2FF;color:#1F5FCA;font-weight:700;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;">
+                <th class="px-3 py-3">Fecha</th>
+                <th class="px-3 py-3">Hora</th>
+                <th class="px-3 py-3">Terapeuta</th>
+                <th class="px-3 py-3">Servicio</th>
+                <th class="px-3 py-3">Consultorio</th>
+                <th class="px-3 py-3">Estatus</th>
+                <th class="px-3 py-3 text-end">Costo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for cita in historial_completo %}
+              <tr style="border-bottom:1px solid #EDF1F7;">
+                <td class="px-3 py-2 fw-semibold">{{ cita.fecha|date:"d/m/Y" }}</td>
+                <td class="px-3 py-2" style="color:#607D8B;">{{ cita.hora|time:"H:i" }}</td>
+                <td class="px-3 py-2">{{ cita.terapeuta|default:"—" }}</td>
+                <td class="px-3 py-2">{{ cita.servicio|default:"—" }}</td>
+                <td class="px-3 py-2" style="color:#607D8B;">{{ cita.consultorio|default:"—" }}</td>
+                <td class="px-3 py-2">
+                  {% if cita.estatus == 'si_asistio' %}
+                    <span class="badge text-bg-success">Asistió</span>
+                  {% elif cita.estatus == 'confirmada' %}
+                    <span class="badge text-bg-primary">Confirmada</span>
+                  {% elif cita.estatus == 'sin_confirmar' %}
+                    <span class="badge text-bg-info">Sin confirmar</span>
+                  {% elif cita.estatus == 'cancelo' %}
+                    <span class="badge text-bg-danger">Canceló</span>
+                  {% elif cita.estatus == 'no_asistio' %}
+                    <span class="badge text-bg-dark">No asistió</span>
+                  {% elif cita.estatus == 'reagendo' %}
+                    <span class="badge text-bg-warning text-dark">Reagendo</span>
+                  {% else %}
+                    <span class="badge text-bg-secondary">{{ cita.get_estatus_display }}</span>
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2 text-end fw-semibold">
+                  {% if cita.costo %}${{ cita.costo }}{% else %}<span style="color:#B0BEC5;">—</span>{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
+          <p class="mb-0">No hay citas registradas para este paciente.</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer bg-light border-0">
+        <span class="text-muted small me-auto">
+          {{ historial_completo|length }} cita{{ historial_completo|length|pluralize }} en total
+        </span>
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
