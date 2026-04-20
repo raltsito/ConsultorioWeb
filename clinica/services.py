@@ -349,14 +349,15 @@ def aprobar_corte_semanal(corte, aprobado_por):
 def registrar_pago_penalizacion_terapeuta(penalizacion):
     """
     Cuando una penalización de inasistencia es cobrada al paciente, el terapeuta
-    recibe DOS pagos:
-      1. El pago completo de la sesión según su tabulador (por haber asistido).
-      2. Un 50% adicional como compensación por la inasistencia del paciente.
+    recibe un bono del 50% de su tabulador como compensación por la inasistencia.
 
-    Ambas líneas se crean como TIPO_PENALIZACION para que sobrevivan el recálculo
+    El pago completo de la sesión atendida (cita_cobro) se registra por el flujo
+    normal de Sesiones Atendidas al recalcular la nómina — no se duplica aquí.
+
+    La línea se crea como TIPO_PENALIZACION para que sobreviva el recálculo
     de calcular_nomina_semanal.
 
-    Retorna: primera LineaNomina creada, o None si no fue posible registrarla.
+    Retorna: LineaNomina creada, o None si no fue posible registrarla.
     """
     cita_origen = penalizacion.cita_origen
     cita_cobro = penalizacion.cita_cobro
@@ -368,7 +369,7 @@ def registrar_pago_penalizacion_terapeuta(penalizacion):
     try:
         regla = terapeuta.regla_pago
     except ReglaTerapeuta.DoesNotExist:
-        return None  # Sin regla de pago configurada — no se puede calcular
+        return None
 
     monto_sesion, concepto_sesion = _resolver_monto_sesion(cita_origen, regla)
     monto_penalizacion = (monto_sesion * Decimal("0.50")).quantize(Decimal("0.01"))
@@ -390,33 +391,20 @@ def registrar_pago_penalizacion_terapeuta(penalizacion):
             defaults={"fecha_fin": domingo, "estatus": CorteSemanal.ESTATUS_BORRADOR},
         )
 
-        # Línea 1: pago completo de la sesión según tabulador
+        # Único bono: 50% del tabulador por la inasistencia del paciente
         linea = LineaNomina.objects.create(
             corte=corte,
             cita=cita_origen,
             tipo=LineaNomina.TIPO_PENALIZACION,
             concepto=(
-                f"{concepto_sesion} — {paciente_nombre} "
-                f"({cita_origen.fecha:%d/%m/%Y}) — sesión cobrada por inasistencia"
-            ),
-            monto=monto_sesion,
-        )
-
-        # Línea 2: 50% adicional por penalización
-        LineaNomina.objects.create(
-            corte=corte,
-            cita=cita_origen,
-            tipo=LineaNomina.TIPO_PENALIZACION,
-            concepto=(
                 f"Penalización inasistencia — {paciente_nombre} "
-                f"({cita_origen.fecha:%d/%m/%Y}) — 50% adicional de {concepto_sesion.lower()}"
+                f"({cita_origen.fecha:%d/%m/%Y}) — 50% de {concepto_sesion.lower()}"
             ),
             monto=monto_penalizacion,
         )
 
-        total_agregado = monto_sesion + monto_penalizacion
-        corte.total_bonos = (corte.total_bonos or Decimal("0.00")) + total_agregado
-        corte.total_pago = (corte.total_pago or Decimal("0.00")) + total_agregado
+        corte.total_bonos = (corte.total_bonos or Decimal("0.00")) + monto_penalizacion
+        corte.total_pago = (corte.total_pago or Decimal("0.00")) + monto_penalizacion
         corte.save(update_fields=["total_bonos", "total_pago"])
 
     return linea

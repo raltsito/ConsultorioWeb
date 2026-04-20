@@ -57,7 +57,8 @@
       "Bash(kill -f 29084)",
       "Bash(venv/Scripts/python.exe -c ' *)",
       "Bash(python3 -c \"import sys; data = sys.stdin.read\\(\\); print\\(data\\)\")",
-      "Bash(venv/Scripts/python.exe manage.py makemigrations clinica --name reporte_incidente)"
+      "Bash(venv/Scripts/python.exe manage.py makemigrations clinica --name reporte_incidente)",
+      "Bash(venv/Scripts/python.exe manage.py shell -c ' *)"
     ]
   }
 }
