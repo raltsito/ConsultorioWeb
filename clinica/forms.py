@@ -1,5 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 from .models import (
     AperturaExpediente,
@@ -16,6 +17,20 @@ from .models import (
     obtener_bloqueo_terapeuta_en_fecha,
 )
 from .models import Terapeuta, Consultorio, Division, Servicio
+
+
+def verificar_empalme_paciente(paciente, fecha, hora, excluir_cita_id=None):
+    """Retorna la primera cita activa que empalma con ese paciente en fecha+hora, o None."""
+    qs = Cita.objects.filter(
+        fecha=fecha,
+        hora=hora,
+        estatus__in=Cita.ESTATUS_ACTIVOS,
+    ).filter(
+        Q(paciente=paciente) | Q(pacientes_adicionales=paciente)
+    ).select_related('terapeuta', 'servicio')
+    if excluir_cita_id:
+        qs = qs.exclude(pk=excluir_cita_id)
+    return qs.first()
 
 
 class CheckoutCitaForm(forms.Form):
@@ -275,6 +290,35 @@ class CitaForm(forms.ModelForm):
                         )
                         self.add_error('consultorio', msg)
                         return cleaned_data
+
+        # ── Verificar empalme de pacientes ───────────────────────────────
+        paciente  = cleaned_data.get('paciente')
+        excluir   = self.instance.pk if (self.instance and self.instance.pk) else None
+
+        if paciente and fecha and hora:
+            conflicto = verificar_empalme_paciente(paciente, fecha, hora, excluir)
+            if conflicto:
+                terapeuta_str = conflicto.terapeuta.nombre if conflicto.terapeuta else 'sin terapeuta'
+                msg = (
+                    f"{paciente.nombre} ya tiene una cita el {fecha:%d/%m/%Y} a las {hora:%H:%M} "
+                    f"con {terapeuta_str} ({conflicto.get_estatus_display()}). "
+                    f"No se puede empalmar."
+                )
+                self.add_error('paciente', msg)
+                self.add_error('hora', msg)
+
+        pacientes_extra = cleaned_data.get('pacientes_extra')
+        if pacientes_extra and fecha and hora:
+            for p in pacientes_extra:
+                conflicto = verificar_empalme_paciente(p, fecha, hora, excluir)
+                if conflicto:
+                    terapeuta_str = conflicto.terapeuta.nombre if conflicto.terapeuta else 'sin terapeuta'
+                    msg = (
+                        f"{p.nombre} ya tiene una cita el {fecha:%d/%m/%Y} a las {hora:%H:%M} "
+                        f"con {terapeuta_str} ({conflicto.get_estatus_display()}). "
+                        f"No se puede empalmar."
+                    )
+                    self.add_error('pacientes_extra', msg)
 
         return cleaned_data
 

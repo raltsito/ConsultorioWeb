@@ -955,41 +955,50 @@ def agendar_cita(request, paciente_id):
     )
 
     if request.method == 'POST':
+        from .forms import verificar_empalme_paciente
         form = CitaForm(request.POST)
         if form.is_valid():
-            cita = form.save(commit=False)
-            cita.paciente = paciente
-
-            # Sumar penalización al costo si existe una pendiente
-            if penalizacion_pendiente:
-                costo_actual = cita.costo or 0
-                cita.costo = costo_actual + penalizacion_pendiente.monto
-
-            cita.save()
-
-            # Marcar penalización como cobrada.
-            # El pago al terapeuta se registra en nómina cuando la cita se marque como 'si_asistio'.
-            if penalizacion_pendiente:
-                penalizacion_pendiente.pagada = True
-                penalizacion_pendiente.cita_cobro = cita
-                penalizacion_pendiente.save(update_fields=['pagada', 'cita_cobro'])
-
-            if es_servicio_grupal(cita.servicio):
-                pacientes_extra = form.cleaned_data.get('pacientes_extra')
-                cita.pacientes_adicionales.set(
-                    (pacientes_extra or Paciente.objects.none()).exclude(pk=cita.paciente_id)
+            fecha = form.cleaned_data.get('fecha')
+            hora  = form.cleaned_data.get('hora')
+            conflicto = verificar_empalme_paciente(paciente, fecha, hora) if fecha and hora else None
+            if conflicto:
+                terapeuta_str = conflicto.terapeuta.nombre if conflicto.terapeuta else 'sin terapeuta'
+                messages.error(
+                    request,
+                    f"{paciente.nombre} ya tiene una cita el {fecha:%d/%m/%Y} a las {hora:%H:%M} "
+                    f"con {terapeuta_str} ({conflicto.get_estatus_display()}). No se puede empalmar."
                 )
             else:
-                cita.pacientes_adicionales.clear()
-            _vincular_expediente_grupal(cita)
+                cita = form.save(commit=False)
+                cita.paciente = paciente
 
-            try:
-                sincronizar_google_sheet(cita)
-                print("✅ Sincronización exitosa")
-            except Exception as e:
-                print(f" Error al sincronizar con Google: {e}")
+                if penalizacion_pendiente:
+                    costo_actual = cita.costo or 0
+                    cita.costo = costo_actual + penalizacion_pendiente.monto
 
-            return redirect('detalle_paciente', paciente_id=paciente.id)
+                cita.save()
+
+                if penalizacion_pendiente:
+                    penalizacion_pendiente.pagada = True
+                    penalizacion_pendiente.cita_cobro = cita
+                    penalizacion_pendiente.save(update_fields=['pagada', 'cita_cobro'])
+
+                if es_servicio_grupal(cita.servicio):
+                    pacientes_extra = form.cleaned_data.get('pacientes_extra')
+                    cita.pacientes_adicionales.set(
+                        (pacientes_extra or Paciente.objects.none()).exclude(pk=cita.paciente_id)
+                    )
+                else:
+                    cita.pacientes_adicionales.clear()
+                _vincular_expediente_grupal(cita)
+
+                try:
+                    sincronizar_google_sheet(cita)
+                    print("✅ Sincronización exitosa")
+                except Exception as e:
+                    print(f" Error al sincronizar con Google: {e}")
+
+                return redirect('detalle_paciente', paciente_id=paciente.id)
     else:
         form = CitaForm(initial={'costo': 500})
 
@@ -3373,10 +3382,33 @@ def aprobar_reagendo(request, solicitud_id):
     if request.method != 'POST':
         return redirect('home')
 
+    from .forms import verificar_empalme_paciente
+    from django.db.models import Q as _Q
+
     solicitud = get_object_or_404(SolicitudReagendo, id=solicitud_id, estado='pendiente')
     cita = solicitud.cita
-    cita.fecha  = solicitud.fecha_propuesta
-    cita.hora   = solicitud.hora_propuesta
+    nueva_fecha = solicitud.fecha_propuesta
+    nueva_hora  = solicitud.hora_propuesta
+
+    # Verificar empalme de todos los pacientes de la cita
+    todos_pacientes = [cita.paciente] + list(cita.pacientes_adicionales.all())
+    conflictos = []
+    for p in todos_pacientes:
+        c = verificar_empalme_paciente(p, nueva_fecha, nueva_hora, excluir_cita_id=cita.pk)
+        if c:
+            terapeuta_str = c.terapeuta.nombre if c.terapeuta else 'sin terapeuta'
+            conflictos.append(
+                f"{p.nombre} ya tiene cita el {nueva_fecha:%d/%m/%Y} a las {nueva_hora:%H:%M} "
+                f"con {terapeuta_str} ({c.get_estatus_display()})."
+            )
+
+    if conflictos:
+        for msg in conflictos:
+            messages.error(request, f"No se puede reagendar: {msg}")
+        return redirect('home')
+
+    cita.fecha   = nueva_fecha
+    cita.hora    = nueva_hora
     cita.estatus = Cita.ESTATUS_CONFIRMADA
     cita.save(update_fields=['fecha', 'hora', 'estatus'])
 
