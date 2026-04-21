@@ -24,9 +24,12 @@ from openpyxl.utils import get_column_letter
 from .models import (
     AccesoDirectoPortal,
     AperturaExpediente,
+    AperturaExpedienteGrupal,
     BloqueoAgendaTerapeuta,
     DocumentoPaciente,
     Empresa,
+    ExpedienteGrupal,
+    NotaExpedienteGrupal,
     Paciente,
     PacienteTerapeutaAcceso,
     NotaTerapeutaPaciente,
@@ -42,6 +45,7 @@ from .models import (
 from .models import CorteSemanal, LineaNomina, BonoExtra
 from .forms import (
     AperturaExpedienteForm,
+    AperturaExpedienteGrupalForm,
     BloqueoAgendaTerapeutaForm,
     CitaEmpresaForm,
     PacienteEmpresaForm,
@@ -164,6 +168,37 @@ SERVICIOS_GRUPALES = {
 def es_servicio_grupal(servicio):
     nombre = quitar_tildes(servicio.nombre if servicio else '').strip()
     return any(base in nombre for base in SERVICIOS_GRUPALES)
+
+
+def _vincular_expediente_grupal(cita):
+    """Busca o crea un ExpedienteGrupal para una cita con pacientes_adicionales."""
+    pacientes_adicionales = cita.pacientes_adicionales.all()
+    if not pacientes_adicionales.exists():
+        if cita.expediente_grupal_id:
+            cita.expediente_grupal = None
+            cita.save(update_fields=['expediente_grupal'])
+        return
+
+    todos_ids = frozenset(
+        [cita.paciente_id] + list(pacientes_adicionales.values_list('id', flat=True))
+    )
+
+    expediente = None
+    for eg in ExpedienteGrupal.objects.prefetch_related('pacientes'):
+        if frozenset(eg.pacientes.values_list('id', flat=True)) == todos_ids:
+            expediente = eg
+            break
+
+    if not expediente:
+        tipo = ExpedienteGrupal.TIPO_PAREJA if len(todos_ids) == 2 else ExpedienteGrupal.TIPO_FAMILIA
+        expediente = ExpedienteGrupal.objects.create(tipo=tipo)
+        expediente.pacientes.set(todos_ids)
+        expediente.nombre = expediente.generar_nombre()
+        expediente.save(update_fields=['nombre'])
+
+    if cita.expediente_grupal_id != expediente.id:
+        cita.expediente_grupal = expediente
+        cita.save(update_fields=['expediente_grupal'])
 
 
 def obtener_configuracion_estatus_cita(estatus):
@@ -626,7 +661,7 @@ def expedientes_terapeuta(request):
 
     terapeuta = request.user.perfil_terapeuta
     paciente_ids = _pacientes_ids_terapeuta(terapeuta)
-    pacientes = Paciente.objects.filter(id__in=paciente_ids).order_by('nombre')
+    pacientes = Paciente.objects.filter(id__in=paciente_ids).prefetch_related('expedientes_grupales').order_by('nombre')
 
     return render(request, 'clinica/expedientes_terapeuta.html', {
         'terapeuta': terapeuta,
@@ -645,7 +680,7 @@ def expediente_terapeuta_detalle(request, paciente_id):
         messages.error(request, 'Solo puedes abrir expedientes de pacientes agendados contigo.')
         return redirect('expedientes_terapeuta')
 
-    paciente = get_object_or_404(Paciente, id=paciente_id)
+    paciente = get_object_or_404(Paciente.objects.prefetch_related('expedientes_grupales'), id=paciente_id)
     historial = Cita.objects.filter(
         terapeuta=terapeuta
     ).filter(
@@ -661,7 +696,7 @@ def expediente_terapeuta_detalle(request, paciente_id):
     reportes_historial = ReporteSesion.objects.filter(
         terapeuta=terapeuta,
         paciente=paciente,
-    ).order_by('-fecha', '-creado_en')
+    ).select_related('cita__expediente_grupal').order_by('-fecha', '-creado_en')
     for reporte in reportes_historial:
         reporte.form_edicion = ReporteSesionForm(instance=reporte, prefix=f'reporte_{reporte.id}')
 
@@ -946,6 +981,7 @@ def agendar_cita(request, paciente_id):
                 )
             else:
                 cita.pacientes_adicionales.clear()
+            _vincular_expediente_grupal(cita)
 
             try:
                 sincronizar_google_sheet(cita)
@@ -1048,6 +1084,7 @@ def crear_cita(request):
                     )
             else:
                 cita.pacientes_adicionales.clear()
+            _vincular_expediente_grupal(cita)
 
             # --- NUEVA MAGIA: Limpieza de la bandeja de entrada ---
             solicitud_id = request.GET.get('solicitud')
@@ -1170,7 +1207,7 @@ def api_pacientes_relacionados(request):
     except Paciente.DoesNotExist:
         return JsonResponse({'relacionados': []})
 
-    relacionados = paciente.pacientes_relacionados.order_by('nombre').values('id', 'nombre')
+    relacionados = Paciente.objects.exclude(id=paciente.id).order_by('nombre').values('id', 'nombre')
     return JsonResponse({'relacionados': list(relacionados)})
 
 # En clinica/views.py
@@ -1260,6 +1297,7 @@ def editar_cita(request, cita_id):
                 )
             else:
                 cita.pacientes_adicionales.clear()
+            _vincular_expediente_grupal(cita)
             messages.success(request, '¡Cita actualizada correctamente! ')
             
             origen = request.GET.get('next', 'home')
@@ -3452,4 +3490,139 @@ def lista_incidentes(request):
         'incidentes': incidentes,
         'estado_filter': estado_filter,
         'pendientes_count': pendientes_count,
+    })
+
+
+@login_required
+def expedientes_grupales_lista(request):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    terapeuta = request.user.perfil_terapeuta
+    paciente_ids = _pacientes_ids_terapeuta(terapeuta)
+    expedientes = (
+        ExpedienteGrupal.objects
+        .filter(pacientes__id__in=paciente_ids)
+        .prefetch_related('pacientes')
+        .distinct()
+        .order_by('-fecha_apertura')
+    )
+    return render(request, 'clinica/expedientes_grupales_lista.html', {
+        'expedientes': expedientes,
+        'terapeuta': terapeuta,
+    })
+
+
+@login_required
+def expediente_grupal_detalle(request, expediente_id):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    terapeuta = request.user.perfil_terapeuta
+    expediente = get_object_or_404(ExpedienteGrupal, id=expediente_id)
+
+    paciente_ids_terapeuta = _pacientes_ids_terapeuta(terapeuta)
+    paciente_ids_grupal = set(expediente.pacientes.values_list('id', flat=True))
+    if not paciente_ids_terapeuta.intersection(paciente_ids_grupal):
+        messages.error(request, 'No tienes acceso a este expediente.')
+        return redirect('expedientes_terapeuta')
+
+    apertura = getattr(expediente, 'apertura', None)
+    pacientes_grupo = list(expediente.pacientes.all())
+
+    citas = expediente.citas.select_related(
+        'terapeuta', 'servicio', 'consultorio'
+    ).prefetch_related('pacientes_adicionales').order_by('-fecha', '-hora')
+
+    from django.db.models import Min
+    reporte_ids = (
+        ReporteSesion.objects
+        .filter(cita__expediente_grupal=expediente)
+        .values('cita_id')
+        .annotate(primer_id=Min('id'))
+        .values_list('primer_id', flat=True)
+    )
+    reportes = (
+        ReporteSesion.objects
+        .filter(id__in=reporte_ids)
+        .select_related('paciente', 'terapeuta')
+        .order_by('-fecha', '-creado_en')
+    )
+
+    notas = expediente.notas.select_related('terapeuta').all()
+
+    hoy = date.today()
+    cita_hoy = expediente.citas.filter(fecha=hoy).order_by('hora').last()
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+
+        if accion == 'guardar_apertura':
+            form_apertura = AperturaExpedienteGrupalForm(request.POST, instance=apertura)
+            if form_apertura.is_valid():
+                ap = form_apertura.save(commit=False)
+                ap.expediente = expediente
+                ap.save()
+                messages.success(request, 'Apertura guardada correctamente.')
+            else:
+                messages.error(request, 'Revisa los datos de la apertura.')
+            return redirect('expediente_grupal_detalle', expediente_id=expediente.id)
+
+        if accion == 'guardar_reporte_grupal':
+            form_reporte = ReporteSesionForm(request.POST)
+            if form_reporte.is_valid():
+                for paciente in pacientes_grupo:
+                    num_sesion = ReporteSesion.objects.filter(
+                        terapeuta=terapeuta, paciente=paciente
+                    ).count() + 1
+                    reporte = form_reporte.save(commit=False)
+                    reporte.pk = None
+                    reporte.paciente = paciente
+                    reporte.terapeuta = terapeuta
+                    reporte.numero_sesion = num_sesion
+                    reporte.cita = cita_hoy
+                    reporte.save()
+                messages.success(request, f'Reporte guardado para {len(pacientes_grupo)} paciente(s).')
+            else:
+                messages.error(request, 'Revisa los datos del reporte.')
+            return redirect('expediente_grupal_detalle', expediente_id=expediente.id)
+
+        if accion == 'agregar_nota':
+            contenido = request.POST.get('contenido', '').strip()
+            if contenido:
+                NotaExpedienteGrupal.objects.create(
+                    expediente=expediente,
+                    terapeuta=terapeuta,
+                    contenido=contenido,
+                )
+                messages.success(request, 'Nota agregada al expediente.')
+            else:
+                messages.error(request, 'La nota no puede estar vacía.')
+            return redirect('expediente_grupal_detalle', expediente_id=expediente.id)
+
+        if accion == 'eliminar_nota':
+            nota_id = request.POST.get('nota_id')
+            NotaExpedienteGrupal.objects.filter(
+                id=nota_id, expediente=expediente, terapeuta=terapeuta
+            ).delete()
+            messages.success(request, 'Nota eliminada.')
+            return redirect('expediente_grupal_detalle', expediente_id=expediente.id)
+
+    form_apertura = AperturaExpedienteGrupalForm(instance=apertura)
+    form_reporte = ReporteSesionForm(initial={
+        'fecha': hoy,
+        'hora_inicio': cita_hoy.hora if cita_hoy else None,
+    })
+
+    return render(request, 'clinica/expediente_grupal_detalle.html', {
+        'expediente': expediente,
+        'apertura': apertura,
+        'form_apertura': form_apertura,
+        'form_reporte': form_reporte,
+        'pacientes_grupo': pacientes_grupo,
+        'citas': citas,
+        'reportes': reportes,
+        'notas': notas,
+        'terapeuta': terapeuta,
+        'cita_hoy': cita_hoy,
     })

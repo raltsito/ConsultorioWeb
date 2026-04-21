@@ -114,12 +114,12 @@
                <img src="{% static 'clinica/images/logo.png' %}" alt="Logo INTRA" class="me-2">
             </a>
             
-            <div class="d-flex align-items-center">
-                <span class="me-3 text-muted fw-bold d-none d-md-block">
-                    Hola, {{ user.username|title }} 
+            <div class="d-flex align-items-center gap-2">
+                <span class="me-1 text-muted fw-bold d-none d-md-block">
+                    Hola, {{ user.username|title }}
                 </span>
-                
-                <form action="{% url 'logout' %}" method="post">
+
+<form action="{% url 'logout' %}" method="post">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle" title="Cerrar Sesión">
                         <i class="bi bi-box-arrow-right"></i>

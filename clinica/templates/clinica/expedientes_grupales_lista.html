@@ -1,0 +1,95 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<style>
+:root {
+  --navy:#37474F; --teal:#2A72EA; --teal-lt:#EAF2FF; --teal-dk:#1F5FCA;
+  --bg:#F0F4F8; --card:#FFFFFF; --text:#37474F; --muted:#78909C;
+  --border:#DDE5EB; --shadow:0 10px 30px rgba(0,0,0,.05); --r:20px;
+  --purple:#7C3AED; --purple-lt:#F3E8FF; --purple-dk:#6D28D9;
+}
+@keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+.page-header {
+  background:linear-gradient(135deg,#7C3AED 0%,#6D28D9 100%);
+  border-radius:var(--r); padding:1.75rem 2rem; margin-bottom:1.75rem; color:#fff;
+}
+.page-header h1 { font-size:1.4rem; font-weight:800; margin:0; }
+.page-header p  { font-size:.82rem; opacity:.8; margin:0; }
+
+.eg-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--r); box-shadow:var(--shadow);
+  display:flex; align-items:center; gap:1.1rem;
+  padding:1.1rem 1.4rem; margin-bottom:.85rem;
+  text-decoration:none; color:inherit;
+  transition:box-shadow .15s, transform .15s;
+  animation:slideUp .35s both;
+}
+.eg-card:hover { box-shadow:0 14px 35px rgba(0,0,0,.09); transform:translateY(-2px); color:inherit; }
+
+.eg-icon {
+  width:48px; height:48px; border-radius:14px; flex-shrink:0;
+  background:var(--purple-lt); display:flex; align-items:center;
+  justify-content:center; font-size:1.4rem;
+}
+.eg-nombre { font-size:.95rem; font-weight:700; color:var(--navy); margin:0; }
+.eg-sub    { font-size:.75rem; color:var(--muted); margin:0; }
+.eg-badge  {
+  background:var(--purple-lt); color:var(--purple-dk);
+  border:1px solid #E9D5FF; border-radius:20px;
+  padding:2px 10px; font-size:.7rem; font-weight:700; white-space:nowrap;
+}
+.eg-pacientes { display:flex; flex-wrap:wrap; gap:.3rem; margin-top:.35rem; }
+.chip {
+  background:#F0F4F8; border:1px solid var(--border); border-radius:20px;
+  padding:1px 9px; font-size:.72rem; color:var(--muted);
+}
+.empty-state { text-align:center; padding:3rem 1rem; color:var(--muted); }
+.empty-state i { font-size:2.5rem; display:block; margin-bottom:.75rem; opacity:.3; }
+</style>
+
+<div style="max-width:820px; margin:0 auto; padding:1.5rem 1rem;">
+
+  <div class="page-header">
+    <div class="d-flex align-items-center justify-content-between gap-2">
+      <div>
+        <h1><i class="bi bi-people-fill me-2"></i>Expedientes Grupales</h1>
+        <p>Parejas y familias con expediente compartido</p>
+      </div>
+      <a href="{% url 'expedientes_terapeuta' %}" class="btn btn-sm btn-light btn-sm rounded-pill">
+        <i class="bi bi-person-lines-fill me-1"></i>Individuales
+      </a>
+    </div>
+  </div>
+
+  {% if expedientes %}
+    {% for eg in expedientes %}
+      <a href="{% url 'expediente_grupal_detalle' eg.id %}" class="eg-card" style="animation-delay:{{ forloop.counter0 }}00ms">
+        <div class="eg-icon">{% if eg.tipo == 'pareja' %}💑{% else %}👨‍👩‍👧‍👦{% endif %}</div>
+        <div class="flex-grow-1 overflow-hidden">
+          <p class="eg-nombre">{{ eg.nombre }}</p>
+          <div class="eg-pacientes">
+            {% for p in eg.pacientes.all %}
+              <span class="chip">{{ p.nombre }}</span>
+            {% endfor %}
+          </div>
+          <p class="eg-sub mt-1">{{ eg.expediente_no }} · Abierto {{ eg.fecha_apertura|date:"d/m/Y" }}</p>
+        </div>
+        <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+          <span class="eg-badge">{{ eg.get_tipo_display }}</span>
+          <span style="font-size:.72rem; color:var(--muted);">{{ eg.citas.count }} cita(s)</span>
+        </div>
+        <i class="bi bi-chevron-right text-muted"></i>
+      </a>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <i class="bi bi-people"></i>
+      <p style="font-size:.95rem; font-weight:600;">Sin expedientes grupales aún</p>
+      <p style="font-size:.83rem;">Se crean automáticamente al agendar una cita de pareja o familia.</p>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

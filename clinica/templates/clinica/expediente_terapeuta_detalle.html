@@ -281,7 +281,14 @@
     <div class="hero-avatar">{{ paciente.nombre|slice:":1" }}</div>
     <div>
       <p class="hero-name">{{ paciente.nombre }}</p>
-      <p class="hero-sub">Expediente — {{ terapeuta.nombre }}</p>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <p class="hero-sub mb-0">Expediente — {{ terapeuta.nombre }}</p>
+        {% for eg in paciente.expedientes_grupales.all %}
+          <a href="{% url 'expediente_grupal_detalle' eg.id %}" class="btn-hero-back" style="font-size:.82rem;padding:.5rem 1.2rem;">
+            {% if eg.tipo == 'pareja' %}Abrir exp. pareja{% else %}Abrir exp. familia{% endif %}
+          </a>
+        {% endfor %}
+      </div>
     </div>
     <a href="{% url 'expedientes_terapeuta' %}" class="btn-hero-back ms-auto position-relative">
       <i class="bi bi-arrow-left me-1"></i>Mis Expedientes
@@ -579,6 +586,15 @@
                 data-bs-target="#rpt{{ reporte.id }}"
                 aria-expanded="false">
           <span class="rpt-chip">Sesión #{{ reporte.numero_sesion }}</span>
+          {% if reporte.cita.expediente_grupal %}
+            {% if reporte.cita.expediente_grupal.tipo == 'pareja' %}
+              <span style="background:#F3E8FF;color:#6D28D9;border:1px solid #E9D5FF;border-radius:20px;padding:1px 9px;font-size:.68rem;font-weight:700;flex-shrink:0;">Pareja</span>
+            {% else %}
+              <span style="background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;border-radius:20px;padding:1px 9px;font-size:.68rem;font-weight:700;flex-shrink:0;">Familia</span>
+            {% endif %}
+          {% else %}
+            <span style="background:#EAF2FF;color:#1F5FCA;border:1px solid #C8DCFF;border-radius:20px;padding:1px 9px;font-size:.68rem;font-weight:700;flex-shrink:0;">Individual</span>
+          {% endif %}
           <span style="font-size:.875rem;font-weight:600;color:var(--text);">{{ reporte.fecha|date:"d M Y" }}</span>
           {% if reporte.hora_inicio %}
           <span style="font-size:.78rem;color:var(--muted);">
@@ -882,5 +898,6 @@ document.getElementById('colApertura').addEventListener('hide.bs.collapse', func
     </div>
   </div>
 </div>
+
 
 {% endblock %}

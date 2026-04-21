@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 
 from .models import (
     AperturaExpediente,
+    AperturaExpedienteGrupal,
     BloqueoAgendaTerapeuta,
     Cita,
     DocumentoPaciente,
@@ -571,6 +572,59 @@ class AperturaExpedienteForm(forms.ModelForm):
             self.fields['nombre'].initial = self.instance.paciente.nombre
             self.fields['fecha_nacimiento'].initial = self.instance.paciente.fecha_nacimiento
             self.fields['telefono'].initial = self.instance.paciente.telefono
+        if self.instance.pk and self.instance.vive_con:
+            self.fields['vive_con_sel'].initial = [
+                v.strip() for v in self.instance.vive_con.split(',') if v.strip()
+            ]
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.vive_con = ', '.join(self.cleaned_data.get('vive_con_sel', []))
+        if commit:
+            instance.save()
+        return instance
+
+
+class AperturaExpedienteGrupalForm(forms.ModelForm):
+    VIVE_CON_CHOICES = [
+        ('Padres',    'Padres'),
+        ('Familiares','Familiares'),
+        ('Solo(a)',   'Solo(a)'),
+        ('Familia',   'Familia'),
+        ('Esposo(a)', 'Esposo(a)'),
+        ('Novio(a)',  'Novio(a)'),
+        ('Cónyuge',  'Cónyuge'),
+    ]
+    vive_con_sel = forms.MultipleChoiceField(
+        choices=VIVE_CON_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label='Vive con',
+    )
+
+    class Meta:
+        model = AperturaExpedienteGrupal
+        exclude = ['expediente', 'vive_con', 'creado_en', 'actualizado_en']
+        widgets = {
+            'division':             forms.Select(attrs={'class': 'form-select'}),
+            'motivo_consulta':      forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'calle':                forms.TextInput(attrs={'class': 'form-control'}),
+            'num_exterior':         forms.TextInput(attrs={'class': 'form-control'}),
+            'colonia':              forms.TextInput(attrs={'class': 'form-control'}),
+            'religion':             forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional'}),
+            'tiene_hijos':          forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'num_hijos':            forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'hijo_1':               forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre y edad'}),
+            'hijo_2':               forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre y edad'}),
+            'hijo_3':               forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre y edad'}),
+            'hijo_4':               forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre y edad'}),
+            'emergencia_contacto':  forms.TextInput(attrs={'class': 'form-control'}),
+            'emergencia_telefono':  forms.TextInput(attrs={'class': 'form-control'}),
+            'como_se_entero':       forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         if self.instance.pk and self.instance.vive_con:
             self.fields['vive_con_sel'].initial = [
                 v.strip() for v in self.instance.vive_con.split(',') if v.strip()

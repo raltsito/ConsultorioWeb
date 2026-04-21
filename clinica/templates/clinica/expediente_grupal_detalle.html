@@ -1,0 +1,477 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<style>
+:root {
+  --navy:    #37474F;
+  --teal:    #2A72EA;
+  --teal-lt: #EAF2FF;
+  --teal-dk: #1F5FCA;
+  --hero-start: #7C3AED;
+  --hero-end:   #6D28D9;
+  --amber:   #F59E0B;
+  --rose:    #EF5350;
+  --bg:      #F0F4F8;
+  --card:    #FFFFFF;
+  --text:    #37474F;
+  --muted:   #78909C;
+  --border:  #DDE5EB;
+  --shadow:  0 10px 30px rgba(0,0,0,.05);
+  --r:       20px;
+}
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(20px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+.hero {
+  background: linear-gradient(135deg, var(--hero-start) 0%, var(--hero-end) 100%);
+  border-radius: var(--r); padding: 1.75rem 2rem; margin-bottom: 1.75rem;
+  position: relative; overflow: hidden; animation: fadeIn .5s both;
+}
+.hero::before {
+  content:''; position:absolute; top:-50px; right:-50px;
+  width:180px; height:180px; border-radius:50%;
+  background:rgba(255,255,255,.08); pointer-events:none;
+}
+.hero-icon {
+  width:56px; height:56px; border-radius:50%;
+  background:rgba(255,255,255,.18); border:2px solid rgba(255,255,255,.3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.5rem; flex-shrink:0;
+}
+.hero-name { font-size:1.35rem; font-weight:700; color:#fff; margin:0; }
+.hero-sub  { font-size:.8rem; color:rgba(255,255,255,.78); margin:0; }
+.hero-pill {
+  background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
+  border-radius:10px; padding:.45rem 1rem;
+}
+.hero-pill .lbl { font-size:.6rem; text-transform:uppercase; letter-spacing:.09em; color:rgba(255,255,255,.7); margin:0; }
+.hero-pill .val { font-size:.85rem; font-weight:600; color:#fff; margin:0; }
+.btn-hero-back {
+  border:1.5px solid rgba(255,255,255,.35); color:#fff;
+  background:transparent; border-radius:999px; padding:.45rem 1rem;
+  font-size:.8rem; text-decoration:none; transition:all .2s;
+}
+.btn-hero-back:hover { border-color:#fff; color:#fff; background:rgba(255,255,255,.12); }
+
+.xcard {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--r); box-shadow:var(--shadow);
+  margin-bottom:1.25rem; overflow:hidden;
+}
+.xcard:nth-child(1) { animation:slideUp .4s .05s both; }
+.xcard:nth-child(2) { animation:slideUp .4s .12s both; }
+.xcard:nth-child(3) { animation:slideUp .4s .19s both; }
+.xcard:nth-child(4) { animation:slideUp .4s .26s both; }
+.xcard-hd {
+  padding:1.1rem 1.4rem;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; gap:1rem;
+}
+.xcard-icon {
+  width:30px; height:30px; border-radius:8px;
+  background:var(--teal-lt); color:var(--teal);
+  display:flex; align-items:center; justify-content:center; font-size:.9rem; flex-shrink:0;
+}
+.xcard-title { font-size:.75rem; font-weight:700; color:var(--navy); text-transform:uppercase; letter-spacing:.07em; margin:0; }
+.xcard-body  { padding:1.25rem 1.4rem; }
+
+.badge-tipo {
+  background: rgba(255,255,255,.2); color:#fff;
+  border-radius:20px; padding:3px 12px; font-size:.72rem; font-weight:700;
+  border:1px solid rgba(255,255,255,.3);
+}
+
+.slbl { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--teal-dk); margin-bottom:.3rem; }
+
+.nota-item {
+  background:#F7F9FC; border:1px solid var(--border); border-radius:12px;
+  padding:1rem 1.2rem; margin-bottom:.85rem;
+}
+.nota-meta { font-size:.7rem; color:var(--muted); margin-bottom:.4rem; }
+.nota-contenido { font-size:.87rem; color:var(--text); white-space:pre-wrap; }
+
+.cita-row {
+  display:flex; align-items:center; gap:1rem;
+  padding:.85rem 0; border-bottom:1px solid var(--border);
+}
+.cita-row:last-child { border-bottom:none; }
+.cita-fecha {
+  min-width:80px; text-align:center;
+  background:var(--teal-lt); border-radius:10px; padding:.5rem;
+}
+.cita-fecha .dia   { font-size:1.3rem; font-weight:800; color:var(--teal-dk); line-height:1; }
+.cita-fecha .mes   { font-size:.65rem; text-transform:uppercase; color:var(--teal); font-weight:600; }
+.cita-info { flex:1; }
+.cita-info .titulo { font-size:.88rem; font-weight:700; color:var(--navy); margin:0; }
+.cita-info .sub    { font-size:.75rem; color:var(--muted); margin:0; }
+
+.reporte-row {
+  display:flex; align-items:center; gap:1rem;
+  padding:.85rem 0; border-bottom:1px solid var(--border);
+}
+.reporte-row:last-child { border-bottom:none; }
+.reporte-num {
+  width:44px; height:44px; border-radius:50%;
+  background:linear-gradient(135deg,#7C3AED,#6D28D9);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  font-size:.8rem; font-weight:800; flex-shrink:0;
+}
+.reporte-info .titulo { font-size:.88rem; font-weight:700; color:var(--navy); margin:0; }
+.reporte-info .sub    { font-size:.75rem; color:var(--muted); margin:0; }
+
+.paciente-chip {
+  display:inline-flex; align-items:center; gap:.4rem;
+  background:var(--teal-lt); border:1px solid #C8DCFF; border-radius:20px;
+  padding:.3rem .85rem; font-size:.8rem; color:var(--teal-dk); font-weight:600;
+  text-decoration:none; margin:.2rem;
+}
+.paciente-chip:hover { background:#d6e9ff; color:var(--teal-dk); }
+
+.empty-state { text-align:center; padding:2.5rem 1rem; color:var(--muted); }
+.empty-state i { font-size:2rem; margin-bottom:.7rem; display:block; opacity:.35; }
+
+.rpt-item { border-bottom:1px solid var(--border); }
+.rpt-item:last-child { border-bottom:none; }
+.rpt-btn {
+  width:100%; text-align:left; background:none; border:none;
+  padding:.9rem 1.4rem; display:flex; align-items:center; gap:.75rem;
+  cursor:pointer; transition:background .15s;
+}
+.rpt-btn:hover { background:#FAFCFE; }
+.rpt-chip { background:var(--navy);color:#fff;border-radius:7px;padding:2px 9px;font-size:.7rem;font-weight:700;flex-shrink:0; }
+.rpt-chevron { margin-left:auto; color:var(--muted); transition:transform .25s; }
+.rpt-btn[aria-expanded="true"] .rpt-chevron { transform:rotate(180deg); }
+.rpt-body { background:#FAFBFC; padding:1rem 1.4rem 1.25rem; }
+.rfl { font-size:.62rem; text-transform:uppercase; letter-spacing:.09em; color:var(--teal-dk); font-weight:700; margin-bottom:.2rem; }
+.rfv { font-size:.875rem; color:var(--text); margin-bottom:.75rem; }
+.fro { background:#F7F9FC;border:1.5px solid var(--border);border-radius:9px;padding:.44rem .75rem;font-size:.85rem;color:var(--muted); }
+.badge-ok { background:#E8F8F5;color:#009E84;border:1px solid #A8E6D8;border-radius:20px;padding:2px 10px;font-size:.7rem;font-weight:700;white-space:nowrap; }
+
+.btn-teal {
+  background:var(--teal); color:#fff; border:none;
+  border-radius:50px; padding:.6rem 1.45rem;
+  font-size:.85rem; font-weight:700; cursor:pointer;
+  transition:transform .15s, box-shadow .15s;
+}
+.btn-teal:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(42,114,234,.3); color:#fff; }
+.btn-ghost {
+  background:transparent; border:1.5px solid #CFD8DC; border-radius:50px;
+  padding:.4rem .9rem; font-size:.78rem; color:var(--muted); cursor:pointer;
+  text-decoration:none; display:inline-flex; align-items:center; gap:.3rem;
+  transition:all .15s;
+}
+.btn-ghost:hover { border-color:#B0BEC5; background:#ECEFF1; color:var(--navy); }
+
+.form-control, .form-select {
+  border:1.5px solid var(--border); border-radius:9px; font-size:.85rem;
+}
+.form-control:focus { border-color:var(--teal); box-shadow:0 0 0 3px rgba(42,114,234,.13); }
+</style>
+
+<div style="max-width:900px; margin:0 auto; padding:1.5rem 1rem;">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <a href="{% url 'expedientes_terapeuta' %}" class="btn-hero-back">
+        <i class="bi bi-arrow-left"></i> Expedientes
+      </a>
+    </div>
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+      <div class="hero-icon">
+        {% if expediente.tipo == 'pareja' %}💑{% else %}👨‍👩‍👧‍👦{% endif %}
+      </div>
+      <div class="flex-grow-1">
+        <p class="hero-name">{{ expediente.nombre }}</p>
+        <p class="hero-sub">
+          Exp. {{ expediente.expediente_no }} &nbsp;·&nbsp;
+          Abierto {{ expediente.fecha_apertura|date:"d/m/Y" }}
+        </p>
+      </div>
+      <div class="hero-pill">
+        <p class="lbl">Tipo</p>
+        <p class="val">{{ expediente.get_tipo_display }}</p>
+      </div>
+      <div class="hero-pill">
+        <p class="lbl">Sesiones</p>
+        <p class="val">{{ reportes.count }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTEGRANTES -->
+  <div class="xcard">
+    <div class="xcard-hd">
+      <div class="d-flex align-items-center gap-2">
+        <div class="xcard-icon"><i class="bi bi-people-fill"></i></div>
+        <span class="xcard-title">Integrantes</span>
+      </div>
+    </div>
+    <div class="xcard-body">
+      <div class="d-flex flex-wrap">
+        {% for paciente in expediente.pacientes.all %}
+          <a href="{% url 'expediente_terapeuta_detalle' paciente.id %}" class="paciente-chip">
+            <i class="bi bi-person-fill"></i> {{ paciente.nombre }}
+          </a>
+        {% endfor %}
+      </div>
+      {% if expediente.motivo_consulta %}
+        <div class="mt-3">
+          <p class="slbl">Motivo de consulta grupal</p>
+          <p style="font-size:.88rem; color:var(--text); margin:0;">{{ expediente.motivo_consulta }}</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- NUEVO REPORTE DE SESIÓN GRUPAL -->
+  <div class="xcard">
+    <div class="xcard-hd">
+      <div class="d-flex align-items-center gap-2">
+        <div class="xcard-icon"><i class="bi bi-clipboard2-pulse"></i></div>
+        <span class="xcard-title">Nuevo Reporte de Sesión</span>
+      </div>
+      <button class="btn-ghost" type="button" data-bs-toggle="collapse" data-bs-target="#colReporteGrupal">
+        <i class="bi bi-chevron-down"></i>
+      </button>
+    </div>
+
+    <div class="collapse show" id="colReporteGrupal">
+      <div class="xcard-body">
+
+        <!-- strip de pacientes que recibirán el reporte -->
+        <div style="background:linear-gradient(135deg,#F3E8FF 0%,#EDE9FE 100%);border:1px solid #E9D5FF;border-radius:11px;padding:.9rem 1.1rem;margin-bottom:1.25rem;">
+          <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:#7C3AED;margin-bottom:.4rem;">Reporte se guardará para</div>
+          <div class="d-flex flex-wrap gap-2">
+            {% for p in pacientes_grupo %}
+              <span style="background:#fff;border:1px solid #E9D5FF;border-radius:20px;padding:2px 12px;font-size:.8rem;font-weight:600;color:#6D28D9;">
+                {{ p.nombre }}
+              </span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="guardar_reporte_grupal">
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{{ form_reporte.fecha.label }}</label>
+              {{ form_reporte.fecha }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{{ form_reporte.hora_inicio.label }}</label>
+              {{ form_reporte.hora_inicio }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">{{ form_reporte.hora_fin.label }}</label>
+              {{ form_reporte.hora_fin }}
+            </div>
+          </div>
+
+          {% for field in form_reporte %}
+            {% if field.name not in 'fecha,hora_inicio,hora_fin,numero_sesion' %}
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">{{ field.label }}</label>
+              {{ field }}
+            </div>
+            {% endif %}
+          {% endfor %}
+
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn-teal btn">
+              <i class="bi bi-save me-1"></i>Guardar reporte grupal
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTAS DIRECTAS -->
+  <div class="xcard">
+    <div class="xcard-hd">
+      <div class="d-flex align-items-center gap-2">
+        <div class="xcard-icon"><i class="bi bi-journal-text"></i></div>
+        <span class="xcard-title">Notas del expediente</span>
+      </div>
+    </div>
+    <div class="xcard-body">
+
+      <!-- Formulario nueva nota -->
+      <form method="post" class="mb-4">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="agregar_nota">
+        <div class="mb-2">
+          <textarea name="contenido" class="form-control" rows="3"
+            placeholder="Escribe una nota clínica, acuerdo o observación del expediente grupal..."></textarea>
+        </div>
+        <div class="d-flex justify-content-end">
+          <button type="submit" class="btn-teal btn-sm">
+            <i class="bi bi-plus-circle me-1"></i> Guardar nota
+          </button>
+        </div>
+      </form>
+
+      <!-- Listado de notas -->
+      {% if notas %}
+        {% for nota in notas %}
+          <div class="nota-item">
+            <div class="d-flex justify-content-between align-items-start">
+              <p class="nota-meta">
+                <i class="bi bi-person-circle me-1"></i>{{ nota.terapeuta.nombre }}
+                &nbsp;·&nbsp; {{ nota.creado_en|date:"d/m/Y H:i" }}
+              </p>
+              {% if nota.terapeuta == terapeuta %}
+                <form method="post" style="margin:0;">
+                  {% csrf_token %}
+                  <input type="hidden" name="accion" value="eliminar_nota">
+                  <input type="hidden" name="nota_id" value="{{ nota.id }}">
+                  <button type="submit" class="btn-ghost btn-sm py-0 px-2"
+                    onclick="return confirm('¿Eliminar esta nota?')"
+                    style="font-size:.72rem; border-color:#FFCDD2; color:#E53935;">
+                    <i class="bi bi-trash3"></i>
+                  </button>
+                </form>
+              {% endif %}
+            </div>
+            <p class="nota-contenido">{{ nota.contenido }}</p>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <i class="bi bi-journal-x"></i>
+          <p style="font-size:.88rem;">Aún no hay notas en este expediente.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- REPORTES DE SESIÓN -->
+  {% if reportes %}
+  <div class="xcard">
+    <div class="xcard-hd">
+      <div class="d-flex align-items-center gap-2">
+        <div class="xcard-icon"><i class="bi bi-journals"></i></div>
+        <span class="xcard-title">Reportes de sesión grupal</span>
+      </div>
+      <span class="badge-ok">{{ reportes.count }}</span>
+    </div>
+    {% for reporte in reportes %}
+    <div class="rpt-item">
+      <button class="rpt-btn" type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#rptg{{ reporte.id }}"
+              aria-expanded="false">
+        <span class="rpt-chip">Sesión #{{ reporte.numero_sesion }}</span>
+        <span style="font-size:.875rem;font-weight:600;color:var(--text);">{{ reporte.fecha|date:"d M Y" }}</span>
+        {% if reporte.hora_inicio %}
+        <span style="font-size:.78rem;color:var(--muted);">
+          {{ reporte.hora_inicio|time:"H:i" }}{% if reporte.hora_fin %} – {{ reporte.hora_fin|time:"H:i" }}{% endif %}
+        </span>
+        {% endif %}
+        <i class="bi bi-chevron-down rpt-chevron"></i>
+      </button>
+      <div class="collapse" id="rptg{{ reporte.id }}">
+        <div class="rpt-body">
+          <div class="row g-3 mb-3">
+            <div class="col-md-3">
+              <div class="rfl">Terapeuta</div>
+              <div class="fro">{{ reporte.terapeuta.nombre }}</div>
+            </div>
+            <div class="col-md-3">
+              <div class="rfl">Fecha</div>
+              <div class="fro">{{ reporte.fecha|date:"d/m/Y" }}</div>
+            </div>
+            {% if reporte.hora_inicio %}
+            <div class="col-md-3">
+              <div class="rfl">Hora inicio</div>
+              <div class="fro">{{ reporte.hora_inicio|time:"H:i" }}</div>
+            </div>
+            {% endif %}
+            {% if reporte.hora_fin %}
+            <div class="col-md-3">
+              <div class="rfl">Hora fin</div>
+              <div class="fro">{{ reporte.hora_fin|time:"H:i" }}</div>
+            </div>
+            {% endif %}
+          </div>
+          {% if reporte.objetivo_sesion %}
+          <div class="mb-3"><div class="rfl">Objetivo de la sesión</div><div class="rfv">{{ reporte.objetivo_sesion }}</div></div>
+          {% endif %}
+          {% if reporte.revision_tareas %}
+          <div class="mb-3"><div class="rfl">Revisión de tareas</div><div class="rfv">{{ reporte.revision_tareas }}</div></div>
+          {% endif %}
+          {% if reporte.desarrollo_sesion %}
+          <div class="mb-3"><div class="rfl">Desarrollo de sesión</div><div class="rfv">{{ reporte.desarrollo_sesion }}</div></div>
+          {% endif %}
+          {% if reporte.tecnicas_utilizadas %}
+          <div class="mb-3"><div class="rfl">Técnicas utilizadas</div><div class="rfv">{{ reporte.tecnicas_utilizadas }}</div></div>
+          {% endif %}
+          {% if reporte.resultados_sesion %}
+          <div class="mb-3"><div class="rfl">Resultados de la sesión</div><div class="rfv">{{ reporte.resultados_sesion }}</div></div>
+          {% endif %}
+          {% if reporte.tareas %}
+          <div class="mb-3"><div class="rfl">Tareas</div><div class="rfv">{{ reporte.tareas }}</div></div>
+          {% endif %}
+          {% if reporte.comentarios_finales %}
+          <div class="mb-3"><div class="rfl">Comentarios finales</div><div class="rfv">{{ reporte.comentarios_finales }}</div></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- HISTORIAL DE CITAS -->
+  <div class="xcard">
+    <div class="xcard-hd">
+      <div class="d-flex align-items-center gap-2">
+        <div class="xcard-icon"><i class="bi bi-calendar3"></i></div>
+        <span class="xcard-title">Historial de citas grupales</span>
+      </div>
+      <span style="font-size:.75rem; color:var(--muted);">{{ citas.count }} cita(s)</span>
+    </div>
+    <div class="xcard-body">
+      {% if citas %}
+        {% for cita in citas %}
+          <div class="cita-row">
+            <div class="cita-fecha">
+              <div class="dia">{{ cita.fecha|date:"d" }}</div>
+              <div class="mes">{{ cita.fecha|date:"M Y" }}</div>
+            </div>
+            <div class="cita-info flex-grow-1">
+              <p class="titulo">{{ cita.titulo_cita }}</p>
+              <p class="sub">
+                {{ cita.hora|time:"H:i" }}
+                {% if cita.consultorio %} · {{ cita.consultorio }}{% endif %}
+                {% if cita.terapeuta %} · {{ cita.terapeuta }}{% endif %}
+              </p>
+            </div>
+            <span class="badge
+              {% if cita.estatus == 'si_asistio' %}bg-success
+              {% elif cita.estatus == 'no_asistio' %}bg-danger
+              {% elif cita.estatus == 'confirmada' %}bg-primary
+              {% elif cita.estatus == 'cancelo' %}bg-secondary
+              {% else %}bg-warning text-dark{% endif %}
+              " style="font-size:.72rem;">
+              {{ cita.get_estatus_display }}
+            </span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <i class="bi bi-calendar-x"></i>
+          <p style="font-size:.88rem;">Aún no hay citas vinculadas a este expediente.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

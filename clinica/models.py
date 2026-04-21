@@ -463,6 +463,13 @@ class Cita(models.Model):
         blank=True,
         related_name='citas_como_adicional',
     )
+    expediente_grupal = models.ForeignKey(
+        'ExpedienteGrupal',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='citas',
+    )
     fecha = models.DateField()
     hora = models.TimeField()
     tipo_paciente = models.CharField(
@@ -896,6 +903,133 @@ class ReporteSesion(models.Model):
         verbose_name = 'Reporte de Sesión'
         verbose_name_plural = 'Reportes de Sesión'
         ordering = ['-fecha', '-creado_en']
+
+
+class ExpedienteGrupal(models.Model):
+    TIPO_PAREJA = 'pareja'
+    TIPO_FAMILIA = 'familia'
+    TIPO_CHOICES = [
+        (TIPO_PAREJA, 'Pareja'),
+        (TIPO_FAMILIA, 'Familia'),
+    ]
+
+    expediente_no   = models.CharField(max_length=50, unique=True, blank=True, verbose_name='No. de Expediente')
+    tipo            = models.CharField(max_length=20, choices=TIPO_CHOICES, default=TIPO_PAREJA)
+    nombre          = models.CharField(max_length=300, blank=True, verbose_name='Nombre del Expediente')
+    pacientes       = models.ManyToManyField('Paciente', related_name='expedientes_grupales', blank=True)
+    division        = models.ForeignKey('Division', on_delete=models.SET_NULL, null=True, blank=True)
+    motivo_consulta = models.TextField(blank=True, verbose_name='Motivo de consulta')
+    fecha_apertura  = models.DateField(auto_now_add=True)
+    creado_en       = models.DateTimeField(auto_now_add=True)
+
+    def generar_nombre(self):
+        nombres = list(self.pacientes.values_list('nombre', flat=True))
+        if not nombres:
+            return ''
+        tipo_label = 'Pareja' if self.tipo == self.TIPO_PAREJA else 'Familia'
+        if len(nombres) == 1:
+            return f"{tipo_label} {nombres[0]}"
+        if len(nombres) == 2:
+            return f"{tipo_label} {nombres[0]} y {nombres[1]}"
+        return f"{tipo_label} {', '.join(nombres[:-1])} y {nombres[-1]}"
+
+    def _siguiente_numero(self):
+        from django.db.models import Max
+        año = date.today().year
+        prefijo = f'EG-{año}-'
+        ultimo = (
+            ExpedienteGrupal.objects
+            .filter(expediente_no__startswith=prefijo)
+            .aggregate(max_no=Max('expediente_no'))['max_no']
+        )
+        if ultimo:
+            try:
+                seq = int(ultimo.split('-')[-1]) + 1
+            except (ValueError, IndexError):
+                seq = 1
+        else:
+            seq = 1
+        return f'{prefijo}{seq:04d}'
+
+    def save(self, *args, **kwargs):
+        if not self.expediente_no:
+            self.expediente_no = self._siguiente_numero()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.nombre or self.expediente_no
+
+    class Meta:
+        verbose_name = 'Expediente Grupal'
+        verbose_name_plural = 'Expedientes Grupales'
+        ordering = ['-fecha_apertura']
+
+
+class AperturaExpedienteGrupal(models.Model):
+    ESTADO_CIVIL_CHOICES = [
+        ('', '---------'),
+        ('soltero', 'Soltero(a)'),
+        ('casado', 'Casado(a)'),
+        ('divorciado', 'Divorciado(a)'),
+        ('viudo', 'Viudo(a)'),
+        ('union_libre', 'Unión libre'),
+        ('otro', 'Otro'),
+    ]
+
+    expediente = models.OneToOneField(
+        'ExpedienteGrupal',
+        on_delete=models.CASCADE,
+        related_name='apertura',
+    )
+    division            = models.ForeignKey('Division', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='División')
+    motivo_consulta     = models.TextField(blank=True, verbose_name='Motivo de consulta')
+    calle               = models.CharField(max_length=200, blank=True, verbose_name='Calle')
+    num_exterior        = models.CharField(max_length=20, blank=True, verbose_name='Núm.')
+    colonia             = models.CharField(max_length=150, blank=True, verbose_name='Col.')
+    religion            = models.CharField(max_length=100, blank=True, verbose_name='Religión')
+    vive_con            = models.CharField(max_length=200, blank=True, verbose_name='Vive con')
+    tiene_hijos         = models.BooleanField(default=False, verbose_name='Tiene hijos')
+    num_hijos           = models.PositiveIntegerField(null=True, blank=True, verbose_name='No. de Hijos')
+    hijo_1              = models.CharField(max_length=200, blank=True, verbose_name='Hijo 1')
+    hijo_2              = models.CharField(max_length=200, blank=True, verbose_name='Hijo 2')
+    hijo_3              = models.CharField(max_length=200, blank=True, verbose_name='Hijo 3')
+    hijo_4              = models.CharField(max_length=200, blank=True, verbose_name='Hijo 4')
+    emergencia_contacto = models.CharField(max_length=200, blank=True, verbose_name='En caso de emergencia llamar a')
+    emergencia_telefono = models.CharField(max_length=30, blank=True, verbose_name='Teléfono de emergencia')
+    como_se_entero      = models.CharField(max_length=200, blank=True, verbose_name='¿Cómo se enteraron de nosotros?')
+    creado_en           = models.DateTimeField(auto_now_add=True)
+    actualizado_en      = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'Apertura grupal – {self.expediente}'
+
+    class Meta:
+        verbose_name = 'Apertura de Expediente Grupal'
+        verbose_name_plural = 'Aperturas de Expediente Grupal'
+
+
+class NotaExpedienteGrupal(models.Model):
+    expediente = models.ForeignKey(
+        'ExpedienteGrupal',
+        on_delete=models.CASCADE,
+        related_name='notas',
+    )
+    terapeuta = models.ForeignKey(
+        'Terapeuta',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='notas_expedientes_grupales',
+    )
+    contenido  = models.TextField(verbose_name='Nota')
+    creado_en  = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Nota de {self.terapeuta} — {self.expediente} ({self.creado_en:%d/%m/%Y})"
+
+    class Meta:
+        verbose_name = 'Nota de Expediente Grupal'
+        verbose_name_plural = 'Notas de Expediente Grupal'
+        ordering = ['-creado_en']
 
 
 class AperturaExpediente(models.Model):
