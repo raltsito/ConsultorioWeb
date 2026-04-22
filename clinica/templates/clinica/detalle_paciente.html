@@ -267,6 +267,46 @@
   .doc-row:hover { background:#FAFCFE; }
   .doc-row:last-child { border-bottom:none; }
   .doc-ico { width:36px; height:36px; border-radius:8px; background:var(--teal-lt); color:var(--teal-dk); display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+  .doc-upload {
+    padding:1.25rem 1.5rem;
+    border-bottom:1px solid var(--border);
+    background:#FAFCFE;
+  }
+  .doc-upload-grid {
+    display:grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.2fr) minmax(240px, 1.4fr) auto;
+    gap:.75rem;
+    align-items:end;
+  }
+  .doc-upload label {
+    display:block;
+    font-size:.62rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--teal-dk);
+    font-weight:700;
+    margin-bottom:.25rem;
+  }
+  .doc-upload .form-control,
+  .doc-upload .form-select {
+    border-radius:12px;
+    border-color:#D5E0E8;
+    font-size:.82rem;
+  }
+  .btn-upload-doc {
+    background:var(--teal);
+    color:#fff;
+    border:none;
+    border-radius:999px;
+    padding:.48rem 1rem;
+    font-size:.78rem;
+    font-weight:700;
+    display:inline-flex;
+    align-items:center;
+    gap:.35rem;
+    white-space:nowrap;
+  }
+  .btn-upload-doc:hover { background:var(--teal-dk); color:#fff; }
 
   /* ── Familiares ───────────────────────────────────────── */
   .familiar-chip {
@@ -305,6 +345,7 @@
     .page { padding:1rem 0 1.5rem; }
     .hero { padding:1.25rem; }
     .ap-grid { grid-template-columns:1fr; }
+    .doc-upload-grid { grid-template-columns:1fr; }
   }
   </style>
 </head>
@@ -750,6 +791,28 @@
         </div>
         {% if documentos_historial %}<span class="badge-num">{{ documentos_historial|length }}</span>{% endif %}
       </div>
+      {% if can_subir_documentos %}
+      <form method="POST" enctype="multipart/form-data" class="doc-upload">
+        {% csrf_token %}
+        <div class="doc-upload-grid">
+          <div>
+            <label for="{{ form_documento.tipo_documento.id_for_label }}">Tipo</label>
+            {{ form_documento.tipo_documento }}
+          </div>
+          <div>
+            <label for="{{ form_documento.descripcion.id_for_label }}">Descripcion</label>
+            {{ form_documento.descripcion }}
+          </div>
+          <div>
+            <label for="{{ form_documento.archivo.id_for_label }}">Archivo</label>
+            {{ form_documento.archivo }}
+          </div>
+          <button type="submit" class="btn-upload-doc">
+            <i class="bi bi-cloud-arrow-up"></i>Subir
+          </button>
+        </div>
+      </form>
+      {% endif %}
       {% if documentos_historial %}
         {% for doc in documentos_historial %}
         <div class="doc-row">

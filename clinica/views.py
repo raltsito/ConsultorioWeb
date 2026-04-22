@@ -666,6 +666,29 @@ def _generar_pdf_apertura(apertura):
 
 def detalle_paciente(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)
+
+    can_subir_documentos = request.user.is_authenticated and request.user.is_superuser
+    if request.method == 'POST':
+        if not can_subir_documentos:
+            messages.error(request, 'Solo un superusuario puede subir documentos al expediente.')
+            return redirect('detalle_paciente', paciente_id=paciente.id)
+
+        form_documento = DocumentoPacienteForm(request.POST, request.FILES)
+        if form_documento.is_valid():
+            archivo = request.FILES['archivo']
+            documento = form_documento.save(commit=False)
+            documento.paciente = paciente
+            documento.subido_por = request.user
+            documento.nombre_archivo = archivo.name
+            documento.tipo_mime = archivo.content_type
+            documento.contenido = archivo.read()
+            documento.save()
+            messages.success(request, 'Documento agregado correctamente.')
+            return redirect('detalle_paciente', paciente_id=paciente.id)
+        messages.error(request, 'Revisa el archivo y los datos del documento.')
+    else:
+        form_documento = DocumentoPacienteForm()
+
     historial = Cita.objects.filter(
         Q(paciente=paciente) | Q(pacientes_adicionales=paciente)
     ).distinct().order_by('-fecha', '-hora')
@@ -692,6 +715,8 @@ def detalle_paciente(request, paciente_id):
         'documentos_historial': documentos_historial,
         'reportes_historial': reportes_historial,
         'apertura': apertura,
+        'form_documento': form_documento,
+        'can_subir_documentos': can_subir_documentos,
     }
     return render(request, 'clinica/detalle_paciente.html', context)
 
