@@ -46,6 +46,7 @@ urlpatterns = [
     path('api/disponibilidad-terapeuta/', clinica_views.api_disponibilidad_terapeuta, name='api_disponibilidad'),
     path('api/consultorios-por-horario/', clinica_views.api_consultorios_por_horario, name='api_consultorios_por_horario'),
     path('api/penalizacion-paciente/', clinica_views.api_penalizacion_paciente, name='api_penalizacion_paciente'),
+    path('api/sin-reagendar/', clinica_views.api_sin_reagendar, name='api_sin_reagendar'),
     path('precios-servicios/', clinica_views.precios_servicios, name='precios_servicios'),
     path('citas/<int:cita_id>/checkout/', clinica_views.checkout_cita, name='checkout_cita'),
     path('bitacora/', clinica_views.bitacora_diaria, name='bitacora_diaria'),

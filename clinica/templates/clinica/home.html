@@ -42,18 +42,43 @@
     </div>
 
     <div class="col-md-4">
-        <div class="card border-0 shadow-sm h-100 bg-white">
-            <div class="card-body d-flex align-items-center justify-content-between">
-                <div>
-                    <h6 class="text-uppercase mb-1 text-muted">Por Atender</h6>
-                    <h1 class="fw-bold mb-0 display-5 text-secondary">{{ pendientes }}</h1>
+        <div class="card border-0 shadow-sm h-100 sr-card"
+             style="background:linear-gradient(135deg,#5C6BC0 0%,#3949AB 100%);color:white;cursor:pointer;overflow:hidden;position:relative;"
+             onclick="abrirModalSR()">
+
+            <div style="position:absolute;top:-28px;right:-18px;width:115px;height:115px;background:rgba(255,255,255,0.06);border-radius:50%;pointer-events:none;"></div>
+            <div style="position:absolute;bottom:-38px;left:-12px;width:95px;height:95px;background:rgba(255,255,255,0.04);border-radius:50%;pointer-events:none;"></div>
+
+            <div class="card-body d-flex flex-column pb-2">
+                <div class="d-flex align-items-start justify-content-between mb-2">
+                    <h6 class="text-uppercase mb-0 fw-bold" style="opacity:0.82;font-size:0.68rem;letter-spacing:0.1em;">Sin Reagendar</h6>
+                    <div class="d-flex align-items-center justify-content-center bg-white rounded-circle flex-shrink-0"
+                         style="width:44px;height:44px;box-shadow:0 2px 12px rgba(0,0,0,0.15);">
+                        <i class="bi bi-arrow-repeat fs-5" style="color:#3949AB;"></i>
+                    </div>
                 </div>
-                <div class="stat-icon bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                    <i class="bi bi-clock-history fs-2"></i>
+
+                <div class="text-center my-auto py-1">
+                    <div class="sr-count-display" id="srCountDisplay">
+                        <h1 class="fw-bold mb-0 display-5 sr-count-num" id="srCountNum">—</h1>
+                    </div>
+                    <p class="mb-0 mt-1" style="opacity:0.72;font-size:0.72rem;letter-spacing:0.02em;">pacientes sin seguimiento</p>
+                </div>
+
+                <div class="d-flex gap-2 justify-content-center flex-wrap mt-2 mb-1">
+                    <span class="sr-badge-si"><i class="bi bi-check-circle-fill me-1"></i><span id="srNumSi">—</span> asistieron</span>
+                    <span class="sr-badge-no"><i class="bi bi-x-circle-fill me-1"></i><span id="srNumNo">—</span> no</span>
                 </div>
             </div>
-            <div class="card-footer bg-transparent border-0 text-muted small">
-                *Citas pasadas sin cerrar
+
+            <div class="card-footer border-0 d-flex align-items-center justify-content-between"
+                 style="background:rgba(0,0,0,0.18);padding:8px 14px;">
+                <div class="d-flex gap-1" onclick="event.stopPropagation()">
+                    <button class="sr-pill active" data-periodo="dia" onclick="cambiarSRPeriodo('dia')">Ayer</button>
+                    <button class="sr-pill" data-periodo="semana" onclick="cambiarSRPeriodo('semana')">Semana</button>
+                    <button class="sr-pill" data-periodo="mes" onclick="cambiarSRPeriodo('mes')">Mes</button>
+                </div>
+                <span style="opacity:0.65;font-size:0.72rem;">Ver lista <i class="bi bi-arrow-right-short"></i></span>
             </div>
         </div>
     </div>
@@ -980,6 +1005,239 @@
     </div>
     {% endif %}
 
+
+<!-- ===== MODAL SIN REAGENDAR ===== -->
+<div class="modal fade" id="modalSinReagendar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:20px;overflow:hidden;">
+            <div class="modal-header border-0" style="background:linear-gradient(135deg,#5C6BC0 0%,#3949AB 100%);color:white;padding:1.25rem 1.5rem;">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0">
+                        <i class="bi bi-arrow-repeat me-2"></i>Pacientes sin reagendar
+                    </h5>
+                    <p class="mb-0 mt-1" style="font-size:0.78rem;opacity:0.8;" id="srModalSubtitle">—</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="px-3 pt-3 d-flex gap-2 border-bottom pb-3">
+                <button class="modal-sr-tab active" data-periodo="dia" onclick="cargarModalSR('dia')">
+                    <i class="bi bi-calendar-day me-1"></i>Ayer
+                    <span id="srBadgeDia" class="badge ms-1" style="background:rgba(92,107,192,0.12);color:#3949AB;font-size:0.62rem;">—</span>
+                </button>
+                <button class="modal-sr-tab" data-periodo="semana" onclick="cargarModalSR('semana')">
+                    <i class="bi bi-calendar-week me-1"></i>Semana
+                    <span id="srBadgeSemana" class="badge ms-1" style="background:rgba(92,107,192,0.12);color:#3949AB;font-size:0.62rem;">—</span>
+                </button>
+                <button class="modal-sr-tab" data-periodo="mes" onclick="cargarModalSR('mes')">
+                    <i class="bi bi-calendar-month me-1"></i>Mes
+                    <span id="srBadgeMes" class="badge ms-1" style="background:rgba(92,107,192,0.12);color:#3949AB;font-size:0.62rem;">—</span>
+                </button>
+            </div>
+
+            <div class="modal-body p-0" id="srModalBody">
+                <div class="text-center py-5 text-muted">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.sr-card {
+    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease;
+}
+.sr-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 22px 45px rgba(57,73,171,0.28) !important;
+}
+.sr-pill {
+    background: rgba(255,255,255,0.13);
+    color: rgba(255,255,255,0.9);
+    border: 1.5px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 3px 11px;
+    font-size: 0.67rem;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    outline: none;
+}
+.sr-pill:hover:not(.active) { background: rgba(255,255,255,0.24); }
+.sr-pill.active {
+    background: white;
+    color: #3949AB;
+    font-weight: 700;
+    border-color: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.14);
+}
+.sr-count-display {
+    transition: opacity 0.17s ease, transform 0.17s ease;
+}
+.sr-count-display.fading {
+    opacity: 0;
+    transform: translateY(-7px);
+}
+.sr-badge-si {
+    background: rgba(255,255,255,0.17);
+    color: rgba(255,255,255,0.95);
+    border-radius: 20px;
+    padding: 2px 9px;
+    font-size: 0.66rem;
+    border: 1px solid rgba(255,255,255,0.14);
+}
+.sr-badge-no {
+    background: rgba(255,255,255,0.09);
+    color: rgba(255,255,255,0.8);
+    border-radius: 20px;
+    padding: 2px 9px;
+    font-size: 0.66rem;
+    border: 1px solid rgba(255,255,255,0.09);
+}
+.modal-sr-tab {
+    border: 1.5px solid #e0e4f0;
+    border-radius: 20px;
+    color: #78909C;
+    background: white;
+    font-size: 0.78rem;
+    padding: 5px 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    font-family: 'Poppins', sans-serif;
+}
+.modal-sr-tab:hover:not(.active) { border-color: #5C6BC0; color: #5C6BC0; }
+.modal-sr-tab.active {
+    background: linear-gradient(135deg,#5C6BC0,#3949AB);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 3px 12px rgba(57,73,171,0.26);
+}
+@keyframes srItemIn {
+    from { opacity:0; transform:translateY(9px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+.sr-list-item {
+    animation: srItemIn 0.28s ease both;
+    transition: background 0.12s ease;
+}
+.sr-list-item:hover { background: #f4f6ff !important; }
+.sr-list-item:last-child { border-bottom: none !important; }
+.sr-avatar {
+    width:40px; height:40px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:0.78rem; color:white;
+    flex-shrink:0;
+    font-family:'Poppins',sans-serif;
+}
+</style>
+
+<script>
+(function() {
+    const SR = {
+        dia:    { total: {{ sin_reagendar.dia.total }},    si: {{ sin_reagendar.dia.si }},    no: {{ sin_reagendar.dia.no }} },
+        semana: { total: {{ sin_reagendar.semana.total }}, si: {{ sin_reagendar.semana.si }}, no: {{ sin_reagendar.semana.no }} },
+        mes:    { total: {{ sin_reagendar.mes.total }},    si: {{ sin_reagendar.mes.si }},    no: {{ sin_reagendar.mes.no }} },
+    };
+    let srPeriodo = 'dia';
+
+    function animarNum(el, target) {
+        const start = parseInt(el.textContent) || 0;
+        const dur = 480, t0 = performance.now();
+        (function step(now) {
+            const p = Math.min((now - t0) / dur, 1);
+            const e = 1 - Math.pow(1 - p, 3);
+            el.textContent = Math.round(start + (target - start) * e);
+            if (p < 1) requestAnimationFrame(step);
+        })(t0);
+    }
+
+    window.cambiarSRPeriodo = function(periodo) {
+        srPeriodo = periodo;
+        document.querySelectorAll('.sr-pill').forEach(b => b.classList.toggle('active', b.dataset.periodo === periodo));
+        const display = document.getElementById('srCountDisplay');
+        display.classList.add('fading');
+        setTimeout(function() {
+            const d = SR[periodo];
+            animarNum(document.getElementById('srCountNum'), d.total);
+            document.getElementById('srNumSi').textContent = d.si;
+            document.getElementById('srNumNo').textContent = d.no;
+            display.classList.remove('fading');
+        }, 175);
+    };
+
+    window.abrirModalSR = function() {
+        document.getElementById('srBadgeDia').textContent    = SR.dia.total;
+        document.getElementById('srBadgeSemana').textContent = SR.semana.total;
+        document.getElementById('srBadgeMes').textContent    = SR.mes.total;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalSinReagendar')).show();
+        cargarModalSR(srPeriodo);
+    };
+
+    window.cargarModalSR = function(periodo) {
+        srPeriodo = periodo;
+        document.querySelectorAll('.modal-sr-tab').forEach(t => t.classList.toggle('active', t.dataset.periodo === periodo));
+        const subs = { dia:'Pacientes de ayer sin reagendar', semana:'Pacientes de esta semana sin reagendar', mes:'Pacientes de este mes sin reagendar' };
+        document.getElementById('srModalSubtitle').textContent = subs[periodo];
+        const body = document.getElementById('srModalBody');
+        body.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>Cargando...</div>';
+        fetch('/api/sin-reagendar/?periodo=' + periodo)
+            .then(function(r) { return r.json(); })
+            .then(renderSRList)
+            .catch(function() {
+                body.innerHTML = '<div class="text-center py-4 text-danger small"><i class="bi bi-exclamation-circle me-2"></i>Error al cargar. Intenta de nuevo.</div>';
+            });
+    };
+
+    const HUES = [210,175,140,35,265,328,55,190];
+    function avatarColor(id) { return 'hsl(' + HUES[id % HUES.length] + ',55%,50%)'; }
+
+    function renderSRList(data) {
+        const body = document.getElementById('srModalBody');
+        if (data.total === 0) {
+            body.innerHTML = '<div class="text-center py-5"><div class="mb-3" style="font-size:3rem;">✅</div><p class="fw-semibold text-secondary mb-1">¡Todo al día!</p><p class="text-muted small">Todos los pacientes tienen seguimiento agendado.</p></div>';
+            return;
+        }
+        const summary = '<div class="px-3 py-2 d-flex gap-3" style="background:#f8fafc;border-bottom:1px solid #eef0f7;font-size:0.8rem;">' +
+            '<span><i class="bi bi-people me-1" style="color:#5C6BC0;"></i><strong>' + data.total + '</strong> total</span>' +
+            '<span><i class="bi bi-check-circle me-1 text-success"></i><strong>' + data.si + '</strong> asistieron</span>' +
+            '<span><i class="bi bi-x-circle me-1 text-danger"></i><strong>' + data.no + '</strong> no asistieron</span></div>';
+
+        const items = data.pacientes.map(function(p, i) {
+            const esSi = p.estatus === 'si_asistio';
+            const badgeStyle = esSi
+                ? 'background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;'
+                : 'background:#fce4ec;color:#c62828;border:1px solid #f8bbd0;';
+            const icon  = esSi ? 'check-circle-fill' : 'x-circle-fill';
+            const label = esSi ? 'Asistió' : 'No asistió';
+            const initials = p.nombre.trim().split(/\s+/).slice(0,2).map(function(n){ return n[0].toUpperCase(); }).join('');
+            const delay = Math.min(i * 35, 280);
+            const terapeutaHtml = p.terapeuta !== '—'
+                ? '<span class="ms-2"><i class="bi bi-person me-1"></i>' + p.terapeuta + '</span>'
+                : '';
+            return '<div class="sr-list-item d-flex align-items-center gap-3 px-3 py-3 border-bottom" style="animation-delay:' + delay + 'ms;">' +
+                '<div class="sr-avatar" style="background:' + avatarColor(p.paciente_id) + ';">' + initials + '</div>' +
+                '<div class="flex-grow-1 min-w-0">' +
+                    '<div class="fw-semibold text-truncate" style="font-size:0.88rem;color:#37474F;">' + p.nombre + '</div>' +
+                    '<div class="text-muted" style="font-size:0.73rem;"><i class="bi bi-calendar2 me-1"></i>' + p.fecha + terapeutaHtml + '</div>' +
+                '</div>' +
+                '<div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">' +
+                    '<span class="rounded-pill px-2 py-1" style="' + badgeStyle + 'font-size:0.62rem;font-weight:600;">' +
+                        '<i class="bi bi-' + icon + ' me-1"></i>' + label + '</span>' +
+                    '<a href="' + p.agendar_url + '" class="btn btn-sm" ' +
+                       'style="font-size:0.68rem;padding:2px 10px;border-radius:20px;background:linear-gradient(135deg,#5C6BC0,#3949AB);color:white;border:none;box-shadow:0 2px 8px rgba(57,73,171,0.22);">' +
+                        '<i class="bi bi-calendar-plus me-1"></i>Agendar</a>' +
+                '</div></div>';
+        }).join('');
+        body.innerHTML = summary + '<div>' + items + '</div>';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() { cambiarSRPeriodo('dia'); });
+})();
+</script>
 
 {% endblock %}
 

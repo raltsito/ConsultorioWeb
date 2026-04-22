@@ -264,39 +264,75 @@ def obtener_configuracion_estatus_cita(estatus):
         },
     )
 
+def _sin_reagendar_stats():
+    hoy = timezone.now().date()
+    inicio_mes = hoy.replace(day=1)
+    inicio_semana = hoy - timedelta(days=hoy.weekday())
+    ayer = hoy - timedelta(days=1)
+    fecha_inicio_query = min(inicio_mes, inicio_semana, ayer)
+
+    excluir = set(
+        Cita.objects.filter(
+            fecha__gte=hoy,
+            estatus__in=Cita.ESTATUS_ACTIVOS,
+            paciente__isnull=False,
+        ).values_list('paciente_id', flat=True)
+    ) | set(
+        SolicitudCita.objects.filter(
+            estado='pendiente',
+            paciente__isnull=False,
+        ).values_list('paciente_id', flat=True)
+    )
+
+    citas = list(
+        Cita.objects.filter(
+            fecha__range=(fecha_inicio_query, hoy),
+            estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
+            paciente__isnull=False,
+        ).values('paciente_id', 'estatus', 'fecha').order_by('paciente_id', '-fecha')
+    )
+
+    def calc(subset):
+        seen = {}
+        for c in subset:
+            pid = c['paciente_id']
+            if pid not in excluir and pid not in seen:
+                seen[pid] = c['estatus']
+        si = sum(1 for s in seen.values() if s == Cita.ESTATUS_SI_ASISTIO)
+        return {'total': len(seen), 'si': si, 'no': len(seen) - si}
+
+    return {
+        'dia': calc([c for c in citas if c['fecha'] == ayer]),
+        'semana': calc([c for c in citas if c['fecha'] >= inicio_semana]),
+        'mes': calc([c for c in citas if c['fecha'] >= inicio_mes]),
+    }
+
+
 @login_required
 def home(request):
     # --- EL SEMAFORO INTELIGENTE ---
     if hasattr(request.user, 'perfil_terapeuta'):
         return redirect('portal_terapeuta')
-    
+
     if hasattr(request.user, 'perfil_paciente'):
         return redirect('portal_paciente')
 
     if hasattr(request.user, 'perfil_empresa'):
         return redirect('portal_empresa')
 
-    from django.utils import timezone
-    from .models import SolicitudCita # <-- Importamos la sala de espera por si acaso
-    
     hoy = timezone.now().date()
     mes_actual = timezone.now().month
-    
-    # --- NUEVO: Traemos la bandeja de entrada de solicitudes pendientes ---
+
     solicitudes_pendientes = SolicitudCita.objects.filter(estado='pendiente').order_by('fecha_creacion')
-    
+
     # 1. ESTADÍSTICAS
     citas_hoy_count = Cita.objects.filter(fecha=hoy).count()
-    
-    # CORRECCIÓN 1: Usamos 'estatus' en lugar de 'estado'
-    pendientes_count = Cita.objects.filter(
-        fecha__lte=hoy,
-        estatus__in=Cita.ESTATUS_ACTIVOS,
-    ).count()
-    
+
     pacientes_nuevos = Paciente.objects.filter(
         fecha_registro__month=mes_actual
     ).count()
+
+    sin_reagendar = _sin_reagendar_stats()
 
     # 2. PRÓXIMAS CITAS
     # CORRECCIÓN 2: Usamos 'estatus' y ordenamos por 'hora' (no hora_inicio)
@@ -340,8 +376,8 @@ def home(request):
 
     return render(request, 'clinica/home.html', {
         'citas_hoy': citas_hoy_count,
-        'pendientes': pendientes_count,
         'pacientes_nuevos': pacientes_nuevos,
+        'sin_reagendar': sin_reagendar,
         'proximas_citas': proximas_citas,
         'citas_tablero': citas_tablero,
         'dia_tablero': dia_tablero,
@@ -354,6 +390,62 @@ def home(request):
         'manual_portal': manual_portal,
         'manual_form': manual_form,
     })
+
+
+@login_required
+def api_sin_reagendar(request):
+    periodo = request.GET.get('periodo', 'mes')
+    if periodo not in ('dia', 'semana', 'mes'):
+        periodo = 'mes'
+
+    hoy = timezone.now().date()
+
+    if periodo == 'dia':
+        fecha_inicio = fecha_fin = hoy - timedelta(days=1)
+    elif periodo == 'semana':
+        fecha_inicio = hoy - timedelta(days=hoy.weekday())
+        fecha_fin = hoy
+    else:
+        fecha_inicio = hoy.replace(day=1)
+        fecha_fin = hoy
+
+    excluir = set(
+        Cita.objects.filter(
+            fecha__gte=hoy,
+            estatus__in=Cita.ESTATUS_ACTIVOS,
+            paciente__isnull=False,
+        ).values_list('paciente_id', flat=True)
+    ) | set(
+        SolicitudCita.objects.filter(
+            estado='pendiente',
+            paciente__isnull=False,
+        ).values_list('paciente_id', flat=True)
+    )
+
+    citas = Cita.objects.filter(
+        fecha__range=(fecha_inicio, fecha_fin),
+        estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
+        paciente__isnull=False,
+    ).select_related('paciente', 'terapeuta').order_by('paciente_id', '-fecha')
+
+    seen = set()
+    result = []
+    for cita in citas:
+        pid = cita.paciente_id
+        if pid not in excluir and pid not in seen:
+            seen.add(pid)
+            result.append({
+                'paciente_id': cita.paciente.id,
+                'nombre': cita.paciente.nombre,
+                'estatus': cita.estatus,
+                'fecha': cita.fecha.strftime('%d %b %Y'),
+                'terapeuta': cita.terapeuta.nombre if cita.terapeuta else '—',
+                'agendar_url': reverse('agendar_cita', args=[cita.paciente.id]),
+            })
+
+    si = sum(1 for r in result if r['estatus'] == Cita.ESTATUS_SI_ASISTIO)
+    no = len(result) - si
+    return JsonResponse({'pacientes': result, 'total': len(result), 'si': si, 'no': no})
 
 
 @login_required
