@@ -26,6 +26,7 @@ from .models import (
     AperturaExpediente,
     AperturaExpedienteGrupal,
     BloqueoAgendaTerapeuta,
+    Consultorio,
     DocumentoPaciente,
     Empresa,
     ExpedienteGrupal,
@@ -1979,7 +1980,22 @@ def api_disponibilidad_terapeuta(request):
         if any(b.es_bloqueo_parcial() and b.aplica_en_fecha(fecha_obj) for b in bloqueos):
             mensaje = 'Hay horas bloqueadas por el terapeuta en esta fecha.'
 
-        return JsonResponse({'horarios': sorted(list(set(horarios_libres))), 'mensaje': mensaje})
+        sedes_del_dia = list(
+            horarios_laborales.exclude(sede__isnull=True)
+            .values_list('sede', flat=True)
+            .distinct()
+        )
+        consultorios_disponibles = list(
+            Consultorio.objects.filter(sede__in=sedes_del_dia)
+            .values('id', 'nombre')
+            .order_by('nombre')
+        ) if sedes_del_dia else []
+
+        return JsonResponse({
+            'horarios': sorted(list(set(horarios_libres))),
+            'mensaje': mensaje,
+            'consultorios': consultorios_disponibles,
+        })
 
     except Exception as e:
         print(f"Error en radar: {e}")

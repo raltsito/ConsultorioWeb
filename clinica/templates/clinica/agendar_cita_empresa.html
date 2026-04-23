@@ -302,7 +302,19 @@
         </div>
 
         <div class="form-card">
-          <form method="POST" action="{% url 'agendar_cita_empresa' %}" id="cita-form">
+          {% if form.errors %}
+          <div style="background:#fdf0ef;border:1.5px solid #e74c3c;border-radius:var(--radius-sm);padding:.7rem 1rem;margin-bottom:1rem;font-size:.78rem;color:#e74c3c;font-weight:500;">
+            Revisa los siguientes errores:
+            <ul style="margin:.3rem 0 0 1rem;padding:0;">
+              {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                  <li>{{ field }}: {{ error }}</li>
+                {% endfor %}
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+          <form method="POST" action="{% url 'agendar_cita_empresa' %}" id="cita-form" novalidate>
             {% csrf_token %}
 
             <!-- Campos ocultos de control -->
@@ -430,6 +442,10 @@
               <div>Elige terapeuta y fecha para ver slots disponibles.</div>
             </div>
           </div>
+          <div id="consultorios-panel" style="display:none;border-top:1px solid var(--border);padding-top:.9rem;margin-top:.4rem;">
+            <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.5rem;">Consultorios disponibles</div>
+            <div id="consultorios-chips-panel" style="display:flex;flex-wrap:wrap;gap:.4rem;"></div>
+          </div>
         </div>
 
         <div class="hint-card">
@@ -459,35 +475,41 @@
     });
 
     /* ── Referencias DOM ────────────────────────────────────── */
-    const pacienteSel       = document.getElementById('{{ form.paciente.id_for_label }}');
-    const terapeutaSel      = document.getElementById('{{ form.terapeuta.id_for_label }}');
-    const fechaInput        = document.getElementById('{{ form.fecha.id_for_label }}');
-    const horaInput         = document.getElementById('id_hora');
-    const slotsContainer    = document.getElementById('slots-container');
-    const submitBtn         = document.getElementById('submit-btn');
-    const horaDisplay       = document.getElementById('hora-selected-display');
-    const horaText          = document.getElementById('hora-selected-text');
-    const clearHoraBtn      = document.getElementById('clear-hora');
-    const sugeridosBox      = document.getElementById('sugeridos-box');
-    const sugeridosChips    = document.getElementById('sugeridos-chips');
-    const primeraVezToggle  = document.getElementById('primera-vez-toggle');
-    const primeraVezInput   = document.getElementById('primera-vez-input');
-    const terapeutaSection  = document.getElementById('terapeuta-section');
-    const horaManualSection = document.getElementById('hora-manual-section');
-    const horaManualInput   = document.getElementById('hora-manual-input');
-    const primeraVezBanner  = document.getElementById('primera-vez-banner');
-    const availCol          = document.getElementById('avail-col');
+    const pacienteSel         = document.getElementById('{{ form.paciente.id_for_label }}');
+    const terapeutaSel        = document.getElementById('{{ form.terapeuta.id_for_label }}');
+    const fechaInput          = document.getElementById('{{ form.fecha.id_for_label }}');
+    const horaInput           = document.getElementById('id_hora');
+    const consultorioSel      = document.getElementById('{{ form.consultorio.id_for_label }}');
+    const slotsContainer      = document.getElementById('slots-container');
+    const consultoriosPanel   = document.getElementById('consultorios-panel');
+    const consultoriosChipsP  = document.getElementById('consultorios-chips-panel');
+    const submitBtn           = document.getElementById('submit-btn');
+    const horaDisplay         = document.getElementById('hora-selected-display');
+    const horaText            = document.getElementById('hora-selected-text');
+    const clearHoraBtn        = document.getElementById('clear-hora');
+    const sugeridosBox        = document.getElementById('sugeridos-box');
+    const sugeridosChips      = document.getElementById('sugeridos-chips');
+    const primeraVezToggle    = document.getElementById('primera-vez-toggle');
+    const primeraVezInput     = document.getElementById('primera-vez-input');
+    const terapeutaSection    = document.getElementById('terapeuta-section');
+    const horaManualSection   = document.getElementById('hora-manual-section');
+    const horaManualInput     = document.getElementById('hora-manual-input');
+    const primeraVezBanner    = document.getElementById('primera-vez-banner');
+    const availCol            = document.getElementById('avail-col');
 
-    let selectedSlot  = null;
-    let esPrimeraVez  = false;
+    let selectedSlot       = null;
+    let esPrimeraVez       = false;
+    let allConsultorioOpts = [];  // copia de todas las opciones originales del select
 
     /* ── Helpers slots ──────────────────────────────────────── */
     function setHoraSeleccionada(hora) {
+      console.log('[Cita] Slot seleccionado:', hora, '| horaInput:', horaInput);
       selectedSlot = hora;
-      horaInput.value = hora;
+      if (horaInput) horaInput.value = hora;
       horaText.textContent = hora;
       horaDisplay.style.display = 'block';
       submitBtn.disabled = false;
+      console.log('[Cita] submitBtn.disabled =', submitBtn.disabled, '| horaInput.value =', horaInput ? horaInput.value : 'NULL');
       document.querySelectorAll('.slot').forEach(s => s.classList.toggle('selected', s.dataset.hora === hora));
     }
 
@@ -503,6 +525,54 @@
       slotsContainer.innerHTML = '<div class="slots-state"><div class="spinner"></div><div>Consultando disponibilidad…</div></div>';
     }
 
+    /* ── Consultorios: guardar/restaurar/filtrar ────────────── */
+    function guardarOpcionesConsultorio() {
+      if (consultorioSel && allConsultorioOpts.length === 0) {
+        allConsultorioOpts = Array.from(consultorioSel.options).map(o => ({ value: o.value, text: o.text }));
+      }
+    }
+
+    function filtrarConsultorios(consultorios) {
+      if (!consultorioSel || !consultorios || consultorios.length === 0) {
+        restaurarConsultorios();
+        return;
+      }
+      const idsPermitidos = new Set(consultorios.map(c => String(c.id)));
+      const valActual = consultorioSel.value;
+      consultorioSel.innerHTML = '';
+      allConsultorioOpts.forEach(opt => {
+        if (opt.value === '' || idsPermitidos.has(opt.value)) {
+          const o = document.createElement('option');
+          o.value = opt.value;
+          o.text  = opt.text;
+          consultorioSel.appendChild(o);
+        }
+      });
+      consultorioSel.value = idsPermitidos.has(valActual) ? valActual : '';
+
+      // Panel derecho: chips de consultorios
+      consultoriosChipsP.innerHTML = consultorios.map(c =>
+        `<span style="display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .65rem;background:var(--cyan-light);border:1.5px solid var(--cyan-mid);border-radius:999px;font-size:.73rem;font-weight:600;color:var(--cyan);">
+          ${c.nombre}
+        </span>`
+      ).join('');
+      consultoriosPanel.style.display = 'block';
+    }
+
+    function restaurarConsultorios() {
+      if (!consultorioSel || allConsultorioOpts.length === 0) return;
+      const valActual = consultorioSel.value;
+      consultorioSel.innerHTML = '';
+      allConsultorioOpts.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt.value;
+        o.text  = opt.text;
+        consultorioSel.appendChild(o);
+      });
+      consultorioSel.value = valActual;
+      consultoriosPanel.style.display = 'none';
+    }
+
     function fetchDisponibilidad() {
       if (esPrimeraVez) return;
       const terapeuta = terapeutaSel ? terapeutaSel.value : '';
@@ -510,6 +580,7 @@
       if (!terapeuta || !fecha) return;
 
       clearHoraSeleccionada();
+      restaurarConsultorios();
       showLoading();
 
       fetch(`/api/disponibilidad-terapeuta/?terapeuta=${terapeuta}&fecha=${fecha}`)
@@ -517,10 +588,12 @@
         .then(data => {
           if (data.bloqueado) {
             slotsContainer.innerHTML = `<div class="slots-bloqueado">${data.mensaje || 'El terapeuta no está disponible en esta fecha.'}</div>`;
+            restaurarConsultorios();
             return;
           }
           if (!data.horarios || data.horarios.length === 0) {
             slotsContainer.innerHTML = '<div class="slots-state"><div>Sin horarios disponibles para esta fecha.</div></div>';
+            restaurarConsultorios();
             return;
           }
           let html = '';
@@ -532,9 +605,12 @@
           });
           html += '</div>';
           slotsContainer.innerHTML = html;
+
+          filtrarConsultorios(data.consultorios || []);
         })
         .catch(() => {
           slotsContainer.innerHTML = '<div class="slots-state"><div>Error al consultar disponibilidad.</div></div>';
+          restaurarConsultorios();
         });
     }
 
@@ -588,6 +664,7 @@
       availCol.style.visibility = 'hidden';
       availCol.style.pointerEvents = 'none';
       horaInput.value = '';
+      if (terapeutaSel) terapeutaSel.disabled = true;
       checkPrimeraVezSubmit();
     }
 
@@ -601,6 +678,7 @@
       availCol.style.visibility = '';
       availCol.style.pointerEvents = '';
       horaInput.value = '';
+      if (terapeutaSel) terapeutaSel.disabled = false;
       submitBtn.disabled = true;
       if (pacienteSel.value) fetchTerapeutasSugeridos(pacienteSel.value);
     }
@@ -625,6 +703,7 @@
     pacienteSel.addEventListener('change', () => {
       fetchTerapeutasSugeridos(pacienteSel.value);
       clearHoraSeleccionada();
+      restaurarConsultorios();
       terapeutaSel.value = '';
       slotsContainer.innerHTML = '<div class="slots-state"><div>Elige terapeuta y fecha para ver slots disponibles.</div></div>';
       if (esPrimeraVez) checkPrimeraVezSubmit();
@@ -639,7 +718,9 @@
 
     /* ── Validación submit ──────────────────────────────────── */
     document.getElementById('cita-form').addEventListener('submit', function(e) {
-      if (!esPrimeraVez && !horaInput.value) {
+      const horaVal = horaInput ? horaInput.value : '';
+      console.log('[Cita] Submit | esPrimeraVez:', esPrimeraVez, '| hora:', horaVal, '| terapeuta:', terapeutaSel ? terapeutaSel.value : 'N/A');
+      if (!esPrimeraVez && !horaVal) {
         e.preventDefault();
         slotsContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
         slotsContainer.style.outline = '2px solid var(--orange)';
@@ -650,6 +731,7 @@
 
     /* ── Cargar al DOMContentLoaded ─────────────────────────── */
     window.addEventListener('DOMContentLoaded', () => {
+      guardarOpcionesConsultorio();
       const terapeutaVal = terapeutaSel ? terapeutaSel.value : '';
       const fechaVal     = fechaInput   ? fechaInput.value   : '';
       const horaVal      = horaInput    ? horaInput.value    : '';
