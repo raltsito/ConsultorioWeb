@@ -58,7 +58,12 @@
       "Bash(venv/Scripts/python.exe -c ' *)",
       "Bash(python3 -c \"import sys; data = sys.stdin.read\\(\\); print\\(data\\)\")",
       "Bash(venv/Scripts/python.exe manage.py makemigrations clinica --name reporte_incidente)",
-      "Bash(venv/Scripts/python.exe manage.py shell -c ' *)"
+      "Bash(venv/Scripts/python.exe manage.py shell -c ' *)",
+      "Bash(railway --version)",
+      "Bash(pg_dump --version)",
+      "Bash(railway variables *)",
+      "Bash(grep -v \"^COPY\\\\|^\\\\\\\\\\\\\\\\\\\\.\")",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
