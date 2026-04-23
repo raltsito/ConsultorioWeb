@@ -407,6 +407,31 @@
             <div class="sp-val">{{ paciente.identidad_contacto }}</div>
           </div>
           {% endif %}
+          {% if paciente.division %}
+          <div class="stat-pill" id="div-pill-show" style="cursor:pointer;" title="Cambiar división" onclick="toggleDivForm()">
+            <div class="sp-lbl"><i class="bi bi-diagram-2 me-1"></i>División</div>
+            <div class="sp-val">{{ paciente.division }} <i class="bi bi-pencil" style="font-size:.65rem;opacity:.7;"></i></div>
+          </div>
+          {% else %}
+          <button class="stat-pill" id="div-pill-show" style="background:rgba(255,255,255,.08);border:1.5px dashed rgba(255,255,255,.45);cursor:pointer;" onclick="toggleDivForm()" title="Asignar división">
+            <div class="sp-lbl" style="color:rgba(255,255,255,.6);">División</div>
+            <div class="sp-val" style="opacity:.7;font-size:.78rem;">+ Asignar</div>
+          </button>
+          {% endif %}
+        </div>
+        <!-- Mini-form división (oculto por defecto) -->
+        <div id="div-form-wrap" style="display:none;margin-top:.75rem;animation:fadeIn .2s both;">
+          <form method="post" action="{% url 'asignar_division_paciente' paciente.id %}" class="d-flex align-items-center gap-2">
+            {% csrf_token %}
+            <select name="division" class="form-select form-select-sm rounded-pill" style="max-width:220px;font-size:.82rem;">
+              <option value="">— Sin división —</option>
+              {% for d in divisiones %}
+              <option value="{{ d.id }}" {% if paciente.division.id == d.id %}selected{% endif %}>{{ d.nombre }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn-hero-primary" style="padding:.38rem .9rem;font-size:.78rem;">Guardar</button>
+            <button type="button" class="btn-hero-danger" onclick="toggleDivForm()" style="padding:.38rem .9rem;font-size:.78rem;">Cancelar</button>
+          </form>
         </div>
       </div>
       <div class="hero-actions flex-shrink-0">
@@ -887,6 +912,11 @@ const hash = window.location.hash.replace('#','');
 if (['citas','expediente','clinico','documentos'].includes(hash)) {
   const btn = document.querySelector('.tab-nav button[onclick*="' + hash + '"]');
   if (btn) switchTab(hash, btn);
+}
+
+function toggleDivForm() {
+  const wrap = document.getElementById('div-form-wrap');
+  wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
 }
 </script>
 </body>

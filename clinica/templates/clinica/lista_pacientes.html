@@ -73,20 +73,51 @@
 </a>
         </div>
 
-        <div class="card table-card p-3"><div class="row mb-4">
+        <div class="card table-card p-3"><div class="row mb-4 g-2 align-items-end">
     <div class="col-md-6">
-        <form method="get" class="d-flex">
+        <form method="get" id="form-busqueda" class="d-flex">
+            <input type="hidden" name="division" value="{{ request.GET.division }}">
             <input type="text" name="q" class="form-control me-2 rounded-pill" placeholder="Buscar por nombre o teléfono..." value="{{ request.GET.q }}">
             <button type="submit" class="btn btn-primary rounded-pill px-4">
                 <i class="bi bi-search"></i>
             </button>
-            {% if request.GET.q %}
-                <a href="{% url 'lista_pacientes' %}" class="btn btn-outline-secondary rounded-pill ms-2" title="Limpiar filtro">
+            {% if request.GET.q or request.GET.division %}
+                <a href="{% url 'lista_pacientes' %}" class="btn btn-outline-secondary rounded-pill ms-2" title="Limpiar filtros">
                     <i class="bi bi-x-lg"></i>
                 </a>
             {% endif %}
         </form>
     </div>
+    {% if divisiones %}
+    <div class="col-md-auto">
+        <div class="dropdown">
+            <button class="btn rounded-pill px-3 dropdown-toggle {% if division_activa %}btn-primary{% else %}btn-outline-secondary{% endif %}" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-funnel me-1"></i>
+                {% if division_activa %}
+                    {% for d in divisiones %}{% if d.id|stringformat:"s" == division_activa %}{{ d.nombre }}{% endif %}{% endfor %}
+                {% else %}
+                    Filtrar
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu shadow-sm border-0" style="border-radius:14px;min-width:180px;padding:.5rem;">
+                <li>
+                    <a class="dropdown-item rounded-3 {% if not division_activa %}active{% endif %}" href="{% url 'lista_pacientes' %}{% if request.GET.q %}?q={{ request.GET.q }}{% endif %}">
+                        <i class="bi bi-grid-3x3-gap me-2"></i>Todas las divisiones
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider my-1"></li>
+                {% for division in divisiones %}
+                <li>
+                    <a class="dropdown-item rounded-3 {% if division.id|stringformat:"s" == division_activa %}active{% endif %}"
+                       href="?division={{ division.id }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                        <i class="bi bi-diagram-2 me-2"></i>{{ division.nombre }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <div class="card shadow-sm border-0"> ...
@@ -97,6 +128,7 @@
                         <th>Servicio</th>
                         <th>Teléfono</th>
                         <th>Contacto</th>
+                        <th>División</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -114,6 +146,15 @@
                             {% endif %}
                         </td>
                         <td>
+                            {% if paciente.division %}
+                                <span style="background:#EAF2FF;color:#1F5FCA;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600;">
+                                    <i class="bi bi-diagram-2 me-1"></i>{{ paciente.division }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted" style="font-size:.8rem;">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             <a href="{% url 'detalle_paciente' paciente.id %}" class="btn btn-sm btn-light text-primary rounded-circle">
     <i class="bi bi-eye"></i>
 </a>
@@ -121,7 +162,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
+                        <td colspan="6" class="text-center py-5 text-muted">
                             <i class="bi bi-inbox fs-1 d-block mb-3"></i>
                             No hay pacientes registrados aún.
                         </td>
@@ -132,5 +173,6 @@
         </div>
     </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

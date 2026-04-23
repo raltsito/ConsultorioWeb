@@ -338,6 +338,11 @@ class Paciente(models.Model):
         related_name='pacientes'
     )
 
+    division = models.ForeignKey(
+        'Division', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='pacientes', verbose_name='División'
+    )
+
     # Relaciones
     pacientes_relacionados = models.ManyToManyField('self', blank=True, symmetrical=True)
     enlace_resultados = models.URLField(blank=True, null=True)

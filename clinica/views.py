@@ -27,6 +27,7 @@ from .models import (
     AperturaExpedienteGrupal,
     BloqueoAgendaTerapeuta,
     Consultorio,
+    Division,
     DocumentoPaciente,
     Empresa,
     ExpedienteGrupal,
@@ -481,23 +482,38 @@ def actualizar_manual_portal(request):
 
 @login_required
 def lista_pacientes(request):
-    query = request.GET.get('q') 
-    
-    if query:
-        # A. Limpiamos lo que escribió el usuario (Ej: "Ángel" -> "angel")
-        q_limpio = quitar_tildes(query)
+    query = request.GET.get('q')
+    division_id = request.GET.get('division')
 
-        # B. Buscamos:
-        # - En 'nombre_normalizado' usamos la versión limpia ('angel')
-        # - En 'telefono' usamos la versión original (números)
+    if query:
+        q_limpio = quitar_tildes(query)
         pacientes = Paciente.objects.filter(
-            Q(nombre_normalizado__icontains=q_limpio) | 
+            Q(nombre_normalizado__icontains=q_limpio) |
             Q(telefono__icontains=query)
         ).order_by('-fecha_registro')
     else:
         pacientes = Paciente.objects.all().order_by('-fecha_registro')
 
-    return render(request, 'clinica/lista_pacientes.html', {'pacientes': pacientes})
+    if division_id:
+        pacientes = pacientes.filter(division_id=division_id)
+
+    divisiones = Division.objects.all().order_by('nombre')
+    return render(request, 'clinica/lista_pacientes.html', {
+        'pacientes': pacientes,
+        'divisiones': divisiones,
+        'division_activa': division_id,
+    })
+
+
+@login_required
+def asignar_division_paciente(request, paciente_id):
+    paciente = get_object_or_404(Paciente, id=paciente_id)
+    if request.method == 'POST':
+        division_id = request.POST.get('division') or None
+        paciente.division_id = division_id
+        paciente.save()
+        messages.success(request, 'División actualizada correctamente.')
+    return redirect('detalle_paciente', paciente_id=paciente.id)
 @login_required
 def registrar_paciente(request):
     if request.method == 'POST':
@@ -718,6 +734,7 @@ def detalle_paciente(request, paciente_id):
         'apertura': apertura,
         'form_documento': form_documento,
         'can_subir_documentos': can_subir_documentos,
+        'divisiones': Division.objects.all().order_by('nombre'),
     }
     return render(request, 'clinica/detalle_paciente.html', context)
 
@@ -3415,6 +3432,8 @@ def registrar_paciente_empresa(request):
         if form.is_valid():
             paciente = form.save(commit=False)
             paciente.empresa = mi_empresa
+            if mi_empresa.division:
+                paciente.division = mi_empresa.division
             paciente.save()
             messages.success(request, f'Paciente {paciente.nombre} registrado correctamente.')
             return redirect('portal_empresa')
