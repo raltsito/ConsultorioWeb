@@ -21,80 +21,32 @@
       --muted:      #8892a4;
       --border:     #e8ecf2;
       --orange:     #ff7849;
+      --orange-light: #fff3ee;
       --shadow-sm:  0 2px 12px rgba(0,0,0,.06);
       --shadow-md:  0 6px 28px rgba(0,0,0,.09);
       --radius-lg:  20px;
       --radius-md:  14px;
       --radius-sm:  10px;
       --radius-xs:  7px;
-      --sidebar-w:  60px;
     }
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
     /* ── HEADER ─────────────────────────────────────────────── */
-    header {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-      padding: 0 1.8rem;
-      height: 64px;
-      background: var(--card);
-      border-bottom: 1px solid var(--border);
-      box-shadow: 0 2px 8px rgba(0,0,0,.04);
-      position: relative;
-      z-index: 10;
-      flex-shrink: 0;
-    }
-
+    header { display: flex; align-items: center; gap: 1.5rem; padding: 0 1.8rem; height: 64px; background: var(--card); border-bottom: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,.04); position: relative; z-index: 10; flex-shrink: 0; }
     .logo { display: flex; align-items: center; gap: .6rem; text-decoration: none; flex-shrink: 0; }
     .logo-icon { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .logo-text { display: flex; align-items: center; font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; font-weight: 800; color: #111; letter-spacing: .02em; line-height: 1; }
     .logo-heart { display: inline-flex; align-items: center; margin-left: .05rem; }
 
-    nav {
-      display: flex;
-      align-items: center;
-      gap: .3rem;
-      background: var(--bg);
-      border-radius: 999px;
-      padding: .3rem;
-      margin: 0 auto;
-    }
-
-    nav a {
-      text-decoration: none;
-      font-size: .82rem;
-      font-weight: 500;
-      color: var(--muted);
-      padding: .45rem 1.1rem;
-      border-radius: 999px;
-      transition: all .2s;
-    }
-
+    nav { display: flex; align-items: center; gap: .3rem; background: var(--bg); border-radius: 999px; padding: .3rem; margin: 0 auto; }
+    nav a { text-decoration: none; font-size: .82rem; font-weight: 500; color: var(--muted); padding: .45rem 1.1rem; border-radius: 999px; transition: all .2s; }
     nav a:hover { color: var(--text); background: rgba(255,255,255,.7); }
     nav a.active { background: var(--cyan); color: #fff; font-weight: 600; }
 
     .header-actions { display: flex; align-items: center; gap: .7rem; margin-left: auto; }
-
-    .icon-btn {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; transition: all .2s; font-size: .95rem; color: var(--muted); text-decoration: none;
-    }
-
+    .icon-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--bg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; font-size: .95rem; color: var(--muted); text-decoration: none; }
     .icon-btn:hover { background: var(--cyan-light); color: var(--cyan); }
-
     .user-pill { display: flex; align-items: center; gap: .55rem; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: .3rem .7rem .3rem .35rem; }
     .avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #b2f0ed, #00c9be); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; color: #fff; }
     .user-info .name { font-size: .8rem; font-weight: 600; color: var(--text); }
@@ -103,24 +55,6 @@
     /* ── LAYOUT ─────────────────────────────────────────────── */
     .app-body { display: flex; flex: 1; overflow: hidden; }
 
-    aside {
-      width: var(--sidebar-w);
-      background: var(--card);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 1.2rem 0;
-      gap: .5rem;
-      flex-shrink: 0;
-    }
-
-    .side-btn { width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); font-size: 1.1rem; transition: all .2s; text-decoration: none; }
-    .side-btn:hover { background: var(--cyan-light); color: var(--cyan); }
-    .side-btn.active { background: var(--cyan); color: #fff; box-shadow: 0 4px 14px rgba(0,201,190,.35); }
-    .side-spacer { flex: 1; }
-
-    /* ── MAIN ───────────────────────────────────────────────── */
     main {
       flex: 1;
       display: grid;
@@ -137,43 +71,14 @@
     }
 
     /* ── FORM COLUMN ────────────────────────────────────────── */
-    .form-col {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      animation: slideUp .5s ease both;
-    }
-
-    .page-title {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: var(--text);
-      letter-spacing: -.02em;
-    }
-
+    .form-col { display: flex; flex-direction: column; gap: 1rem; animation: slideUp .5s ease both; }
+    .page-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; font-weight: 800; color: var(--text); letter-spacing: -.02em; }
     .page-title span { color: var(--cyan); }
     .page-sub { font-size: .82rem; color: var(--muted); margin-top: .2rem; }
 
-    .form-card {
-      background: var(--card);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      padding: 1.6rem 1.8rem;
-    }
+    .form-card { background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 1.6rem 1.8rem; }
 
-    .form-section-title {
-      font-size: .72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: var(--cyan);
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: .5rem;
-    }
-
+    .form-section-title { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--cyan); margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem; }
     .form-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
@@ -183,26 +88,15 @@
     label { font-size: .76rem; font-weight: 600; color: var(--text); }
     label .req { color: var(--orange); margin-left: .15rem; }
 
-    input[type="text"], input[type="date"], input[type="hidden"], select {
-      width: 100%;
-      padding: .55rem .8rem;
-      font-family: 'Inter', sans-serif;
-      font-size: .82rem;
-      color: var(--text);
-      background: var(--bg);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      outline: none;
-      transition: border-color .2s, box-shadow .2s;
-      appearance: none;
-      -webkit-appearance: none;
+    input[type="text"], input[type="date"], input[type="time"], input[type="hidden"], select {
+      width: 100%; padding: .55rem .8rem; font-family: 'Inter', sans-serif; font-size: .82rem; color: var(--text);
+      background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      outline: none; transition: border-color .2s, box-shadow .2s; appearance: none; -webkit-appearance: none;
     }
 
     select {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238892a4'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right .8rem center;
-      padding-right: 2rem;
+      background-repeat: no-repeat; background-position: right .8rem center; padding-right: 2rem;
     }
 
     input:focus, select:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,201,190,.12); background: #fff; }
@@ -211,134 +105,137 @@
 
     .form-actions { display: flex; align-items: center; gap: .8rem; justify-content: flex-end; padding-top: .5rem; }
 
-    .btn-primary {
-      display: inline-flex; align-items: center; gap: .5rem;
-      padding: .6rem 1.4rem;
-      background: var(--cyan); color: #fff; border: none;
-      border-radius: var(--radius-sm);
-      font-family: 'Inter', sans-serif; font-size: .82rem; font-weight: 600;
-      cursor: pointer; transition: all .2s;
-      box-shadow: 0 4px 14px rgba(0,201,190,.3);
-    }
-
+    .btn-primary { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem 1.4rem; background: var(--cyan); color: #fff; border: none; border-radius: var(--radius-sm); font-family: 'Inter', sans-serif; font-size: .82rem; font-weight: 600; cursor: pointer; transition: all .2s; box-shadow: 0 4px 14px rgba(0,201,190,.3); }
     .btn-primary:hover { background: #00a89f; transform: translateY(-1px); }
     .btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-
-    .btn-ghost {
-      display: inline-flex; align-items: center; gap: .5rem;
-      padding: .6rem 1.2rem;
-      background: transparent; color: var(--muted);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-family: 'Inter', sans-serif; font-size: .82rem; font-weight: 500;
-      text-decoration: none; transition: all .2s;
-    }
-
+    .btn-ghost { display: inline-flex; align-items: center; gap: .5rem; padding: .6rem 1.2rem; background: transparent; color: var(--muted); border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'Inter', sans-serif; font-size: .82rem; font-weight: 500; text-decoration: none; transition: all .2s; }
     .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
 
-    /* ── AVAILABILITY PANEL ─────────────────────────────────── */
-    .avail-col {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      animation: slideUp .5s ease .1s both;
+    /* ── TERAPEUTAS SUGERIDOS ───────────────────────────────── */
+    .sugeridos-box {
+      display: none;
+      background: linear-gradient(135deg, rgba(0,201,190,.06), rgba(0,201,190,.02));
+      border: 1.5px solid var(--cyan-mid);
+      border-radius: var(--radius-md);
+      padding: .9rem 1rem;
+      margin-top: .6rem;
     }
 
-    .avail-card {
-      background: var(--card);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      padding: 1.4rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .avail-title {
-      font-size: .8rem;
+    .sugeridos-label {
+      font-size: .7rem;
       font-weight: 700;
-      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--cyan);
+      margin-bottom: .6rem;
+    }
+
+    .sugeridos-chips {
       display: flex;
+      flex-wrap: wrap;
+      gap: .4rem;
+    }
+
+    .sugerido-chip {
+      display: inline-flex;
       align-items: center;
-      gap: .5rem;
-    }
-
-    .avail-sub { font-size: .72rem; color: var(--muted); }
-
-    /* Slots grid */
-    .slots-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: .5rem;
-    }
-
-    .slot {
-      padding: .45rem .3rem;
-      border-radius: var(--radius-sm);
-      background: var(--bg);
-      border: 1.5px solid var(--border);
+      gap: .35rem;
+      padding: .3rem .7rem;
+      background: #fff;
+      border: 1.5px solid var(--cyan-mid);
+      border-radius: 999px;
       font-size: .76rem;
       font-weight: 600;
       color: var(--text);
-      text-align: center;
       cursor: pointer;
-      transition: all .2s;
+      transition: all .18s;
     }
 
-    .slot:hover { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-light); }
+    .sugerido-chip:hover { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-light); }
+    .sugerido-chip.selected { background: var(--cyan); border-color: var(--cyan); color: #fff; }
 
-    .slot.selected {
-      background: var(--cyan);
-      border-color: var(--cyan);
-      color: #fff;
-      box-shadow: 0 3px 10px rgba(0,201,190,.3);
+    .sugerido-chip .chip-avatar {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--cyan-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .62rem;
+      font-weight: 800;
+      color: var(--cyan);
+      flex-shrink: 0;
     }
 
-    /* Loading / empty states */
-    .slots-state {
-      text-align: center;
-      padding: 1.2rem 0;
-      font-size: .78rem;
-      color: var(--muted);
-      display: flex;
-      flex-direction: column;
+    .sugerido-chip.selected .chip-avatar { background: rgba(255,255,255,.25); color: #fff; }
+
+    .sugeridos-hint { font-size: .67rem; color: var(--muted); margin-top: .5rem; }
+
+    /* ── PRIMERA VEZ TOGGLE ─────────────────────────────────── */
+    .primera-vez-toggle {
+      display: inline-flex;
       align-items: center;
       gap: .5rem;
+      padding: .4rem .9rem;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      background: var(--bg);
+      font-size: .76rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .2s;
+      user-select: none;
+      margin-top: .8rem;
     }
 
-    .slots-state .state-icon { font-size: 1.6rem; }
+    .primera-vez-toggle:hover { border-color: var(--orange); color: var(--orange); }
 
-    .slots-bloqueado {
-      background: #fff5f0;
-      border: 1px solid #ffd0b8;
+    .primera-vez-toggle.active {
+      background: var(--orange-light);
+      border-color: var(--orange);
+      color: var(--orange);
+    }
+
+    .primera-vez-toggle .toggle-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background .2s;
+      flex-shrink: 0;
+    }
+
+    .primera-vez-toggle.active .toggle-dot { background: var(--orange); }
+
+    .primera-vez-banner {
+      display: none;
+      background: var(--orange-light);
+      border: 1.5px solid #ffd0b8;
       border-radius: var(--radius-sm);
-      padding: .7rem;
-      font-size: .75rem;
+      padding: .6rem .9rem;
+      font-size: .76rem;
       color: var(--orange);
       font-weight: 500;
+      margin-top: .5rem;
     }
 
-    /* Loading spinner */
+    /* ── AVAILABILITY PANEL ─────────────────────────────────── */
+    .avail-col { display: flex; flex-direction: column; gap: 1rem; animation: slideUp .5s ease .1s both; }
+
+    .avail-card { background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 1.4rem; display: flex; flex-direction: column; gap: 1rem; }
+    .avail-title { font-size: .8rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: .5rem; }
+    .avail-sub { font-size: .72rem; color: var(--muted); }
+
+    .slots-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+    .slot { padding: .45rem .3rem; border-radius: var(--radius-sm); background: var(--bg); border: 1.5px solid var(--border); font-size: .76rem; font-weight: 600; color: var(--text); text-align: center; cursor: pointer; transition: all .2s; }
+    .slot:hover { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-light); }
+    .slot.selected { background: var(--cyan); border-color: var(--cyan); color: #fff; box-shadow: 0 3px 10px rgba(0,201,190,.3); }
+
+    .slots-state { text-align: center; padding: 1.2rem 0; font-size: .78rem; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+    .slots-bloqueado { background: #fff5f0; border: 1px solid #ffd0b8; border-radius: var(--radius-sm); padding: .7rem; font-size: .75rem; color: var(--orange); font-weight: 500; }
+
     @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner {
-      width: 20px; height: 20px;
-      border: 2.5px solid var(--border);
-      border-top-color: var(--cyan);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-    }
+    .spinner { width: 20px; height: 20px; border: 2.5px solid var(--border); border-top-color: var(--cyan); border-radius: 50%; animation: spin .7s linear infinite; }
 
-    /* Hint card */
-    .hint-card {
-      background: linear-gradient(135deg, rgba(0,201,190,.07), rgba(0,201,190,.02));
-      border: 1px solid var(--cyan-mid);
-      border-radius: var(--radius-md);
-      padding: 1rem;
-      font-size: .76rem;
-      color: var(--text);
-      line-height: 1.5;
-    }
-
+    .hint-card { background: linear-gradient(135deg, rgba(0,201,190,.07), rgba(0,201,190,.02)); border: 1px solid var(--cyan-mid); border-radius: var(--radius-md); padding: 1rem; font-size: .76rem; color: var(--text); line-height: 1.5; }
     .hint-card strong { color: var(--cyan); }
 
     /* ── TOAST ──────────────────────────────────────────────── */
@@ -375,6 +272,7 @@
       <a href="{% url 'portal_empresa' %}">Dashboard</a>
       <a href="{% url 'registrar_paciente_empresa' %}">Registrar Colaborador</a>
       <a href="{% url 'agendar_cita_empresa' %}" class="active">Agendar Cita</a>
+      <a href="{% url 'citas_en_proceso_empresa' %}">Citas en proceso</a>
     </nav>
 
     <div class="header-actions">
@@ -387,75 +285,102 @@
       </div>
       <form method="post" action="{% url 'logout' %}" style="display:inline;">
         {% csrf_token %}
-        <button type="submit" class="icon-btn" title="Cerrar sesión">⎋</button>
+        <button type="submit" class="icon-btn" title="Cerrar sesión">×</button>
       </form>
     </div>
   </header>
 
   <!-- BODY -->
   <div class="app-body">
-
     <main>
 
       <!-- ── COL IZQ: FORMULARIO ──────── -->
       <div class="form-col">
         <div>
           <h1 class="page-title">Agendar <span>cita</span></h1>
-          <p class="page-sub">La cita se crea directamente respetando disponibilidad y bloqueos del terapeuta.</p>
+          <p class="page-sub">Selecciona el colaborador para ver los terapeutas que lo han atendido.</p>
         </div>
 
         <div class="form-card">
           <form method="POST" action="{% url 'agendar_cita_empresa' %}" id="cita-form">
             {% csrf_token %}
 
-            <!-- Campo oculto para hora (se llena con JS al seleccionar slot) -->
+            <!-- Campos ocultos de control -->
             {{ form.hora }}
+            <input type="hidden" name="primera_vez" id="primera-vez-input" value="0">
 
-            <div class="form-section-title">Colaborador y terapeuta</div>
-            <div class="form-grid">
+            <!-- ── COLABORADOR ─────────────────── -->
+            <div class="form-section-title">Colaborador</div>
+            <div class="form-group">
+              <label for="{{ form.paciente.id_for_label }}">Colaborador <span class="req">*</span></label>
+              {{ form.paciente }}
+              {% if form.paciente.errors %}<span class="field-error">{{ form.paciente.errors|join:", " }}</span>{% endif %}
+            </div>
 
-              <div class="form-group full">
-                <label for="{{ form.paciente.id_for_label }}">Colaborador <span class="req">*</span></label>
-                {{ form.paciente }}
-                {% if form.paciente.errors %}<span class="field-error">{{ form.paciente.errors|join:", " }}</span>{% endif %}
+            <!-- Terapeutas sugeridos (aparece via AJAX) -->
+            <div class="sugeridos-box" id="sugeridos-box">
+              <div class="sugeridos-label">Terapeutas que han atendido a este colaborador</div>
+              <div class="sugeridos-chips" id="sugeridos-chips"></div>
+              <div class="sugeridos-hint">Haz clic para seleccionarlo automáticamente</div>
+            </div>
+
+            <!-- Toggle primera vez -->
+            <div>
+              <div class="primera-vez-toggle" id="primera-vez-toggle">
+                <span class="toggle-dot"></span>
+                Paciente primera vez (sin terapeuta asignado)
               </div>
+              <div class="primera-vez-banner" id="primera-vez-banner">
+                La solicitud se enviará sin terapeuta. Recepción asignará uno disponible según la fecha indicada.
+              </div>
+            </div>
 
-              <div class="form-group full">
+            <!-- ── TERAPEUTA (oculto en primera vez) ─ -->
+            <div id="terapeuta-section" style="margin-top:1.2rem;">
+              <div class="form-section-title">Terapeuta</div>
+              <div class="form-group">
                 <label for="{{ form.terapeuta.id_for_label }}">Terapeuta <span class="req">*</span></label>
                 {{ form.terapeuta }}
                 {% if form.terapeuta.errors %}<span class="field-error">{{ form.terapeuta.errors|join:", " }}</span>{% endif %}
               </div>
-
             </div>
 
+            <!-- ── FECHA Y HORA ────────────────────── -->
             <div class="form-section-title" style="margin-top:1.2rem;">Fecha y horario</div>
-            <div class="form-grid">
-
-              <div class="form-group full">
-                <label for="{{ form.fecha.id_for_label }}">Fecha <span class="req">*</span></label>
-                {{ form.fecha }}
-                {% if form.fecha.errors %}<span class="field-error">{{ form.fecha.errors|join:", " }}</span>{% endif %}
-              </div>
-
+            <div class="form-group">
+              <label for="{{ form.fecha.id_for_label }}">Fecha <span class="req">*</span></label>
+              {{ form.fecha }}
+              {% if form.fecha.errors %}<span class="field-error">{{ form.fecha.errors|join:", " }}</span>{% endif %}
             </div>
 
-            <!-- Slot selected display -->
+            <!-- Horario seleccionado desde slots (modo normal) -->
             <div id="hora-selected-display" style="display:none;margin-top:.7rem;">
               <div style="font-size:.72rem;font-weight:600;color:var(--text);margin-bottom:.3rem;">Horario seleccionado</div>
               <div style="display:inline-flex;align-items:center;gap:.5rem;background:var(--cyan-light);border:1.5px solid var(--cyan);border-radius:var(--radius-sm);padding:.4rem .8rem;">
                 <span id="hora-selected-text" style="font-size:.88rem;font-weight:700;color:var(--cyan);"></span>
-                <button type="button" id="clear-hora" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:0 0 0 .4rem;" title="Cambiar hora">x</button>
+                <button type="button" id="clear-hora" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:0 0 0 .4rem;">×</button>
+              </div>
+            </div>
+            {% if form.hora.errors %}
+            <span class="field-error" style="display:block;margin-top:.4rem;">Selecciona un horario disponible en el panel derecho.</span>
+            {% endif %}
+
+            <!-- Hora manual (modo primera vez) -->
+            <div id="hora-manual-section" style="display:none;margin-top:.7rem;">
+              <div class="form-group">
+                <label for="hora-manual-input">Hora preferida <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
+                <input type="time" id="hora-manual-input" placeholder="HH:MM">
               </div>
             </div>
 
-            {% if form.hora.errors %}
-            <span class="field-error" style="display:block;margin-top:.4rem;">Selecciona un horario disponible del panel de la derecha.</span>
-            {% endif %}
-
-            <div class="form-section-title" style="margin-top:1.2rem;">Detalles adicionales <span style="font-size:.65rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(opcional)</span></div>
+            <!-- ── DETALLES ADICIONALES ─────────── -->
+            <div class="form-section-title" style="margin-top:1.2rem;">
+              Detalles adicionales
+              <span style="font-size:.65rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(opcional)</span>
+            </div>
             <div class="form-grid">
 
-              <div class="form-group">
+              <div class="form-group" id="tipo-paciente-group">
                 <label for="{{ form.tipo_paciente.id_for_label }}">Tipo de paciente</label>
                 {{ form.tipo_paciente }}
               </div>
@@ -494,17 +419,15 @@
       </div>
 
       <!-- ── COL DER: DISPONIBILIDAD ─── -->
-      <div class="avail-col">
-
+      <div class="avail-col" id="avail-col">
         <div class="avail-card">
           <div>
             <div class="avail-title">Horarios disponibles</div>
-            <div class="avail-sub">Selecciona terapeuta y fecha para ver disponibilidad en tiempo real.</div>
+            <div class="avail-sub" id="avail-sub">Selecciona terapeuta y fecha para ver disponibilidad.</div>
           </div>
-
           <div id="slots-container">
             <div class="slots-state">
-                <div>Elige terapeuta y fecha para ver slots disponibles.</div>
+              <div>Elige terapeuta y fecha para ver slots disponibles.</div>
             </div>
           </div>
         </div>
@@ -514,7 +437,6 @@
           Al seleccionar terapeuta y fecha, los horarios disponibles aparecen automáticamente.
           Haz clic en un slot y envía la solicitud — recepción la revisará y confirmará la cita a la brevedad.
         </div>
-
       </div>
 
     </main>
@@ -537,35 +459,43 @@
     });
 
     /* ── Referencias DOM ────────────────────────────────────── */
-    const terapeutaSel   = document.getElementById('{{ form.terapeuta.id_for_label }}');
-    const fechaInput     = document.getElementById('{{ form.fecha.id_for_label }}');
-    const horaInput      = document.getElementById('id_hora');
-    const slotsContainer = document.getElementById('slots-container');
-    const submitBtn      = document.getElementById('submit-btn');
-    const horaDisplay    = document.getElementById('hora-selected-display');
-    const horaText       = document.getElementById('hora-selected-text');
-    const clearHora      = document.getElementById('clear-hora');
+    const pacienteSel       = document.getElementById('{{ form.paciente.id_for_label }}');
+    const terapeutaSel      = document.getElementById('{{ form.terapeuta.id_for_label }}');
+    const fechaInput        = document.getElementById('{{ form.fecha.id_for_label }}');
+    const horaInput         = document.getElementById('id_hora');
+    const slotsContainer    = document.getElementById('slots-container');
+    const submitBtn         = document.getElementById('submit-btn');
+    const horaDisplay       = document.getElementById('hora-selected-display');
+    const horaText          = document.getElementById('hora-selected-text');
+    const clearHoraBtn      = document.getElementById('clear-hora');
+    const sugeridosBox      = document.getElementById('sugeridos-box');
+    const sugeridosChips    = document.getElementById('sugeridos-chips');
+    const primeraVezToggle  = document.getElementById('primera-vez-toggle');
+    const primeraVezInput   = document.getElementById('primera-vez-input');
+    const terapeutaSection  = document.getElementById('terapeuta-section');
+    const horaManualSection = document.getElementById('hora-manual-section');
+    const horaManualInput   = document.getElementById('hora-manual-input');
+    const primeraVezBanner  = document.getElementById('primera-vez-banner');
+    const availCol          = document.getElementById('avail-col');
 
-    let selectedSlot = null;
+    let selectedSlot  = null;
+    let esPrimeraVez  = false;
 
-    /* ── Helpers ────────────────────────────────────────────── */
+    /* ── Helpers slots ──────────────────────────────────────── */
     function setHoraSeleccionada(hora) {
       selectedSlot = hora;
       horaInput.value = hora;
       horaText.textContent = hora;
       horaDisplay.style.display = 'block';
       submitBtn.disabled = false;
-      // Resaltar slot activo en grilla
-      document.querySelectorAll('.slot').forEach(s => {
-        s.classList.toggle('selected', s.dataset.hora === hora);
-      });
+      document.querySelectorAll('.slot').forEach(s => s.classList.toggle('selected', s.dataset.hora === hora));
     }
 
     function clearHoraSeleccionada() {
       selectedSlot = null;
       horaInput.value = '';
       horaDisplay.style.display = 'none';
-      submitBtn.disabled = true;
+      if (!esPrimeraVez) submitBtn.disabled = true;
       document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
     }
 
@@ -574,8 +504,9 @@
     }
 
     function fetchDisponibilidad() {
+      if (esPrimeraVez) return;
       const terapeuta = terapeutaSel ? terapeutaSel.value : '';
-      const fecha     = fechaInput ? fechaInput.value : '';
+      const fecha     = fechaInput   ? fechaInput.value   : '';
       if (!terapeuta || !fecha) return;
 
       clearHoraSeleccionada();
@@ -592,13 +523,12 @@
             slotsContainer.innerHTML = '<div class="slots-state"><div>Sin horarios disponibles para esta fecha.</div></div>';
             return;
           }
-
           let html = '';
           if (data.mensaje) html += `<div style="font-size:.7rem;color:var(--orange);margin-bottom:.6rem;">${data.mensaje}</div>`;
           html += '<div class="slots-grid">';
           data.horarios.forEach(h => {
-            const isSelected = h === selectedSlot ? ' selected' : '';
-            html += `<div class="slot${isSelected}" data-hora="${h}" onclick="setHoraSeleccionada('${h}')">${h}</div>`;
+            const sel = h === selectedSlot ? ' selected' : '';
+            html += `<div class="slot${sel}" data-hora="${h}" onclick="setHoraSeleccionada('${h}')">${h}</div>`;
           });
           html += '</div>';
           slotsContainer.innerHTML = html;
@@ -608,14 +538,108 @@
         });
     }
 
-    /* ── Listeners ──────────────────────────────────────────── */
-    if (terapeutaSel) terapeutaSel.addEventListener('change', fetchDisponibilidad);
-    if (fechaInput)   fechaInput.addEventListener('change', fetchDisponibilidad);
-    if (clearHora)    clearHora.addEventListener('click', clearHoraSeleccionada);
+    /* ── Terapeutas sugeridos ───────────────────────────────── */
+    function renderSugeridos(terapeutas) {
+      sugeridosChips.innerHTML = '';
+      terapeutas.forEach(t => {
+        const inicial = t.nombre.charAt(0).toUpperCase();
+        const chip = document.createElement('div');
+        chip.className = 'sugerido-chip';
+        chip.dataset.id = t.id;
+        chip.innerHTML = `<span class="chip-avatar">${inicial}</span>${t.nombre}`;
+        chip.addEventListener('click', () => seleccionarSugerido(t.id, chip));
+        sugeridosChips.appendChild(chip);
+      });
+    }
 
-    /* ── Validación antes de enviar ─────────────────────────── */
+    function seleccionarSugerido(id, chip) {
+      terapeutaSel.value = id;
+      document.querySelectorAll('.sugerido-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      fetchDisponibilidad();
+    }
+
+    function fetchTerapeutasSugeridos(pacienteId) {
+      if (!pacienteId) { sugeridosBox.style.display = 'none'; return; }
+
+      fetch(`{% url 'terapeutas_paciente_empresa' %}?paciente_id=${pacienteId}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.terapeutas && data.terapeutas.length > 0) {
+            renderSugeridos(data.terapeutas);
+            sugeridosBox.style.display = 'block';
+          } else {
+            sugeridosBox.style.display = 'none';
+          }
+        })
+        .catch(() => { sugeridosBox.style.display = 'none'; });
+    }
+
+    /* ── Primera vez toggle ─────────────────────────────────── */
+    function activarPrimeraVez() {
+      esPrimeraVez = true;
+      primeraVezInput.value = '1';
+      primeraVezToggle.classList.add('active');
+      terapeutaSection.style.display = 'none';
+      sugeridosBox.style.display = 'none';
+      horaManualSection.style.display = 'block';
+      horaDisplay.style.display = 'none';
+      primeraVezBanner.style.display = 'block';
+      availCol.style.visibility = 'hidden';
+      availCol.style.pointerEvents = 'none';
+      horaInput.value = '';
+      checkPrimeraVezSubmit();
+    }
+
+    function desactivarPrimeraVez() {
+      esPrimeraVez = false;
+      primeraVezInput.value = '0';
+      primeraVezToggle.classList.remove('active');
+      terapeutaSection.style.display = 'block';
+      horaManualSection.style.display = 'none';
+      primeraVezBanner.style.display = 'none';
+      availCol.style.visibility = '';
+      availCol.style.pointerEvents = '';
+      horaInput.value = '';
+      submitBtn.disabled = true;
+      if (pacienteSel.value) fetchTerapeutasSugeridos(pacienteSel.value);
+    }
+
+    function checkPrimeraVezSubmit() {
+      const pacienteOk = !!pacienteSel.value;
+      const fechaOk    = !!fechaInput.value;
+      submitBtn.disabled = !(pacienteOk && fechaOk);
+    }
+
+    primeraVezToggle.addEventListener('click', () => {
+      esPrimeraVez ? desactivarPrimeraVez() : activarPrimeraVez();
+    });
+
+    /* ── Hora manual → campo oculto ─────────────────────────── */
+    horaManualInput.addEventListener('change', () => {
+      horaInput.value = horaManualInput.value;
+      checkPrimeraVezSubmit();
+    });
+
+    /* ── Listeners principales ──────────────────────────────── */
+    pacienteSel.addEventListener('change', () => {
+      fetchTerapeutasSugeridos(pacienteSel.value);
+      clearHoraSeleccionada();
+      terapeutaSel.value = '';
+      slotsContainer.innerHTML = '<div class="slots-state"><div>Elige terapeuta y fecha para ver slots disponibles.</div></div>';
+      if (esPrimeraVez) checkPrimeraVezSubmit();
+    });
+
+    if (terapeutaSel) terapeutaSel.addEventListener('change', fetchDisponibilidad);
+    if (fechaInput)   fechaInput.addEventListener('change', () => {
+      fetchDisponibilidad();
+      if (esPrimeraVez) checkPrimeraVezSubmit();
+    });
+    if (clearHoraBtn) clearHoraBtn.addEventListener('click', clearHoraSeleccionada);
+
+    /* ── Validación submit ──────────────────────────────────── */
     document.getElementById('cita-form').addEventListener('submit', function(e) {
-      if (!horaInput.value) {
+      if (!esPrimeraVez && !horaInput.value) {
         e.preventDefault();
         slotsContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
         slotsContainer.style.outline = '2px solid var(--orange)';
@@ -624,31 +648,23 @@
       }
     });
 
-    /* ── Si hay valores pre-llenados (error de form), cargar slots ── */
+    /* ── Cargar al DOMContentLoaded ─────────────────────────── */
     window.addEventListener('DOMContentLoaded', () => {
       const terapeutaVal = terapeutaSel ? terapeutaSel.value : '';
-      const fechaVal     = fechaInput ? fechaInput.value : '';
-      const horaVal      = horaInput ? horaInput.value : '';
+      const fechaVal     = fechaInput   ? fechaInput.value   : '';
+      const horaVal      = horaInput    ? horaInput.value    : '';
+
+      if (pacienteSel.value) fetchTerapeutasSugeridos(pacienteSel.value);
 
       if (terapeutaVal && fechaVal) {
-        // Cargar disponibilidad y luego marcar la hora si ya estaba seleccionada
-        clearHoraSeleccionada();
         showLoading();
         fetch(`/api/disponibilidad-terapeuta/?terapeuta=${terapeutaVal}&fecha=${fechaVal}`)
           .then(r => r.json())
           .then(data => {
-            if (data.bloqueado) {
-              slotsContainer.innerHTML = `<div class="slots-bloqueado">${data.mensaje || 'El terapeuta no está disponible en esta fecha.'}</div>`;
-              return;
-            }
-            if (!data.horarios || data.horarios.length === 0) {
-              slotsContainer.innerHTML = '<div class="slots-state"><div>Sin horarios disponibles.</div></div>';
-              return;
-            }
+            if (data.bloqueado) { slotsContainer.innerHTML = `<div class="slots-bloqueado">${data.mensaje || ''}</div>`; return; }
+            if (!data.horarios || data.horarios.length === 0) { slotsContainer.innerHTML = '<div class="slots-state"><div>Sin horarios disponibles.</div></div>'; return; }
             let html = '<div class="slots-grid">';
-            data.horarios.forEach(h => {
-              html += `<div class="slot" data-hora="${h}" onclick="setHoraSeleccionada('${h}')">${h}</div>`;
-            });
+            data.horarios.forEach(h => { html += `<div class="slot" data-hora="${h}" onclick="setHoraSeleccionada('${h}')">${h}</div>`; });
             html += '</div>';
             slotsContainer.innerHTML = html;
             if (horaVal) setHoraSeleccionada(horaVal);

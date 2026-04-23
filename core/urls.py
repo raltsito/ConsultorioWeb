@@ -83,6 +83,8 @@ urlpatterns = [
     path('empresa/', clinica_views.portal_empresa, name='portal_empresa'),
     path('empresa/registrar-paciente/', clinica_views.registrar_paciente_empresa, name='registrar_paciente_empresa'),
     path('empresa/agendar-cita/', clinica_views.agendar_cita_empresa, name='agendar_cita_empresa'),
+    path('empresa/citas-en-proceso/', clinica_views.citas_en_proceso_empresa, name='citas_en_proceso_empresa'),
+    path('empresa/terapeutas-paciente/', clinica_views.terapeutas_paciente_empresa, name='terapeutas_paciente_empresa'),
 
 ]
 

@@ -3420,25 +3420,74 @@ def agendar_cita_empresa(request):
     terapeutas = Terapeuta.objects.filter(activo=True)
 
     if request.method == 'POST':
-        form = CitaEmpresaForm(request.POST, empresa=mi_empresa)
-        if form.is_valid():
-            data = form.cleaned_data
-            paciente = data['paciente']
-            SolicitudCita.objects.create(
-                paciente_nombre=paciente.nombre,
-                telefono=paciente.telefono or '',
-                fecha_deseada=data['fecha'],
-                hora_deseada=data['hora'],
-                terapeuta=data.get('terapeuta'),
-                consultorio=data.get('consultorio'),
-                paciente=paciente,
-                empresa=mi_empresa,
-                division=data.get('division') or mi_empresa.division,
-                servicio=data.get('servicio'),
-                estado='pendiente',
-            )
-            messages.success(request, f'Solicitud enviada para {paciente.nombre}. Recepción la confirmará pronto.')
-            return redirect('portal_empresa')
+        primera_vez = request.POST.get('primera_vez') == '1'
+
+        if primera_vez:
+            paciente_id = request.POST.get('paciente')
+            fecha_str   = request.POST.get('fecha', '').strip()
+            hora_str    = request.POST.get('hora', '').strip()
+            paciente    = None
+            fecha_obj   = None
+            hora_obj    = None
+            errores     = []
+
+            try:
+                paciente = mi_empresa.pacientes.get(pk=paciente_id)
+            except Exception:
+                errores.append('Selecciona un colaborador válido.')
+
+            if not fecha_str:
+                errores.append('La fecha es requerida.')
+            else:
+                try:
+                    fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+                except ValueError:
+                    errores.append('Fecha inválida.')
+
+            if hora_str:
+                try:
+                    hora_obj = datetime.strptime(hora_str, '%H:%M').time()
+                except ValueError:
+                    pass
+
+            if errores:
+                for e in errores:
+                    messages.error(request, e)
+            else:
+                SolicitudCita.objects.create(
+                    paciente_nombre=paciente.nombre,
+                    telefono=paciente.telefono or '',
+                    fecha_deseada=fecha_obj,
+                    hora_deseada=hora_obj,
+                    paciente=paciente,
+                    empresa=mi_empresa,
+                    division=mi_empresa.division,
+                    estado='pendiente',
+                )
+                messages.success(request, f'Solicitud de primera cita enviada para {paciente.nombre}. Recepción asignará terapeuta disponible.')
+                return redirect('portal_empresa')
+
+            form = CitaEmpresaForm(empresa=mi_empresa)
+        else:
+            form = CitaEmpresaForm(request.POST, empresa=mi_empresa)
+            if form.is_valid():
+                data = form.cleaned_data
+                paciente = data['paciente']
+                SolicitudCita.objects.create(
+                    paciente_nombre=paciente.nombre,
+                    telefono=paciente.telefono or '',
+                    fecha_deseada=data['fecha'],
+                    hora_deseada=data['hora'],
+                    terapeuta=data.get('terapeuta'),
+                    consultorio=data.get('consultorio'),
+                    paciente=paciente,
+                    empresa=mi_empresa,
+                    division=data.get('division') or mi_empresa.division,
+                    servicio=data.get('servicio'),
+                    estado='pendiente',
+                )
+                messages.success(request, f'Solicitud enviada para {paciente.nombre}. Recepción la confirmará pronto.')
+                return redirect('portal_empresa')
     else:
         form = CitaEmpresaForm(empresa=mi_empresa)
 
@@ -3446,6 +3495,65 @@ def agendar_cita_empresa(request):
         'form': form,
         'empresa': mi_empresa,
         'terapeutas': terapeutas,
+    })
+
+
+@login_required
+def terapeutas_paciente_empresa(request):
+    if not hasattr(request.user, 'perfil_empresa'):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    mi_empresa  = request.user.perfil_empresa
+    paciente_id = request.GET.get('paciente_id')
+
+    if not paciente_id:
+        return JsonResponse({'terapeutas': []})
+
+    try:
+        paciente = mi_empresa.pacientes.get(pk=paciente_id)
+    except Exception:
+        return JsonResponse({'terapeutas': []})
+
+    terapeutas = (
+        Terapeuta.objects
+        .filter(cita__paciente=paciente, activo=True)
+        .distinct()
+        .values('id', 'nombre')
+    )
+
+    return JsonResponse({'terapeutas': list(terapeutas)})
+
+
+@login_required
+def citas_en_proceso_empresa(request):
+    if not hasattr(request.user, 'perfil_empresa'):
+        return redirect('home')
+
+    mi_empresa = request.user.perfil_empresa
+    hoy = date.today()
+
+    solicitudes_pendientes = SolicitudCita.objects.filter(
+        empresa=mi_empresa,
+        estado='pendiente',
+    ).select_related('paciente', 'terapeuta', 'consultorio').order_by('fecha_deseada', 'hora_deseada')
+
+    solicitudes_rechazadas = SolicitudCita.objects.filter(
+        empresa=mi_empresa,
+        estado='rechazada',
+    ).select_related('paciente', 'terapeuta').order_by('-fecha_creacion')[:10]
+
+    citas_proximas = Cita.objects.filter(
+        paciente__empresa=mi_empresa,
+        fecha__gte=hoy,
+        estatus__in=Cita.ESTATUS_ACTIVOS,
+    ).select_related('paciente', 'terapeuta', 'consultorio').order_by('fecha', 'hora')
+
+    return render(request, 'clinica/citas_en_proceso_empresa.html', {
+        'empresa': mi_empresa,
+        'solicitudes_pendientes': solicitudes_pendientes,
+        'solicitudes_rechazadas': solicitudes_rechazadas,
+        'citas_proximas': citas_proximas,
+        'hoy': hoy,
     })
 
 

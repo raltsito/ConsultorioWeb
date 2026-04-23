@@ -1,0 +1,526 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>INTRA – Citas en proceso – {{ empresa.nombre }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cyan:       #00c9be;
+      --cyan-light: #e0faf9;
+      --cyan-mid:   #b2f0ed;
+      --bg:         #f0f2f5;
+      --card:       #ffffff;
+      --text:       #1a1e2c;
+      --muted:      #8892a4;
+      --border:     #e8ecf2;
+      --orange:     #ff7849;
+      --orange-light: #fff3ee;
+      --red:        #e74c3c;
+      --red-light:  #fdf0ef;
+      --shadow-sm:  0 2px 12px rgba(0,0,0,.06);
+      --shadow-md:  0 6px 28px rgba(0,0,0,.09);
+      --radius-lg:  20px;
+      --radius-md:  14px;
+      --radius-sm:  10px;
+      --radius-xs:  7px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 0 1.8rem;
+      height: 64px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0,0,0,.04);
+      position: relative;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .logo { display: flex; align-items: center; gap: .6rem; text-decoration: none; flex-shrink: 0; }
+    .logo-icon { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .logo-text { display: flex; align-items: center; font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; font-weight: 800; color: #111; letter-spacing: .02em; line-height: 1; }
+    .logo-heart { display: inline-flex; align-items: center; margin-left: .05rem; }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: .3rem;
+      background: var(--bg);
+      border-radius: 999px;
+      padding: .3rem;
+      margin: 0 auto;
+    }
+
+    nav a {
+      text-decoration: none;
+      font-size: .82rem;
+      font-weight: 500;
+      color: var(--muted);
+      padding: .45rem 1.1rem;
+      border-radius: 999px;
+      transition: all .2s;
+    }
+
+    nav a:hover { color: var(--text); background: rgba(255,255,255,.7); }
+    nav a.active { background: var(--cyan); color: #fff; font-weight: 600; }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      margin-left: auto;
+    }
+
+    .icon-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all .2s;
+      font-size: .95rem;
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    .icon-btn:hover { background: var(--cyan-light); color: var(--cyan); }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: .3rem .7rem .3rem .35rem;
+    }
+
+    .avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #b2f0ed, #00c9be);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .user-info { line-height: 1.2; }
+    .user-info .name { font-size: .8rem; font-weight: 600; color: var(--text); }
+    .user-info .handle { font-size: .7rem; color: var(--muted); }
+
+    /* ── MAIN ───────────────────────────────────────────────── */
+    main {
+      flex: 1;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .page-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -.02em;
+    }
+
+    .page-title span { color: var(--cyan); }
+
+    /* ── SECCIÓN ────────────────────────────────────────────── */
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: .8rem;
+    }
+
+    .section-label h2 {
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: .03em;
+      text-transform: uppercase;
+    }
+
+    .badge {
+      font-size: .7rem;
+      font-weight: 700;
+      padding: .15rem .55rem;
+      border-radius: 999px;
+    }
+
+    .badge-orange { background: var(--orange-light); color: var(--orange); }
+    .badge-cyan   { background: var(--cyan-light);   color: var(--cyan);   }
+    .badge-red    { background: var(--red-light);     color: var(--red);    }
+
+    /* ── TABLA ──────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      font-size: .72rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      padding: .75rem 1.2rem;
+      text-align: left;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafbfc; }
+
+    tbody td {
+      padding: .75rem 1.2rem;
+      font-size: .8rem;
+      color: var(--text);
+      vertical-align: middle;
+    }
+
+    .td-muted { color: var(--muted); font-size: .74rem; }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      font-size: .72rem;
+      font-weight: 600;
+      padding: .2rem .6rem;
+      border-radius: 999px;
+    }
+
+    .status-pendiente { background: var(--orange-light); color: var(--orange); }
+    .status-confirmada,
+    .status-sin_confirmar { background: var(--cyan-light); color: var(--cyan); }
+    .status-rechazada { background: var(--red-light); color: var(--red); }
+    .status-reagendo  { background: #fff8e1; color: #f59e0b; }
+    .status-incidencia { background: #fdf0ef; color: #e74c3c; }
+
+    .dot-pulse {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .4; }
+    }
+
+    /* ── EMPTY STATE ────────────────────────────────────────── */
+    .empty-row td {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: .8rem;
+    }
+
+    .empty-icon { font-size: 1.6rem; display: block; margin-bottom: .4rem; }
+
+    /* ── TOAST ──────────────────────────────────────────────── */
+    .toast-stack {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      z-index: 100;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      background: var(--card);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-md);
+      padding: .7rem 1rem;
+      font-size: .78rem;
+      font-weight: 500;
+      min-width: 240px;
+      border-left: 3px solid var(--cyan);
+      animation: slideUp .3s ease both;
+    }
+
+    .toast.error   { border-left-color: var(--red); }
+    .toast.warning { border-left-color: var(--orange); }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── ANIMATIONS ─────────────────────────────────────────── */
+    .animate-in { animation: slideUp .4s ease both; }
+    .animate-in:nth-child(1) { animation-delay: .05s; }
+    .animate-in:nth-child(2) { animation-delay: .12s; }
+    .animate-in:nth-child(3) { animation-delay: .18s; }
+
+    /* ── RESPONSIVE ─────────────────────────────────────────── */
+    @media (max-width: 700px) {
+      .hide-mobile { display: none; }
+      main { padding: 1.2rem 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════ HEADER -->
+  <header>
+    <a href="{% url 'portal_empresa' %}" class="logo">
+      <div class="logo-icon">
+        <img src="{% static 'clinica/images/logo.png' %}" alt="INTRA Logo" width="44" height="44" style="object-fit:contain;">
+      </div>
+      <span class="logo-text">
+        INTRA
+        <span class="logo-heart">
+          <svg viewBox="0 0 32 28" width="24" height="21" xmlns="http://www.w3.org/2000/svg" fill="none" style="margin-bottom:-3px">
+            <path d="M16 25 C12 21 2 15 2 9 C2 5 5 2 9 2 C12 2 14.5 3.5 16 6 C17.5 3.5 20 2 23 2 C27 2 30 5 30 9 C30 15 20 21 16 25Z" stroke="#d92020" stroke-width="3.2" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+          </svg>
+        </span>
+      </span>
+    </a>
+
+    <nav>
+      <a href="{% url 'portal_empresa' %}">Dashboard</a>
+      <a href="{% url 'registrar_paciente_empresa' %}">Registrar Colaborador</a>
+      <a href="{% url 'agendar_cita_empresa' %}">Agendar Cita</a>
+      <a href="{% url 'citas_en_proceso_empresa' %}" class="active">Citas en proceso</a>
+    </nav>
+
+    <div class="header-actions">
+      <div class="user-pill">
+        <div class="avatar">{{ empresa.nombre|slice:":1"|upper }}</div>
+        <div class="user-info">
+          <div class="name">{{ empresa.nombre }}</div>
+          <div class="handle">Empresa</div>
+        </div>
+        <span style="font-size:.6rem;color:var(--muted);margin-left:.2rem;">▾</span>
+      </div>
+      <form method="post" action="{% url 'logout' %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="icon-btn" title="Cerrar sesión">×</button>
+      </form>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════ MAIN -->
+  <main>
+
+    <h1 class="page-title animate-in">Citas en <span>proceso</span></h1>
+
+    <!-- ── SOLICITUDES PENDIENTES ────────────────────────────── -->
+    <div class="animate-in">
+      <div class="section-label">
+        <h2>Solicitudes enviadas a recepción</h2>
+        <span class="badge badge-orange">{{ solicitudes_pendientes.count }} pendiente{{ solicitudes_pendientes.count|pluralize:"s" }}</span>
+      </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Colaborador</th>
+              <th>Fecha deseada</th>
+              <th class="hide-mobile">Hora</th>
+              <th class="hide-mobile">Terapeuta</th>
+              <th class="hide-mobile">Consultorio</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if solicitudes_pendientes %}
+              {% for s in solicitudes_pendientes %}
+              <tr>
+                <td>
+                  <strong>{{ s.paciente_nombre }}</strong>
+                </td>
+                <td>{{ s.fecha_deseada|date:"d/m/Y" }}</td>
+                <td class="hide-mobile td-muted">
+                  {% if s.hora_deseada %}{{ s.hora_deseada|time:"H:i" }}{% else %}—{% endif %}
+                </td>
+                <td class="hide-mobile td-muted">
+                  {% if s.terapeuta %}{{ s.terapeuta.nombre }}{% else %}—{% endif %}
+                </td>
+                <td class="hide-mobile td-muted">
+                  {% if s.consultorio %}{{ s.consultorio.nombre }}{% else %}—{% endif %}
+                </td>
+                <td>
+                  <span class="status-pill status-pendiente">
+                    <span class="dot-pulse"></span>
+                    Pendiente
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr class="empty-row">
+                <td colspan="5">
+                  <span class="empty-icon">📋</span>
+                  No hay solicitudes pendientes.
+                  <a href="{% url 'agendar_cita_empresa' %}" style="color:var(--cyan);font-weight:600;text-decoration:none;margin-left:.3rem;">Agendar una →</a>
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── CITAS CONFIRMADAS/ACTIVAS ─────────────────────────── -->
+    <div class="animate-in">
+      <div class="section-label">
+        <h2>Citas confirmadas</h2>
+        <span class="badge badge-cyan">{{ citas_proximas.count }} próxima{{ citas_proximas.count|pluralize:"s" }}</span>
+      </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Colaborador</th>
+              <th>Fecha</th>
+              <th class="hide-mobile">Hora</th>
+              <th class="hide-mobile">Terapeuta</th>
+              <th class="hide-mobile">Consultorio</th>
+              <th>Estatus</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if citas_proximas %}
+              {% for cita in citas_proximas %}
+              <tr>
+                <td><strong>{{ cita.paciente.nombre }}</strong></td>
+                <td>{{ cita.fecha|date:"d/m/Y" }}</td>
+                <td class="hide-mobile td-muted">{{ cita.hora|time:"H:i" }}</td>
+                <td class="hide-mobile td-muted">
+                  {% if cita.terapeuta %}{{ cita.terapeuta.nombre }}{% else %}—{% endif %}
+                </td>
+                <td class="hide-mobile td-muted">
+                  {% if cita.consultorio %}{{ cita.consultorio.nombre }}{% else %}—{% endif %}
+                </td>
+                <td>
+                  <span class="status-pill status-{{ cita.estatus }}">
+                    <span class="dot-pulse"></span>
+                    {{ cita.get_estatus_display }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr class="empty-row">
+                <td colspan="5">
+                  <span class="empty-icon">📅</span>
+                  No hay citas próximas confirmadas.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SOLICITUDES RECHAZADAS ────────────────────────────── -->
+    {% if solicitudes_rechazadas %}
+    <div class="animate-in">
+      <div class="section-label">
+        <h2>Solicitudes rechazadas recientes</h2>
+        <span class="badge badge-red">{{ solicitudes_rechazadas|length }}</span>
+      </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Colaborador</th>
+              <th>Fecha solicitada</th>
+              <th class="hide-mobile">Terapeuta</th>
+              <th class="hide-mobile">Consultorio</th>
+              <th>Motivo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in solicitudes_rechazadas %}
+            <tr>
+              <td><strong>{{ s.paciente_nombre }}</strong></td>
+              <td>{{ s.fecha_deseada|date:"d/m/Y" }}</td>
+              <td class="hide-mobile td-muted">
+                {% if s.terapeuta %}{{ s.terapeuta.nombre }}{% else %}—{% endif %}
+              </td>
+              <td class="hide-mobile td-muted">
+                {% if s.consultorio %}{{ s.consultorio.nombre }}{% else %}—{% endif %}
+              </td>
+              <td class="td-muted">
+                {{ s.motivo_rechazo|default:"Sin motivo registrado" }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </main>
+
+  <!-- ── TOASTS ────────────────────────────────────────────── -->
+  {% if messages %}
+  <div class="toast-stack">
+    {% for message in messages %}
+    <div class="toast {% if message.tags == 'error' %}error{% elif message.tags == 'warning' %}warning{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <script>
+    document.querySelectorAll('.toast').forEach(t => {
+      setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .4s'; setTimeout(() => t.remove(), 400); }, 4000);
+    });
+  </script>
+
+</body>
+</html>
