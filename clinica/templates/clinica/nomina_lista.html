@@ -118,6 +118,7 @@
                         <th class="text-end">Ingreso Clínica</th>
                         <th class="text-end">Total a Pagar</th>
                         <th class="text-center">Estado Corte</th>
+                        <th class="text-center">Confirmación T.</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
@@ -168,6 +169,28 @@
                                 </span>
                             {% else %}
                                 <span class="corte-badge corte-badge--none">—</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">
+                            {% if not fila.corte %}
+                                <span class="corte-badge corte-badge--none">—</span>
+                            {% elif fila.corte.confirmacion_terapeuta == 'aceptado' %}
+                                <span class="corte-badge corte-badge--confirmado">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Aceptado
+                                </span>
+                            {% elif fila.corte.confirmacion_terapeuta == 'incidencia' %}
+                                <span class="corte-badge corte-badge--incidencia">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Incidencia
+                                </span>
+                            {% elif fila.corte.fecha_fin <= hoy %}
+                                <span class="corte-badge corte-badge--pendiente-conf">
+                                    <i class="bi bi-hourglass-split me-1"></i>Pendiente
+                                </span>
+                            {% else %}
+                                <span class="corte-badge corte-badge--none">
+                                    <i class="bi bi-clock me-1"></i>No disponible
+                                </span>
                             {% endif %}
                         </td>
 
@@ -276,10 +299,13 @@
         padding: 0.3rem 0.8rem; border-radius: 50px;
         font-size: 0.78rem; font-weight: 600;
     }
-    .corte-badge--none     { background: #F5F5F5; color: #9E9E9E; }
-    .corte-badge--borrador { background: #FFF8E1; color: #F57F17; border: 1px solid #FFE0B2; }
-    .corte-badge--aprobado { background: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9; }
-    .corte-badge--pagado   { background: #E3F2FD; color: #1565C0; border: 1px solid #BBDEFB; }
+    .corte-badge--none            { background: #F5F5F5; color: #9E9E9E; }
+    .corte-badge--borrador        { background: #FFF8E1; color: #F57F17; border: 1px solid #FFE0B2; }
+    .corte-badge--aprobado        { background: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9; }
+    .corte-badge--pagado          { background: #E3F2FD; color: #1565C0; border: 1px solid #BBDEFB; }
+    .corte-badge--confirmado      { background: #D1FAE5; color: #065F46; border: 1px solid #6EE7B7; }
+    .corte-badge--incidencia      { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+    .corte-badge--pendiente-conf  { background: #F3F4F6; color: #6B7280; border: 1px solid #D1D5DB; }
 
     /* DataTables */
     div.dataTables_wrapper div.dataTables_filter input { border-radius: 50px; }
@@ -386,7 +412,7 @@ $(document).ready(function () {
         },
         pageLength: 25,
         order: [[0, 'asc']],
-        columnDefs: [{ orderable: false, targets: [5] }],
+        columnDefs: [{ orderable: false, targets: [6] }],
         dom: '<"d-flex justify-content-between align-items-center px-4 py-3 flex-wrap gap-2"lf>t<"d-flex justify-content-between px-4 py-2"ip>',
     });
 });

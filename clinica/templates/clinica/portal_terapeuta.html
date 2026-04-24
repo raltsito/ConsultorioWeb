@@ -358,6 +358,28 @@
 </div>
 
 
+{# ─────────────────────────── CONFIRMACIÓN DE NÓMINA ─────────────────────────── #}
+{% if corte_pendiente_confirmacion %}
+<div class="border-0 rounded-4 shadow-sm mb-4 d-flex align-items-start gap-3 p-4"
+     style="background:linear-gradient(135deg,#ecfdf5,#d1fae5); border-left: 5px solid #10b981 !important;">
+    <span style="font-size:1.6rem; line-height:1; flex-shrink:0; margin-top:.1rem;">💰</span>
+    <div class="flex-grow-1">
+        <p class="fw-bold mb-1" style="color:#065f46;">Tienes una nómina pendiente de confirmación</p>
+        {% with c=corte_pendiente_confirmacion %}
+        <p class="mb-2" style="color:#047857; font-size:.9rem;">
+            Semana del {{ c.fecha_inicio|date:"d M" }} al {{ c.fecha_fin|date:"d M Y" }} —
+            <strong>Total: ${{ c.total_pago|floatformat:2 }}</strong>
+        </p>
+        {% endwith %}
+        <a href="{% url 'confirmar_nomina_terapeuta' corte_pendiente_confirmacion.id %}"
+           class="btn btn-sm fw-bold px-4"
+           style="background:linear-gradient(135deg,#10b981,#059669); color:#fff; border-radius:999px; border:0;">
+            <i class="bi bi-cash-coin me-1"></i> Revisar y Confirmar Nómina
+        </a>
+    </div>
+</div>
+{% endif %}
+
 {# ─────────────────────────── AVISO DISPONIBILIDAD ─────────────────────────── #}
 <div class="border-0 rounded-4 shadow-sm mb-4 d-flex align-items-start gap-3 p-4"
      style="background:linear-gradient(135deg,#e0f2fe,#ede9fe); border-left: 5px solid #6366f1 !important;">

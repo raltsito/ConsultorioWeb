@@ -1,0 +1,310 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+
+<style>
+    .conf-header {
+        background: linear-gradient(135deg, #10b981, #059669);
+        border-radius: 1.5rem;
+        padding: 2rem 2rem 1.75rem;
+        color: #fff;
+        margin-bottom: 1.5rem;
+    }
+    .conf-header-icon {
+        width: 56px; height: 56px; border-radius: 50%;
+        background: rgba(255,255,255,.2);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.8rem; margin-bottom: .75rem;
+    }
+    .conf-semana-label {
+        font-size: .9rem; opacity: .85; margin-bottom: .25rem;
+    }
+    .conf-total-badge {
+        display: inline-block;
+        background: rgba(255,255,255,.18);
+        border: 1px solid rgba(255,255,255,.35);
+        border-radius: 999px;
+        padding: .4rem 1.1rem;
+        font-family: 'Courier New', monospace;
+        font-size: 1.4rem;
+        font-weight: 900;
+        margin-top: .5rem;
+    }
+
+    /* Tabla de sesiones */
+    .tabla-conf thead th {
+        background: #F0F4F8; color: #546E7A;
+        font-size: .72rem; font-weight: 700; letter-spacing: .06em;
+        text-transform: uppercase; border-bottom: 2px solid #E0E7EF;
+        padding: .75rem 1rem; white-space: nowrap;
+    }
+    .tabla-conf tbody td {
+        padding: .65rem 1rem;
+        border-bottom: 1px solid #F5F7FA;
+        font-size: .88rem;
+    }
+    .tabla-conf tfoot td {
+        padding: .7rem 1rem;
+        border-top: 2px solid #E0E7EF;
+        font-size: .85rem;
+    }
+
+    /* Card total */
+    .total-conf-card {
+        background: #1A237E;
+        border-radius: 1.25rem;
+        padding: 1.4rem 1.5rem;
+        color: #fff;
+    }
+    .total-conf-row { display: flex; justify-content: space-between; margin-bottom: .5rem; font-size: .88rem; }
+    .total-conf-row .lbl { opacity: .75; }
+    .total-conf-row .amt { font-family: 'Courier New', monospace; font-weight: 700; }
+    .total-conf-divider { height: 1px; background: rgba(255,255,255,.2); margin: .75rem 0; }
+    .total-conf-final { font-family: 'Poppins', sans-serif; font-weight: 700; font-size: .9rem; }
+    .total-conf-final-amt { font-family: 'Courier New', monospace; font-size: 1.55rem; font-weight: 900; }
+
+    /* Botones de acción */
+    .btn-confirmo {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: #fff; border: none; border-radius: 999px;
+        font-weight: 700; padding: .8rem 2rem; font-size: 1rem;
+        box-shadow: 0 4px 18px rgba(16,185,129,.4);
+        transition: all .25s;
+    }
+    .btn-confirmo:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(16,185,129,.5); }
+
+    .btn-algo-mal {
+        background: #FEF3C7; color: #92400E;
+        border: 1.5px solid #FDE68A; border-radius: 999px;
+        font-weight: 700; padding: .8rem 2rem; font-size: 1rem;
+        transition: all .25s;
+    }
+    .btn-algo-mal:hover { background: #FDE68A; color: #78350F; }
+
+    /* Panel "algo mal" */
+    .panel-algo-mal {
+        max-height: 0; overflow: hidden;
+        transition: max-height .35s ease;
+        border-radius: 1rem;
+    }
+    .panel-algo-mal.abierto { max-height: 400px; }
+</style>
+
+{# ── BREADCRUMB ── #}
+<a href="{% url 'portal_terapeuta' %}"
+   class="text-decoration-none text-muted small d-inline-flex align-items-center gap-1 mb-3">
+    <i class="bi bi-arrow-left"></i> Volver al portal
+</a>
+
+{# ── HEADER ── #}
+<div class="conf-header">
+    <div class="conf-header-icon"><i class="bi bi-cash-coin"></i></div>
+    <h2 class="fw-bold mb-1">Confirmación de Nómina</h2>
+    <p class="conf-semana-label">{{ semana_label }}</p>
+    <div class="conf-total-badge">${{ corte.total_pago|floatformat:2 }}</div>
+</div>
+
+{# ── MENSAJES ── #}
+{% if messages %}
+<div class="mb-3">
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible rounded-3 border-0 fade show" role="alert">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# ── LAYOUT ── #}
+<div class="row g-4">
+
+    {# ── Sesiones ── #}
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden h-100">
+            <div class="card-header px-4 py-3 d-flex justify-content-between align-items-center"
+                 style="background: linear-gradient(135deg,#F0F4F8,#E8EEF5); border-bottom:1px solid #E0E7EF;">
+                <h5 class="fw-bold mb-0"><i class="bi bi-list-check me-2"></i>Sesiones Atendidas</h5>
+                <span class="badge bg-white text-primary border border-primary-subtle px-3">
+                    {{ lineas_sesion|length }} sesión{{ lineas_sesion|length|pluralize:"es" }}
+                </span>
+            </div>
+            <div class="card-body p-0">
+                {% if lineas_sesion %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 tabla-conf">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Paciente / Concepto</th>
+                                <th>Servicio</th>
+                                <th class="text-end">Pago</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for linea in lineas_sesion %}
+                            <tr>
+                                <td class="text-muted small" style="white-space:nowrap;">
+                                    {% if linea.cita %}{{ linea.cita.fecha|date:"d/m" }}{% else %}—{% endif %}
+                                </td>
+                                <td class="fw-semibold" style="max-width:200px;">
+                                    {% if linea.cita and linea.cita.paciente %}
+                                        {{ linea.cita.paciente.nombre }}
+                                    {% else %}{{ linea.concepto }}{% endif %}
+                                </td>
+                                <td>
+                                    {% if linea.cita and linea.cita.servicio %}
+                                        <span class="small text-muted">{{ linea.cita.servicio }}</span>
+                                    {% else %}<span class="small text-muted">—</span>{% endif %}
+                                </td>
+                                <td class="text-end font-monospace fw-bold text-success">
+                                    ${{ linea.monto|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light">
+                                <td colspan="3" class="text-end fw-semibold text-secondary small px-3">Subtotal sesiones:</td>
+                                <td class="text-end font-monospace fw-bold text-dark px-3">${{ corte.subtotal_sesiones|floatformat:2 }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-calendar-x fs-1 d-block mb-3 opacity-25"></i>
+                    <p class="mb-0">No hay sesiones registradas para este periodo.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ── Columna derecha: bonos + total + acciones ── #}
+    <div class="col-lg-5">
+
+        {# Bonos #}
+        {% if lineas_bono or bonos_extra %}
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header px-4 py-3"
+                 style="background:linear-gradient(135deg,#FFF8E1,#FFFDE7); border-bottom:1px solid #FFE0B2;">
+                <h5 class="fw-bold mb-0 text-warning-emphasis">
+                    <i class="bi bi-star-fill me-2 text-warning"></i>Bonos y Ajustes
+                </h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for bono in lineas_bono %}
+                <li class="list-group-item px-4 py-3 d-flex justify-content-between align-items-center gap-2">
+                    <div>
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle me-2 small">Auto</span>
+                        <span class="text-dark small">{{ bono.concepto }}</span>
+                    </div>
+                    <span class="font-monospace fw-bold text-warning-emphasis">+${{ bono.monto|floatformat:2 }}</span>
+                </li>
+                {% endfor %}
+                {% for bono in bonos_extra %}
+                <li class="list-group-item px-4 py-3 d-flex justify-content-between align-items-center gap-2">
+                    <div>
+                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle me-2 small">Manual</span>
+                        <span class="text-dark small">{{ bono.concepto }}</span>
+                    </div>
+                    <span class="font-monospace fw-bold text-info-emphasis">+${{ bono.monto|floatformat:2 }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {# Total #}
+        <div class="total-conf-card mb-4">
+            <div class="total-conf-row">
+                <span class="lbl">Subtotal sesiones</span>
+                <span class="amt">${{ corte.subtotal_sesiones|floatformat:2 }}</span>
+            </div>
+            <div class="total-conf-row">
+                <span class="lbl">Total bonos</span>
+                <span class="amt text-warning">+${{ corte.total_bonos|floatformat:2 }}</span>
+            </div>
+            <div class="total-conf-divider"></div>
+            <div class="total-conf-row total-conf-final">
+                <span>TOTAL A RECIBIR</span>
+                <span class="total-conf-final-amt">${{ corte.total_pago|floatformat:2 }}</span>
+            </div>
+        </div>
+
+        {# Acciones #}
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+            <div class="card-header px-4 py-3 bg-white border-bottom">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-patch-question me-2 text-primary"></i>¿El resumen es correcto?
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted small mb-4">
+                    Revisa que las sesiones y montos coincidan con tu registro personal.
+                    Si hay alguna diferencia, selecciona <strong>"Algo está mal"</strong> y describe el problema.
+                </p>
+
+                {# Botón Confirmo #}
+                <form method="POST" action="{% url 'confirmar_nomina_terapeuta' corte.id %}" class="mb-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="confirmo">
+                    <button type="submit" class="btn-confirmo w-100 d-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-check-circle-fill fs-5"></i>
+                        Confirmo, todo está correcto
+                    </button>
+                </form>
+
+                {# Botón Algo está mal (toggle) #}
+                <button type="button" class="btn-algo-mal w-100 d-flex align-items-center justify-content-center gap-2"
+                        id="btnAlgoMal">
+                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                    Algo está mal
+                </button>
+
+                {# Panel con el formulario de incidencia #}
+                <div class="panel-algo-mal mt-3" id="panelAlgoMal">
+                    <form method="POST" action="{% url 'confirmar_nomina_terapeuta' corte.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="algo_mal">
+                        <div class="p-3 rounded-3 border" style="background:#FFFBEB; border-color:#FDE68A !important;">
+                            <label class="form-label fw-semibold small text-secondary mb-2">
+                                Describe el problema <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="descripcion" class="form-control form-control-sm mb-3" rows="4"
+                                      placeholder="Ej: Falta una sesión del día 18, o el monto de la sesión del martes es incorrecto..."
+                                      required></textarea>
+                            <button type="submit" class="btn btn-warning fw-bold rounded-pill px-4 w-100 text-dark">
+                                <i class="bi bi-send-fill me-1"></i>Enviar reporte de incidencia
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+
+    </div>{# /col-lg-5 #}
+
+</div>{# /row #}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const btnAlgoMal = document.getElementById('btnAlgoMal');
+    const panel = document.getElementById('panelAlgoMal');
+    if (!btnAlgoMal || !panel) return;
+
+    btnAlgoMal.addEventListener('click', function () {
+        panel.classList.toggle('abierto');
+        const abierto = panel.classList.contains('abierto');
+        btnAlgoMal.innerHTML = abierto
+            ? '<i class="bi bi-x-circle-fill fs-5"></i> Cancelar'
+            : '<i class="bi bi-exclamation-triangle-fill fs-5"></i> Algo está mal';
+    });
+})();
+</script>
+{% endblock %}

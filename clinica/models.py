@@ -786,6 +786,17 @@ class CorteSemanal(models.Model):
     )
     aprobado_en = models.DateTimeField(null=True, blank=True)
 
+    CONFIRMACION_ACEPTADO = 'aceptado'
+    CONFIRMACION_INCIDENCIA = 'incidencia'
+    CONFIRMACION_CHOICES = [
+        ('aceptado', 'Aceptado por terapeuta'),
+        ('incidencia', 'Incidencia reportada'),
+    ]
+    confirmacion_terapeuta = models.CharField(
+        max_length=20, choices=CONFIRMACION_CHOICES, null=True, blank=True,
+    )
+    confirmacion_terapeuta_en = models.DateTimeField(null=True, blank=True)
+
     notas = models.TextField(blank=True)
     creado_en = models.DateTimeField(auto_now_add=True)
 

@@ -40,6 +40,36 @@
             {% if corte.aprobado_por %}por <strong>{{ corte.aprobado_por.username }}</strong>{% endif %}
         </small>
         {% endif %}
+
+        {# Confirmación del terapeuta #}
+        {% if corte %}
+            {% if corte.confirmacion_terapeuta == 'aceptado' %}
+            <div class="d-flex align-items-center gap-2 px-3 py-2 rounded-3"
+                 style="background:#D1FAE5; border:1px solid #6EE7B7;">
+                <i class="bi bi-check-circle-fill text-success"></i>
+                <div>
+                    <span class="fw-semibold small" style="color:#065F46;">El terapeuta aceptó esta nómina</span>
+                    {% if corte.confirmacion_terapeuta_en %}
+                    <br><span class="text-muted" style="font-size:.75rem;">{{ corte.confirmacion_terapeuta_en|date:"d/m/Y H:i" }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% elif corte.confirmacion_terapeuta == 'incidencia' %}
+            <div class="d-flex align-items-center gap-2 px-3 py-2 rounded-3"
+                 style="background:#FEF3C7; border:1px solid #FDE68A;">
+                <i class="bi bi-exclamation-triangle-fill" style="color:#92400E;"></i>
+                <div>
+                    <span class="fw-semibold small" style="color:#92400E;">El terapeuta reportó una incidencia</span>
+                    <br>
+                    <a href="{% url 'lista_incidentes' %}" class="small" style="color:#92400E;">Ver en Incidentes</a>
+                </div>
+            </div>
+            {% else %}
+            <span class="text-muted small fst-italic">
+                <i class="bi bi-hourglass-split me-1"></i>Pendiente de confirmación del terapeuta
+            </span>
+            {% endif %}
+        {% endif %}
     </div>
 </div>
 

@@ -40,6 +40,7 @@ urlpatterns = [
     path('portal-medico/documentos/<int:doc_id>/', clinica_views.descargar_documento, name='descargar_documento'),
     path('portal-medico/bloqueos/nuevo/', clinica_views.crear_bloqueo_terapeuta, name='crear_bloqueo_terapeuta'),
     path('portal-medico/bloqueos/<int:bloqueo_id>/eliminar/', clinica_views.eliminar_bloqueo_terapeuta, name='eliminar_bloqueo_terapeuta'),
+    path('portal-medico/confirmar-nomina/<int:corte_id>/', clinica_views.confirmar_nomina_terapeuta, name='confirmar_nomina_terapeuta'),
     path('mi-portal/', clinica_views.portal_paciente, name='portal_paciente'),
     path('mi-portal/solicitar/', clinica_views.solicitar_cita_paciente, name='solicitar_cita_paciente'),
     path('solicitud/rechazar/<int:solicitud_id>/', clinica_views.rechazar_solicitud, name='rechazar_solicitud'),

@@ -1655,6 +1655,16 @@ def portal_terapeuta(request):
         clave=AccesoDirectoPortal.CLAVE_MANUAL_PORTAL_MEDICO,
         activo=True,
     ).first()
+    corte_pendiente_confirmacion = (
+        CorteSemanal.objects.filter(
+            terapeuta=mi_perfil,
+            fecha_fin__lte=hoy,
+            confirmacion_terapeuta__isnull=True,
+        )
+        .order_by('-fecha_fin')
+        .first()
+    )
+
     context = {
         'terapeuta': mi_perfil,
         'citas_hoy': citas_hoy,
@@ -1664,12 +1674,13 @@ def portal_terapeuta(request):
         'agenda_fin_semana': fin_semana,
         'agenda_semana_offset': semana_offset,
         'mostrar_agenda_semanal': request.GET.get('ver_agenda') == '1',
-        'fecha_bonita': fecha_bonita, # <--- Pasamos la fecha arreglada
+        'fecha_bonita': fecha_bonita,
         'mis_solicitudes': mis_solicitudes,
         'mis_reagendos': mis_reagendos,
         'bloqueos_agenda': bloqueos_futuros,
         'bloqueo_form': BloqueoAgendaTerapeutaForm(),
         'manual_portal': manual_portal,
+        'corte_pendiente_confirmacion': corte_pendiente_confirmacion,
     }
     
     return render(request, 'clinica/portal_terapeuta.html', context)
@@ -2439,6 +2450,9 @@ def nomina_lista(request):
         'total_citas_global':       total_citas_global,
         'aprobados':  sum(1 for f in filas if f['corte'] and f['corte'].estatus == CorteSemanal.ESTATUS_APROBADO),
         'borradores': sum(1 for f in filas if f['corte'] and f['corte'].estatus == CorteSemanal.ESTATUS_BORRADOR),
+        'confirmaciones_aceptadas': sum(1 for f in filas if f['corte'] and f['corte'].confirmacion_terapeuta == CorteSemanal.CONFIRMACION_ACEPTADO),
+        'confirmaciones_incidencia': sum(1 for f in filas if f['corte'] and f['corte'].confirmacion_terapeuta == CorteSemanal.CONFIRMACION_INCIDENCIA),
+        'hoy': date.today(),
     })
 
 
@@ -2894,6 +2908,87 @@ def nomina_detalle(request, terapeuta_id):
         'puede_editar':        puede_editar,
         'puede_aprobar':       puede_aprobar,
         'error_preview':       error_preview,
+    })
+
+
+@login_required
+def confirmar_nomina_terapeuta(request, corte_id):
+    """El terapeuta revisa y confirma (o reporta incidencia en) su nómina semanal."""
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    terapeuta = request.user.perfil_terapeuta
+    corte = get_object_or_404(CorteSemanal, id=corte_id, terapeuta=terapeuta)
+
+    if corte.confirmacion_terapeuta is not None:
+        messages.warning(request, 'Esta nómina ya fue respondida anteriormente.')
+        return redirect('portal_terapeuta')
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+
+        if accion == 'confirmo':
+            corte.confirmacion_terapeuta = CorteSemanal.CONFIRMACION_ACEPTADO
+            corte.confirmacion_terapeuta_en = timezone.now()
+            corte.save(update_fields=['confirmacion_terapeuta', 'confirmacion_terapeuta_en'])
+            messages.success(request, 'Nómina confirmada correctamente. ¡Gracias!')
+            return redirect('portal_terapeuta')
+
+        elif accion == 'algo_mal':
+            if not descripcion:
+                messages.error(request, 'Por favor describe el problema antes de enviar.')
+                return redirect('confirmar_nomina_terapeuta', corte_id=corte_id)
+
+            meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+            semana_label = (
+                f"{corte.fecha_inicio.day} de {meses[corte.fecha_inicio.month - 1]}"
+                f" al {corte.fecha_fin.day} de {meses[corte.fecha_fin.month - 1]}"
+                f" de {corte.fecha_fin.year}"
+            )
+            ReporteIncidente.objects.create(
+                terapeuta=terapeuta,
+                tipo=ReporteIncidente.TIPO_QUEJA,
+                titulo=f"Incidencia en nómina: {semana_label}",
+                descripcion=descripcion,
+            )
+            corte.confirmacion_terapeuta = CorteSemanal.CONFIRMACION_INCIDENCIA
+            corte.confirmacion_terapeuta_en = timezone.now()
+            corte.save(update_fields=['confirmacion_terapeuta', 'confirmacion_terapeuta_en'])
+            messages.success(request, 'Tu reporte fue enviado. El equipo revisará tu nómina a la brevedad.')
+            return redirect('portal_terapeuta')
+
+        messages.error(request, 'Acción no válida.')
+        return redirect('confirmar_nomina_terapeuta', corte_id=corte_id)
+
+    # GET — mostrar resumen de nómina para revisión
+    lineas_sesion = list(
+        corte.lineas.filter(tipo=LineaNomina.TIPO_SESION)
+                    .select_related('cita__paciente', 'cita__servicio')
+                    .order_by('cita__fecha', 'cita__hora')
+    )
+    lineas_bono = list(
+        corte.lineas.filter(
+            tipo__in=[LineaNomina.TIPO_BONO_UMBRAL, LineaNomina.TIPO_BONO_POR_PACIENTE]
+        )
+    )
+    bonos_extra = list(corte.bonos_extra.order_by('creado_en'))
+
+    meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+             'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+    semana_label = (
+        f"{corte.fecha_inicio.day} de {meses[corte.fecha_inicio.month - 1]}"
+        f" al {corte.fecha_fin.day} de {meses[corte.fecha_fin.month - 1]}"
+        f" de {corte.fecha_fin.year}"
+    )
+
+    return render(request, 'clinica/confirmar_nomina_terapeuta.html', {
+        'corte': corte,
+        'lineas_sesion': lineas_sesion,
+        'lineas_bono': lineas_bono,
+        'bonos_extra': bonos_extra,
+        'semana_label': semana_label,
     })
 
 
