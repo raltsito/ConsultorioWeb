@@ -45,6 +45,7 @@ from .models import (
     SolicitudReagendo,
     obtener_bloqueo_terapeuta_en_fecha,
     ReporteIncidente,
+    RecursoPropio,
 )
 from .models import CorteSemanal, LineaNomina, BonoExtra
 from .forms import (
@@ -2014,6 +2015,52 @@ def descargar_manual_portal_medico(request):
         content_type=manual.tipo_mime or 'application/octet-stream',
     )
     response['Content-Disposition'] = f'attachment; filename="{manual.nombre_archivo or "manual_sistema"}"'
+    return response
+
+
+@login_required
+def recursos_propios(request):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+
+        if accion == 'subir':
+            nombre = request.POST.get('nombre', '').strip()
+            descripcion = request.POST.get('descripcion', '').strip()
+            archivo = request.FILES.get('archivo')
+            if not nombre or not archivo:
+                messages.error(request, 'El nombre y el archivo son obligatorios.')
+            else:
+                RecursoPropio.objects.create(
+                    nombre=nombre,
+                    descripcion=descripcion,
+                    nombre_archivo=archivo.name,
+                    tipo_mime=archivo.content_type or 'application/octet-stream',
+                    contenido=archivo.read(),
+                    subido_por=request.user,
+                )
+                messages.success(request, f'"{nombre}" agregado correctamente.')
+            return redirect('recursos_propios')
+
+        if accion == 'eliminar':
+            recurso_id = request.POST.get('recurso_id')
+            RecursoPropio.objects.filter(pk=recurso_id, subido_por=request.user).delete()
+            messages.success(request, 'Recurso eliminado.')
+            return redirect('recursos_propios')
+
+    recursos = RecursoPropio.objects.filter(subido_por=request.user)
+    return render(request, 'clinica/recursos_propios.html', {'recursos': recursos})
+
+
+@login_required
+def descargar_recurso_propio(request, recurso_id):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+    recurso = get_object_or_404(RecursoPropio, pk=recurso_id, subido_por=request.user)
+    response = HttpResponse(bytes(recurso.contenido), content_type=recurso.tipo_mime or 'application/octet-stream')
+    response['Content-Disposition'] = f'attachment; filename="{recurso.nombre_archivo}"'
     return response
 
 

@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib import admin
-from .models import AccesoDirectoPortal, Empresa, Host, HostChecklistTask, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta
+from .models import AccesoDirectoPortal, Empresa, Host, HostChecklistTask, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta, RecursoPropio
 from .models import Horario
 
 admin.site.register(Terapeuta)
@@ -95,6 +95,13 @@ class AccesoDirectoPortalAdmin(admin.ModelAdmin):
     )
     readonly_fields = ('resumen_archivo',)
 
+    def resumen_archivo(self, obj):
+        if obj and obj.nombre_archivo:
+            kb = len(obj.contenido) // 1024 if obj.contenido else 0
+            return f'{obj.nombre_archivo} ({kb} KB)'
+        return '—'
+    resumen_archivo.short_description = 'Archivo actual'
+
     def has_add_permission(self, request):
         return not AccesoDirectoPortal.objects.exists() or super().has_add_permission(request)
 
@@ -116,6 +123,12 @@ class AccesoDirectoPortalAdmin(admin.ModelAdmin):
         if obj and obj.nombre_archivo:
             fieldsets.append(('Archivo actual', {'fields': ('resumen_archivo',)}))
         return fieldsets
+
+
+@admin.register(RecursoPropio)
+class RecursoPropioAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'nombre_archivo', 'subido_por', 'creado_en')
+    search_fields = ('nombre', 'descripcion', 'nombre_archivo')
 
     @admin.display(description='Archivo actual')
     def resumen_archivo(self, obj):

@@ -1,0 +1,192 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<style>
+  .rp-header {
+    background: linear-gradient(135deg, #003087 0%, #0d6efd 100%);
+    border-radius: 1.4rem;
+    padding: 2rem 2.5rem;
+    color: #fff;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .rp-header h1 { font-size: 1.6rem; font-weight: 800; margin: 0; }
+  .rp-header p  { margin: .25rem 0 0; opacity: .8; font-size: .95rem; }
+
+  .rp-card {
+    background: #fff;
+    border-radius: 1.2rem;
+    box-shadow: 0 4px 24px rgba(15,23,42,.07);
+    border: 1px solid rgba(15,23,42,.07);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .rp-card-hd {
+    padding: 1.1rem 1.5rem;
+    border-bottom: 1px solid rgba(15,23,42,.07);
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #003087;
+  }
+  .rp-card-hd i { font-size: 1.2rem; }
+
+  .rp-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(15,23,42,.05);
+    flex-wrap: wrap;
+  }
+  .rp-row:last-child { border-bottom: none; }
+  .rp-icon {
+    width: 42px; height: 42px;
+    border-radius: .75rem;
+    background: #eef3ff;
+    color: #003087;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+  .rp-info { flex: 1 1 0; min-width: 0; }
+  .rp-name { font-weight: 700; color: #1e293b; font-size: .97rem; }
+  .rp-desc { font-size: .82rem; color: #64748b; margin-top: .1rem; }
+  .rp-actions { display: flex; gap: .5rem; flex-shrink: 0; }
+
+  .btn-dl {
+    background: #003087; color: #fff; border: none;
+    border-radius: .6rem; padding: .42rem 1rem;
+    font-size: .85rem; font-weight: 700;
+    display: inline-flex; align-items: center; gap: .4rem;
+    text-decoration: none;
+    transition: background .15s;
+  }
+  .btn-dl:hover { background: #0d6efd; color: #fff; }
+
+  .btn-del {
+    background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3;
+    border-radius: .6rem; padding: .42rem .8rem;
+    font-size: .85rem; font-weight: 700;
+    display: inline-flex; align-items: center; gap: .4rem;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-del:hover { background: #ffe4e6; }
+
+  .empty-state {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: #94a3b8;
+  }
+  .empty-state i { font-size: 2.5rem; margin-bottom: .75rem; display: block; }
+</style>
+
+<div class="container py-4" style="max-width:860px;">
+
+  <!-- Header -->
+  <div class="rp-header">
+    <div>
+      <h1><i class="bi bi-folder-fill me-2"></i>Recursos Propios</h1>
+      <p>Formatos y archivos de uso interno del consultorio.</p>
+    </div>
+    <a href="{% url 'portal_terapeuta' %}" class="btn btn-light btn-sm fw-bold">
+      <i class="bi bi-arrow-left me-1"></i>Volver al portal
+    </a>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show" role="alert">
+      {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Subir recurso -->
+  <div class="rp-card">
+    <div class="rp-card-hd"><i class="bi bi-cloud-arrow-up"></i>Subir nuevo recurso</div>
+    <div class="p-4">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="subir">
+        <div class="row g-3">
+          <div class="col-md-5">
+            <label class="form-label small fw-semibold">Nombre <span class="text-danger">*</span></label>
+            <input type="text" name="nombre" class="form-control" placeholder="Ej. Hoja de consentimiento" required>
+          </div>
+          <div class="col-md-7">
+            <label class="form-label small fw-semibold">Descripción</label>
+            <input type="text" name="descripcion" class="form-control" placeholder="Opcional">
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Archivo <span class="text-danger">*</span></label>
+            <input type="file" name="archivo" class="form-control" required>
+          </div>
+          <div class="col-12 d-flex justify-content-end">
+            <button type="submit" class="btn-dl">
+              <i class="bi bi-upload"></i>Subir archivo
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Lista de recursos -->
+  <div class="rp-card">
+    <div class="rp-card-hd"><i class="bi bi-files"></i>Archivos disponibles</div>
+
+    {% if recursos %}
+      {% for recurso in recursos %}
+      <div class="rp-row">
+        <div class="rp-icon">
+          {% if 'pdf' in recurso.tipo_mime %}
+            <i class="bi bi-file-earmark-pdf"></i>
+          {% elif 'image' in recurso.tipo_mime %}
+            <i class="bi bi-file-earmark-image"></i>
+          {% elif 'word' in recurso.tipo_mime or 'document' in recurso.tipo_mime %}
+            <i class="bi bi-file-earmark-word"></i>
+          {% elif 'sheet' in recurso.tipo_mime or 'excel' in recurso.tipo_mime %}
+            <i class="bi bi-file-earmark-excel"></i>
+          {% else %}
+            <i class="bi bi-file-earmark"></i>
+          {% endif %}
+        </div>
+        <div class="rp-info">
+          <div class="rp-name">{{ recurso.nombre }}</div>
+          {% if recurso.descripcion %}
+          <div class="rp-desc">{{ recurso.descripcion }}</div>
+          {% endif %}
+          <div class="rp-desc">{{ recurso.nombre_archivo }} &middot; {{ recurso.creado_en|date:"d/m/Y" }}</div>
+        </div>
+        <div class="rp-actions">
+          <a href="{% url 'descargar_recurso_propio' recurso.id %}" class="btn-dl">
+            <i class="bi bi-download"></i>Descargar
+          </a>
+          <form method="post" onsubmit="return confirm('¿Eliminar este recurso?');">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="eliminar">
+            <input type="hidden" name="recurso_id" value="{{ recurso.id }}">
+            <button type="submit" class="btn-del"><i class="bi bi-trash"></i></button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="bi bi-folder2-open"></i>
+        <p class="fw-semibold mb-1">No hay recursos disponibles aún.</p>
+        <p class="small">Sube el primer formato usando el formulario de arriba.</p>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

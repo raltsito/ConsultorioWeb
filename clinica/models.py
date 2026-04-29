@@ -459,6 +459,25 @@ class AccesoDirectoPortal(models.Model):
         verbose_name_plural = "Accesos directos"
 
 
+class RecursoPropio(models.Model):
+    """Formatos y archivos propios del consultorio, accesibles desde el portal médico."""
+    nombre       = models.CharField(max_length=200, verbose_name='Nombre del recurso')
+    descripcion  = models.CharField(max_length=400, blank=True, verbose_name='Descripción')
+    nombre_archivo = models.CharField(max_length=255)
+    tipo_mime    = models.CharField(max_length=100, blank=True)
+    contenido    = models.BinaryField()
+    subido_por   = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='recursos_propios')
+    creado_en    = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.nombre
+
+    class Meta:
+        verbose_name = 'Recurso Propio'
+        verbose_name_plural = 'Recursos Propios'
+        ordering = ['nombre']
+
+
 class Cita(models.Model):
     ESTATUS_CONFIRMADA = 'confirmada'
     ESTATUS_SIN_CONFIRMAR = 'sin_confirmar'
