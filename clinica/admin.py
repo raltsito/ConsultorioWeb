@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib import admin
-from .models import AccesoDirectoPortal, Empresa, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta
+from .models import AccesoDirectoPortal, Empresa, Host, HostChecklistTask, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta
 from .models import Horario
 
 admin.site.register(Terapeuta)
@@ -14,6 +14,21 @@ class EmpresaAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'usuario', 'activo')
     list_filter = ('activo',)
     search_fields = ('nombre',)
+
+
+@admin.register(Host)
+class HostAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'usuario', 'activo')
+    list_filter = ('activo',)
+    search_fields = ('nombre', 'usuario__username')
+
+
+@admin.register(HostChecklistTask)
+class HostChecklistTaskAdmin(admin.ModelAdmin):
+    list_display = ('titulo', 'etiqueta', 'urgente', 'activo', 'orden')
+    list_filter = ('activo', 'urgente')
+    search_fields = ('titulo', 'subtitulo', 'etiqueta')
+    filter_horizontal = ('hosts',)
 
 
 class PacienteAdmin(admin.ModelAdmin):

@@ -42,6 +42,46 @@ class Empresa(models.Model):
         verbose_name_plural = "Empresas"
 
 
+class Host(models.Model):
+    usuario = models.OneToOneField(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='perfil_host'
+    )
+    nombre = models.CharField(max_length=100)
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
+
+    class Meta:
+        verbose_name = "Host"
+        verbose_name_plural = "Hosts"
+
+
+class HostChecklistTask(models.Model):
+    titulo = models.CharField(max_length=140)
+    subtitulo = models.CharField(max_length=180, blank=True)
+    etiqueta = models.CharField(max_length=40, blank=True)
+    urgente = models.BooleanField(default=False)
+    activo = models.BooleanField(default=True)
+    orden = models.PositiveIntegerField(default=0)
+    hosts = models.ManyToManyField(
+        Host,
+        blank=True,
+        related_name='tareas_checklist',
+        help_text='Dejalo vacio para que aplique a todos los hosts.',
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.titulo
+
+    class Meta:
+        verbose_name = "Tarea de Checklist Host"
+        verbose_name_plural = "Tareas de Checklist Host"
+        ordering = ['orden', 'id']
+
+
 class BloqueoAgendaTerapeuta(models.Model):
     TIPO_TEMPORAL = 'temporal'
     TIPO_PERMANENTE = 'permanente'
@@ -1100,6 +1140,43 @@ class AperturaExpediente(models.Model):
     emergencia_contacto = models.CharField(max_length=200, blank=True, verbose_name='En caso de emergencia llamar a')
     emergencia_telefono = models.CharField(max_length=30, blank=True, verbose_name='Teléfono de contacto de emergencia')
     como_se_entero      = models.CharField(max_length=200, blank=True, verbose_name='¿Cómo se enteró de nosotros?')
+
+    # Antecedentes médicos
+    tiene_enfermedad        = models.BooleanField(default=False, verbose_name='¿Tiene alguna enfermedad?')
+    cual_enfermedad         = models.CharField(max_length=300, blank=True, verbose_name='¿Cuál enfermedad?')
+
+    # Antecedentes psiquiátricos
+    tx_psiquiatrico         = models.BooleanField(default=False, verbose_name='¿Está o ha estado en tratamiento psiquiátrico?')
+    tx_psiquiatrico_hace_cuanto = models.CharField(max_length=100, blank=True, verbose_name='¿Hace cuánto? (Tx psiquiátrico)')
+    tx_psiquiatrico_motivo  = models.TextField(blank=True, verbose_name='Motivo del tratamiento psiquiátrico')
+    tx_psiquiatrico_medicamento = models.CharField(max_length=300, blank=True, verbose_name='Medicamento(s)')
+
+    # Terapia previa
+    ha_tomado_terapia       = models.BooleanField(default=False, verbose_name='¿Ha tomado terapia anteriormente?')
+    terapia_hace_cuanto     = models.CharField(max_length=100, blank=True, verbose_name='¿Hace cuánto? (Terapia)')
+    terapia_duracion        = models.CharField(max_length=100, blank=True, verbose_name='¿Cuánto duró la terapia?')
+    terapia_motivo          = models.TextField(blank=True, verbose_name='Motivo de la terapia anterior')
+
+    # Sustancias
+    fuma                    = models.BooleanField(default=False, verbose_name='¿Fuma?')
+    consume_alcohol         = models.BooleanField(default=False, verbose_name='¿Consume alcohol?')
+    consume_otras_sustancias = models.BooleanField(default=False, verbose_name='¿Consume o ha consumido otras sustancias?')
+    cuales_sustancias       = models.CharField(max_length=300, blank=True, verbose_name='¿Cuáles sustancias?')
+
+    # Hábitos
+    comidas_al_dia          = models.PositiveIntegerField(null=True, blank=True, verbose_name='Comidas al día')
+    horas_sueno             = models.PositiveIntegerField(null=True, blank=True, verbose_name='Horas de sueño al día')
+    actividad_fisica        = models.BooleanField(default=False, verbose_name='¿Realiza actividad física?')
+    cual_actividad_fisica   = models.CharField(max_length=200, blank=True, verbose_name='¿Cuál actividad física?')
+
+    # Ideación/intento suicida
+    intento_suicida         = models.BooleanField(default=False, verbose_name='¿Ha intentado quitarse la vida?')
+    intento_suicida_hace_cuanto = models.CharField(max_length=100, blank=True, verbose_name='¿Hace cuánto? (Intento)')
+    intento_suicida_que_hizo = models.TextField(blank=True, verbose_name='¿Qué hizo?')
+    intento_suicida_motivo  = models.TextField(blank=True, verbose_name='¿Por qué?')
+
+    # Vida sexual
+    vida_sexual_activa      = models.BooleanField(default=False, verbose_name='¿Tiene vida sexual activa?')
 
     creado_en      = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)

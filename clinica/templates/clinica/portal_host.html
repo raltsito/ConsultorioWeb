@@ -1,0 +1,883 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INTRA · Host</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #26C6DA;
+  --primary-light: #80DEEA;
+  --primary-dark: #0097A7;
+  --secondary: #EF5350;
+  --dark: #37474F;
+  --dark2: #546E7A;
+  --light: #F0F4F8;
+  --light2: #E1EBF4;
+  --white: #FFFFFF;
+}
+html, body { min-height: 100%; }
+body {
+  min-height: 100vh;
+  overflow: hidden;
+  font-family: 'DM Sans', sans-serif;
+  background: var(--light);
+  color: var(--dark);
+}
+button, select { font: inherit; }
+.bg-canvas { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.18;
+  animation: blobFloat 12s ease-in-out infinite;
+}
+.blob-1 { width: 600px; height: 600px; background: var(--primary); top: -150px; left: -100px; animation-delay: 0s; }
+.blob-2 { width: 400px; height: 400px; background: var(--secondary); bottom: -80px; right: 60px; animation-delay: -4s; }
+.blob-3 { width: 350px; height: 350px; background: var(--primary-dark); top: 40%; right: 20%; animation-delay: -8s; }
+@keyframes blobFloat {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(30px, -40px) scale(1.05); }
+  66% { transform: translate(-20px, 30px) scale(0.97); }
+}
+.shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 40px;
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(38,198,218,0.15);
+  animation: slideDown 0.6s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: none; } }
+.brand { display: flex; align-items: center; gap: 14px; min-width: 250px; }
+.brand-logo { width: 44px; height: 44px; border-radius: 12px; object-fit: contain; background: white; padding: 4px; }
+.brand-name { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--dark); }
+.brand-sub { font-size: 11px; color: var(--dark2); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
+.topbar-center { text-align: center; min-width: 260px; }
+.greeting-main { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--dark); }
+.greeting-main span { color: var(--primary-dark); font-style: italic; }
+.date-line { font-size: 12px; color: var(--dark2); margin-top: 2px; }
+.topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 250px; }
+.host-consultorio-form { display: flex; align-items: center; gap: 8px; }
+.host-select {
+  height: 38px;
+  min-width: 145px;
+  border: 1px solid rgba(38,198,218,0.28);
+  color: var(--dark);
+  background: rgba(255,255,255,0.72);
+  border-radius: 12px;
+  padding: 0 10px;
+  outline: none;
+}
+.mini-btn {
+  border: 0;
+  cursor: pointer;
+  min-width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(38,198,218,0.22);
+}
+.logout-btn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(239,83,80,0.2);
+  color: var(--secondary);
+  background: rgba(255,255,255,0.72);
+  cursor: pointer;
+}
+.clock { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--dark); letter-spacing: -1px; }
+.clock small { font-size: 16px; color: var(--dark2); margin-left: 4px; }
+.main-grid {
+  display: grid;
+  grid-template-columns: 380px minmax(420px, 1fr) 320px;
+  gap: 24px;
+  padding: 24px 40px 28px;
+  overflow: hidden;
+}
+.glass {
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.9);
+  border-radius: 24px;
+  box-shadow: 0 8px 40px rgba(55,71,79,0.08), 0 1px 0 rgba(255,255,255,0.6) inset;
+}
+.checklist-card {
+  padding: 28px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  animation: fadeUp 0.7s 0.1s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes fadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+.card-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--primary-dark);
+  margin-bottom: 6px;
+}
+.card-title { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--dark); line-height: 1.2; }
+.progress-ring-wrap { display: flex; align-items: center; gap: 16px; margin: 18px 0 22px; }
+.ring-svg { flex-shrink: 0; }
+.ring-track { fill: none; stroke: var(--light2); stroke-width: 7; }
+.ring-fill {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 7;
+  stroke-linecap: round;
+  transform-origin: center;
+  transform: rotate(-90deg);
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.34,1.56,0.64,1);
+}
+.ring-text { font-family: 'DM Serif Display', serif; font-size: 22px; fill: var(--dark); dominant-baseline: middle; text-anchor: middle; }
+.ring-sub { font-size: 10px; fill: var(--dark2); dominant-baseline: middle; text-anchor: middle; }
+.ring-label strong { display: block; font-size: 15px; font-weight: 700; color: var(--dark); }
+.ring-label span { font-size: 12px; color: var(--dark2); }
+.checklist-items { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 2px; }
+.checklist-items::-webkit-scrollbar { width: 4px; }
+.checklist-items::-webkit-scrollbar-thumb { background: var(--light2); border-radius: 4px; }
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  animation: itemIn 0.5s both;
+  position: relative;
+  overflow: hidden;
+}
+.check-item:hover { background: rgba(38,198,218,0.06); transform: translateX(3px); }
+.check-item.done { background: rgba(38,198,218,0.07); }
+.check-box {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  border: 2px solid var(--light2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  background: var(--white);
+}
+.check-item.done .check-box {
+  background: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(38,198,218,0.18);
+  transform: scale(1.1);
+}
+.check-icon { opacity: 0; transform: scale(0); transition: all 0.25s 0.05s; }
+.check-item.done .check-icon { opacity: 1; transform: scale(1); }
+.check-text { flex: 1; min-width: 0; }
+.check-text strong { display: block; font-size: 13.5px; font-weight: 600; color: var(--dark); }
+.check-item.done .check-text strong { color: var(--dark2); text-decoration: line-through; text-decoration-color: var(--primary); }
+.check-text small { font-size: 11px; color: #90A4AE; }
+.check-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(38,198,218,0.12);
+  color: var(--primary-dark);
+}
+.check-tag.urgent { background: rgba(239,83,80,0.1); color: var(--secondary); }
+@keyframes itemIn { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(38,198,218,0.25);
+  transform: scale(0);
+  animation: rippleAnim 0.5s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes rippleAnim { to { transform: scale(4); opacity: 0; } }
+.video-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeUp 0.7s 0.2s cubic-bezier(0.16,1,0.3,1) both;
+}
+.video-hero {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: linear-gradient(135deg, #0D2B35 0%, #0A3D47 50%, #063040 100%);
+  overflow: hidden;
+  border-radius: 24px 24px 0 0;
+}
+.video-bg-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  background-image: radial-gradient(circle at 2px 2px, var(--primary) 1px, transparent 0);
+  background-size: 32px 32px;
+}
+.video-glow {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(38,198,218,0.25) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  animation: glowPulse 3s ease-in-out infinite;
+}
+@keyframes glowPulse {
+  0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.8; }
+  50% { transform: translate(-50%,-50%) scale(1.15); opacity: 1; }
+}
+.play-btn-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 2; }
+.play-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.3);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.play-btn:hover { transform: scale(1.12); background: rgba(38,198,218,0.28); border-color: var(--primary); }
+.play-btn.playing { background: rgba(239,83,80,0.2); border-color: var(--secondary); }
+.play-btn svg { margin-left: 4px; }
+.play-btn.playing svg { margin-left: 0; }
+.video-pulse-ring {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 2px solid rgba(38,198,218,0.4);
+  animation: pulseRing 2s ease-out infinite;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  pointer-events: none;
+}
+.video-pulse-ring.delay { animation-delay: 0.7s; }
+@keyframes pulseRing {
+  0% { transform: translate(-50%,-50%) scale(0.8); opacity: 0.8; }
+  100% { transform: translate(-50%,-50%) scale(2.2); opacity: 0; }
+}
+.video-label {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  z-index: 3;
+  color: rgba(255,255,255,0.72);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: dotBlink 1.4s ease-in-out infinite;
+}
+@keyframes dotBlink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+.video-title-overlay { position: absolute; bottom: 24px; left: 24px; right: 24px; z-index: 3; }
+.video-module { font-size: 11px; color: var(--primary-light); font-weight: 700; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+.video-name { font-family: 'DM Serif Display', serif; font-size: 22px; color: white; line-height: 1.25; text-shadow: 0 2px 20px rgba(0,0,0,0.5); }
+.video-progress-section {
+  padding: 20px 28px 24px;
+  border-top: 1px solid rgba(38,198,218,0.1);
+}
+.vp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.vp-title { font-size: 13px; font-weight: 700; color: var(--dark); }
+.vp-pct { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--primary-dark); }
+.progress-track { height: 8px; background: var(--light2); border-radius: 20px; overflow: visible; position: relative; cursor: pointer; }
+.progress-fill {
+  height: 100%;
+  border-radius: 20px;
+  background: linear-gradient(90deg, var(--primary-dark) 0%, var(--primary) 60%, var(--primary-light) 100%);
+  transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1);
+  position: relative;
+}
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(38,198,218,0.2);
+}
+.video-chapters { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.chapter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.chapter-row:hover { background: rgba(38,198,218,0.06); }
+.chapter-row.active { background: rgba(38,198,218,0.1); }
+.chapter-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--light2);
+  color: var(--dark2);
+}
+.chapter-row.active .chapter-num { background: var(--primary); color: white; }
+.chapter-row.done-ch .chapter-num { background: rgba(38,198,218,0.15); color: var(--primary-dark); }
+.chapter-text { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--dark); }
+.chapter-row.active .chapter-text { color: var(--primary-dark); }
+.chapter-dur { font-size: 11px; color: #90A4AE; }
+.right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeUp 0.7s 0.3s cubic-bezier(0.16,1,0.3,1) both;
+  min-height: 0;
+}
+.citas-btn {
+  position: relative;
+  overflow: hidden;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 22px;
+  text-decoration: none;
+  background: linear-gradient(135deg, var(--secondary) 0%, #FF7043 100%);
+  box-shadow: 0 12px 40px rgba(239,83,80,0.35), 0 4px 12px rgba(239,83,80,0.2);
+  transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  animation: citasEntrance 0.8s 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes citasEntrance { from { opacity: 0; transform: scale(0.85) translateY(20px); } to { opacity: 1; transform: none; } }
+.citas-btn:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 20px 50px rgba(239,83,80,0.4), 0 6px 16px rgba(239,83,80,0.25); }
+.citas-shine {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%);
+  transform: translateX(-100%);
+  animation: shineSlide 3.5s ease-in-out infinite 1.5s;
+  pointer-events: none;
+}
+@keyframes shineSlide { 0% { transform: translateX(-100%); } 30%,100% { transform: translateX(100%); } }
+.citas-bg-circle {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.07);
+  top: -40px;
+  right: -40px;
+}
+.citas-bg-circle-2 {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  bottom: -20px;
+  left: 20px;
+}
+.citas-count { font-family: 'DM Serif Display', serif; font-size: 54px; color: white; line-height: 1; position: relative; z-index: 1; }
+.citas-label { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.88); letter-spacing: 0.5px; position: relative; z-index: 1; }
+.citas-sub { font-size: 11px; color: rgba(255,255,255,0.66); position: relative; z-index: 1; }
+.next-card { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.next-header { display: flex; align-items: center; justify-content: space-between; }
+.next-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--dark); }
+.badge { font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; }
+.badge-soon { background: rgba(239,83,80,0.1); color: var(--secondary); }
+.appointments-list { overflow-y: auto; padding-right: 2px; }
+.appt-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--light2);
+  transition: all 0.2s;
+  cursor: default;
+}
+.appt-row:last-child { border-bottom: none; }
+.appt-row:hover { transform: translateX(4px); }
+.appt-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Serif Display', serif;
+  font-size: 15px;
+  color: white;
+}
+.av-teal { background: linear-gradient(135deg, #26C6DA, #0097A7); }
+.av-coral { background: linear-gradient(135deg, #EF5350, #FF7043); }
+.av-slate { background: linear-gradient(135deg, #546E7A, #37474F); }
+.appt-info { flex: 1; min-width: 0; }
+.appt-name { font-size: 13px; font-weight: 700; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appt-type { font-size: 11px; color: #90A4AE; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appt-time { text-align: right; min-width: 72px; }
+.appt-time strong { display: block; font-size: 13px; font-weight: 700; color: var(--dark); }
+.appt-time span { display: block; font-size: 10px; color: #90A4AE; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 92px; }
+.empty-agenda {
+  padding: 20px 4px 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--dark2);
+  line-height: 1.45;
+}
+.wellness-card {
+  padding: 20px 22px;
+  background: linear-gradient(135deg, rgba(38,198,218,0.08) 0%, rgba(38,198,218,0.04) 100%);
+  border: 1px solid rgba(38,198,218,0.2);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.wellness-kicker {
+  font-size: 11px;
+  color: var(--primary-dark);
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.wellness-quote { font-family: 'DM Serif Display', serif; font-size: 16px; font-style: italic; color: var(--dark); line-height: 1.5; }
+.wellness-attr { font-size: 11px; color: var(--dark2); margin-top: 10px; }
+.wellness-wave { margin-top: 16px; width: 100%; height: 36px; }
+.chooser-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(240,244,248,0.58);
+  backdrop-filter: blur(18px);
+}
+.chooser-card {
+  width: min(460px, 100%);
+  padding: 30px;
+  text-align: center;
+  animation: fadeUp 0.45s cubic-bezier(0.16,1,0.3,1) both;
+}
+.chooser-card img {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: white;
+  padding: 6px;
+  object-fit: contain;
+  margin-bottom: 16px;
+}
+.chooser-card h1 { font-family: 'DM Serif Display', serif; font-size: 30px; margin-bottom: 8px; }
+.chooser-card p { color: var(--dark2); font-size: 14px; line-height: 1.5; margin-bottom: 22px; }
+.chooser-card form { display: flex; gap: 10px; }
+.chooser-card select {
+  flex: 1;
+  height: 48px;
+  border: 1px solid rgba(38,198,218,0.28);
+  border-radius: 14px;
+  color: var(--dark);
+  background: white;
+  padding: 0 12px;
+  outline: none;
+}
+.chooser-card button {
+  border: 0;
+  border-radius: 14px;
+  padding: 0 18px;
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgba(38,198,218,0.24);
+}
+.toast-stack {
+  position: fixed;
+  top: 86px;
+  right: 28px;
+  z-index: 20;
+  display: grid;
+  gap: 8px;
+}
+.toast-msg {
+  max-width: 340px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 10px 28px rgba(55,71,79,0.1);
+  color: var(--dark);
+  font-size: 13px;
+  border: 1px solid rgba(255,255,255,0.9);
+}
+@media (max-width: 1180px) {
+  body { overflow: auto; }
+  .shell { min-height: 100vh; height: auto; }
+  .main-grid { grid-template-columns: 1fr; overflow: visible; }
+  .video-hero { min-height: 360px; }
+  .topbar { flex-wrap: wrap; }
+  .brand, .topbar-center, .topbar-right { min-width: 0; }
+  .topbar-center { order: 3; width: 100%; }
+}
+@media (max-width: 720px) {
+  .topbar { padding: 16px 18px; align-items: flex-start; }
+  .topbar-right { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+  .host-consultorio-form { width: 100%; }
+  .host-select { flex: 1; min-width: 0; }
+  .main-grid { padding: 18px; gap: 18px; }
+  .checklist-card, .next-card, .wellness-card { padding: 20px; }
+  .chooser-card form { flex-direction: column; }
+  .chooser-card button { height: 46px; }
+}
+</style>
+</head>
+<body>
+<div class="bg-canvas">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+{% if messages %}
+<div class="toast-stack">
+  {% for message in messages %}
+    <div class="toast-msg">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <img src="{% static 'clinica/images/logo.png' %}" class="brand-logo" alt="INTRA">
+      <div>
+        <div class="brand-name">INTRA</div>
+        <div class="brand-sub">Consultorios Terapéuticos</div>
+      </div>
+    </div>
+
+    <div class="topbar-center">
+      <div class="greeting-main">Buen día, <span>{{ host.nombre }}</span></div>
+      <div class="date-line" id="dateLine"></div>
+    </div>
+
+    <div class="topbar-right">
+      <form class="host-consultorio-form" method="post" action="{% url 'portal_host' %}">
+        {% csrf_token %}
+        <select class="host-select" name="consultorio_sede" aria-label="Consultorio actual">
+          <option value="">Consultorio</option>
+          {% for sede in sedes_disponibles %}
+            <option value="{{ sede.value }}" {% if sede.value == sede_actual %}selected{% endif %}>{{ sede.label }}</option>
+          {% endfor %}
+        </select>
+        <button class="mini-btn" type="submit" title="Cambiar consultorio">OK</button>
+      </form>
+      <span class="clock" id="clock">--:--<small>:--</small></span>
+      <form action="{% url 'logout' %}" method="post">
+        {% csrf_token %}
+        <button class="logout-btn" type="submit" title="Cerrar sesión">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M10 17l5-5-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </form>
+    </div>
+  </header>
+
+  <main class="main-grid">
+    <section class="glass checklist-card">
+      <div class="card-eyebrow">Tareas del día</div>
+      <div class="card-title">Lista de pendientes</div>
+      <div class="progress-ring-wrap">
+        <svg class="ring-svg" width="88" height="88" viewBox="0 0 88 88">
+          <circle class="ring-track" cx="44" cy="44" r="36"></circle>
+          <circle class="ring-fill" id="ringFill" cx="44" cy="44" r="36" stroke-dasharray="226.19" stroke-dashoffset="150"></circle>
+          <text class="ring-text" id="ringPct" x="44" y="41">33%</text>
+          <text class="ring-sub" x="44" y="57">listo</text>
+        </svg>
+        <div class="ring-label">
+          <strong id="ringTitle">2 de 6 completadas</strong>
+          <span id="ringSub">4 pendientes</span>
+        </div>
+      </div>
+      <div class="checklist-items" id="checklist">
+        {% for tarea in tareas_checklist %}
+          <div class="check-item {% if forloop.counter <= 2 %}done{% endif %}" data-id="{{ tarea.id }}" style="animation-delay:{{ forloop.counter|add:4 }}0ms">
+            <div class="check-box"><svg class="check-icon" width="13" height="10" viewBox="0 0 13 10" fill="none"><polyline points="1.5,5 5,8.5 11.5,1.5" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="check-text">
+              <strong>{{ tarea.titulo }}</strong>
+              <small>{{ tarea.subtitulo|default:sede_actual_label|default:"Tarea diaria" }}</small>
+            </div>
+            {% if tarea.etiqueta %}
+              <span class="check-tag {% if tarea.urgente %}urgent{% endif %}">{{ tarea.etiqueta }}</span>
+            {% endif %}
+          </div>
+        {% empty %}
+          <div class="empty-agenda">Recepción aún no ha configurado tareas para este Host.</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="glass video-card">
+      <div class="video-hero">
+        <div class="video-bg-pattern"></div>
+        <div class="video-glow"></div>
+        <div class="video-pulse-ring"></div>
+        <div class="video-pulse-ring delay"></div>
+        <div class="video-label"><div class="live-dot"></div>Video Capacitación</div>
+        <div class="play-btn-wrap">
+          <button class="play-btn" id="playBtn" type="button" aria-label="Reproducir capacitación">
+            <svg class="play-icon" width="22" height="22" viewBox="0 0 22 22" fill="white"><polygon points="5,2 19,11 5,20"/></svg>
+            <svg class="pause-icon" width="22" height="22" viewBox="0 0 22 22" fill="white" style="display:none"><rect x="4" y="3" width="5" height="16" rx="2"/><rect x="13" y="3" width="5" height="16" rx="2"/></svg>
+          </button>
+        </div>
+        <div class="video-title-overlay">
+          <div class="video-module">Módulo 1 de 4</div>
+          <div class="video-name">Bienvenida y operación diaria del portal Host</div>
+        </div>
+      </div>
+      <div class="video-progress-section">
+        <div class="vp-header">
+          <span class="vp-title">Progreso del curso</span>
+          <span class="vp-pct" id="videoPct">58%</span>
+        </div>
+        <div class="progress-track" id="videoTrack">
+          <div class="progress-fill" id="videoFill" style="width:58%"></div>
+        </div>
+        <div class="video-chapters">
+          <div class="chapter-row done-ch"><div class="chapter-num">✓</div><span class="chapter-text">Introducción al rol Host</span><span class="chapter-dur">8:22</span></div>
+          <div class="chapter-row done-ch"><div class="chapter-num">✓</div><span class="chapter-text">Recepción de pacientes</span><span class="chapter-dur">12:05</span></div>
+          <div class="chapter-row active"><div class="chapter-num">3</div><span class="chapter-text">Manejo de agenda por consultorio</span><span class="chapter-dur">15:40</span></div>
+          <div class="chapter-row"><div class="chapter-num">4</div><span class="chapter-text">Cierre y reportes internos</span><span class="chapter-dur">9:18</span></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="right-col">
+      <button class="citas-btn" type="button">
+        <div class="citas-shine"></div>
+        <div class="citas-bg-circle"></div>
+        <div class="citas-bg-circle-2"></div>
+        <div class="citas-count">{{ citas_total }}</div>
+        <div class="citas-label">Citas Hoy</div>
+        {% if proxima_cita %}
+          <div class="citas-sub">Próxima: {{ proxima_cita.hora|time:"H:i" }} · {{ proxima_cita.paciente.nombre|truncatechars:14 }}</div>
+        {% elif sede_actual %}
+          <div class="citas-sub">{{ sede_actual_label }} · Sin citas pendientes</div>
+        {% else %}
+          <div class="citas-sub">Elige consultorio para ver agenda</div>
+        {% endif %}
+      </button>
+
+      <section class="glass next-card">
+        <div class="next-header">
+          <div class="next-title">Agenda</div>
+          <span class="badge badge-soon">{{ sede_actual_label|default:"Hoy" }}</span>
+        </div>
+        <div class="appointments-list">
+          {% for cita in citas_host %}
+            <div class="appt-row">
+              <div class="appt-avatar {{ cita.avatar_class }}">{{ cita.iniciales }}</div>
+              <div class="appt-info">
+                <div class="appt-name">{{ cita.nombre }}</div>
+                <div class="appt-type">{{ cita.tipo }} · {{ cita.terapeuta }}</div>
+              </div>
+              <div class="appt-time">
+                <strong>{{ cita.hora }}</strong>
+                <span title="{{ cita.sala }}">{{ cita.sala }}</span>
+              </div>
+            </div>
+          {% empty %}
+            <div class="empty-agenda">
+              {% if sede_actual %}
+                No hay citas activas hoy para {{ sede_actual_label }}.
+              {% else %}
+                Selecciona el consultorio donde estás para cargar solo sus citas.
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="glass wellness-card">
+        <div>
+          <div class="wellness-kicker">Reflexión del día</div>
+          <div class="wellness-quote">"La calma en recepción también ordena la experiencia del paciente."</div>
+          <div class="wellness-attr">— INTRA Consultorios</div>
+        </div>
+        <svg class="wellness-wave" viewBox="0 0 320 36" preserveAspectRatio="none">
+          <path d="M0 18 Q40 0 80 18 Q120 36 160 18 Q200 0 240 18 Q280 36 320 18" stroke="rgba(38,198,218,0.25)" stroke-width="2" fill="none"/>
+          <path d="M0 24 Q40 6 80 24 Q120 42 160 24 Q200 6 240 24 Q280 42 320 24" stroke="rgba(38,198,218,0.12)" stroke-width="2" fill="none"/>
+        </svg>
+      </section>
+    </aside>
+  </main>
+</div>
+
+{% if requiere_consultorio %}
+<div class="chooser-overlay">
+  <section class="glass chooser-card">
+    <img src="{% static 'clinica/images/logo.png' %}" alt="INTRA">
+    <h1>¿En qué consultorio estás?</h1>
+    <p>Selecciona la sede para mostrar únicamente las citas activas de ese consultorio. No necesitas elegir sala.</p>
+    <form method="post" action="{% url 'portal_host' %}">
+      {% csrf_token %}
+      <select name="consultorio_sede" required>
+        <option value="">Seleccionar consultorio</option>
+        {% for sede in sedes_disponibles %}
+          <option value="{{ sede.value }}">{{ sede.label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Entrar</button>
+    </form>
+  </section>
+</div>
+{% endif %}
+
+<script>
+const CHECK_TOTAL = {{ tareas_total|default:0 }};
+const RING_CIRC = 2 * Math.PI * 36;
+const clockEl = document.getElementById('clock');
+const dateLine = document.getElementById('dateLine');
+const ringFill = document.getElementById('ringFill');
+const ringPct = document.getElementById('ringPct');
+const ringTitle = document.getElementById('ringTitle');
+const ringSub = document.getElementById('ringSub');
+const checklist = document.getElementById('checklist');
+const playBtn = document.getElementById('playBtn');
+const playIcon = playBtn.querySelector('.play-icon');
+const pauseIcon = playBtn.querySelector('.pause-icon');
+const videoFill = document.getElementById('videoFill');
+const videoPct = document.getElementById('videoPct');
+const videoTrack = document.getElementById('videoTrack');
+let videoProgress = 58;
+let playing = false;
+let playTimer = null;
+
+function updateClock() {
+  const now = new Date();
+  const hhmm = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  clockEl.innerHTML = `${hhmm}<small>:${ss}</small>`;
+  const today = now.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+  dateLine.textContent = today.charAt(0).toUpperCase() + today.slice(1);
+}
+
+function updateChecklist() {
+  const done = checklist.querySelectorAll('.check-item.done').length;
+  const pct = CHECK_TOTAL ? Math.round((done / CHECK_TOTAL) * 100) : 0;
+  ringFill.style.strokeDasharray = RING_CIRC;
+  ringFill.style.strokeDashoffset = CHECK_TOTAL ? RING_CIRC * (1 - done / CHECK_TOTAL) : RING_CIRC;
+  ringPct.textContent = `${pct}%`;
+  ringTitle.textContent = `${done} de ${CHECK_TOTAL} completadas`;
+  const pending = CHECK_TOTAL - done;
+  ringSub.textContent = pending === 0 ? 'Jornada lista' : `${pending} pendiente${pending === 1 ? '' : 's'}`;
+}
+
+function setVideoProgress(value) {
+  videoProgress = Math.max(0, Math.min(100, Math.round(value)));
+  videoFill.style.width = `${videoProgress}%`;
+  videoPct.textContent = `${videoProgress}%`;
+}
+
+checklist.addEventListener('click', (event) => {
+  const item = event.target.closest('.check-item');
+  if (!item) return;
+  const rect = item.getBoundingClientRect();
+  const ripple = document.createElement('span');
+  const size = Math.max(rect.width, rect.height);
+  ripple.className = 'ripple';
+  ripple.style.width = `${size}px`;
+  ripple.style.height = `${size}px`;
+  ripple.style.left = `${event.clientX - rect.left - size / 2}px`;
+  ripple.style.top = `${event.clientY - rect.top - size / 2}px`;
+  item.appendChild(ripple);
+  window.setTimeout(() => ripple.remove(), 600);
+  item.classList.toggle('done');
+  updateChecklist();
+});
+
+playBtn.addEventListener('click', () => {
+  playing = !playing;
+  playBtn.classList.toggle('playing', playing);
+  playIcon.style.display = playing ? 'none' : 'block';
+  pauseIcon.style.display = playing ? 'block' : 'none';
+  if (playing) {
+    playTimer = window.setInterval(() => setVideoProgress(videoProgress + 1), 900);
+  } else {
+    window.clearInterval(playTimer);
+  }
+});
+
+videoTrack.addEventListener('click', (event) => {
+  const rect = videoTrack.getBoundingClientRect();
+  setVideoProgress(((event.clientX - rect.left) / rect.width) * 100);
+});
+
+document.querySelectorAll('.chapter-row').forEach(row => {
+  row.addEventListener('click', () => {
+    document.querySelectorAll('.chapter-row').forEach(ch => ch.classList.remove('active'));
+    row.classList.add('active');
+  });
+});
+
+updateClock();
+updateChecklist();
+window.setInterval(updateClock, 1000);
+</script>
+</body>
+</html>

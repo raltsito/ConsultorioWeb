@@ -605,6 +605,36 @@ class AperturaExpedienteForm(forms.ModelForm):
             'emergencia_contacto':  forms.TextInput(attrs={'class': 'form-control'}),
             'emergencia_telefono':  forms.TextInput(attrs={'class': 'form-control'}),
             'como_se_entero':       forms.TextInput(attrs={'class': 'form-control'}),
+            # Antecedentes médicos
+            'tiene_enfermedad':     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'cual_enfermedad':      forms.TextInput(attrs={'class': 'form-control'}),
+            # Antecedentes psiquiátricos
+            'tx_psiquiatrico':              forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'tx_psiquiatrico_hace_cuanto':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 6 meses'}),
+            'tx_psiquiatrico_motivo':       forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'tx_psiquiatrico_medicamento':  forms.TextInput(attrs={'class': 'form-control'}),
+            # Terapia previa
+            'ha_tomado_terapia':    forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'terapia_hace_cuanto':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 1 año'}),
+            'terapia_duracion':     forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 3 meses'}),
+            'terapia_motivo':       forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            # Sustancias
+            'fuma':                     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'consume_alcohol':          forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'consume_otras_sustancias': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'cuales_sustancias':        forms.TextInput(attrs={'class': 'form-control'}),
+            # Hábitos
+            'comidas_al_dia':       forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'horas_sueno':          forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'actividad_fisica':     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'cual_actividad_fisica': forms.TextInput(attrs={'class': 'form-control'}),
+            # Intento suicida
+            'intento_suicida':              forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'intento_suicida_hace_cuanto':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 2 años'}),
+            'intento_suicida_que_hizo':     forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'intento_suicida_motivo':       forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            # Vida sexual
+            'vida_sexual_activa':   forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
     def __init__(self, *args, **kwargs):

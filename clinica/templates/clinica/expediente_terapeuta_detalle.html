@@ -499,6 +499,161 @@
               {{ form_apertura.como_se_entero }}
             </div>
 
+            <!-- ── ANTECEDENTES MÉDICOS ───────────────────────────── -->
+            <div class="slbl">Antecedentes Médicos</div>
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <div class="form-check">
+                  {{ form_apertura.tiene_enfermedad }}
+                  <label class="form-check-label small fw-semibold" for="{{ form_apertura.tiene_enfermedad.id_for_label }}">
+                    ¿Tiene alguna enfermedad?
+                  </label>
+                </div>
+              </div>
+              <div class="col-12" id="row-cual-enfermedad">
+                <label class="form-label small fw-semibold">¿Cuál?</label>
+                {{ form_apertura.cual_enfermedad }}
+              </div>
+            </div>
+
+            <!-- ── TRATAMIENTO PSIQUIÁTRICO ───────────────────────── -->
+            <div class="slbl">Tratamiento Psiquiátrico</div>
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <div class="form-check">
+                  {{ form_apertura.tx_psiquiatrico }}
+                  <label class="form-check-label small fw-semibold" for="{{ form_apertura.tx_psiquiatrico.id_for_label }}">
+                    ¿Está o ha estado en tratamiento psiquiátrico?
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-4" id="row-tx-psiq-hace-cuanto">
+                <label class="form-label small fw-semibold">¿Hace cuánto?</label>
+                {{ form_apertura.tx_psiquiatrico_hace_cuanto }}
+              </div>
+              <div class="col-md-8" id="row-tx-psiq-medicamento">
+                <label class="form-label small fw-semibold">Medicamento(s)</label>
+                {{ form_apertura.tx_psiquiatrico_medicamento }}
+              </div>
+              <div class="col-12" id="row-tx-psiq-motivo">
+                <label class="form-label small fw-semibold">Motivo del tratamiento</label>
+                {{ form_apertura.tx_psiquiatrico_motivo }}
+              </div>
+            </div>
+
+            <!-- ── TERAPIA PREVIA ─────────────────────────────────── -->
+            <div class="slbl">Terapia Previa</div>
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <div class="form-check">
+                  {{ form_apertura.ha_tomado_terapia }}
+                  <label class="form-check-label small fw-semibold" for="{{ form_apertura.ha_tomado_terapia.id_for_label }}">
+                    ¿Ha tomado terapia anteriormente?
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-4" id="row-terapia-hace-cuanto">
+                <label class="form-label small fw-semibold">¿Hace cuánto?</label>
+                {{ form_apertura.terapia_hace_cuanto }}
+              </div>
+              <div class="col-md-4" id="row-terapia-duracion">
+                <label class="form-label small fw-semibold">¿Cuánto duró?</label>
+                {{ form_apertura.terapia_duracion }}
+              </div>
+              <div class="col-12" id="row-terapia-motivo">
+                <label class="form-label small fw-semibold">Motivo</label>
+                {{ form_apertura.terapia_motivo }}
+              </div>
+            </div>
+
+            <!-- ── SUSTANCIAS ─────────────────────────────────────── -->
+            <div class="slbl">Sustancias</div>
+            <div class="row g-3 mb-4">
+              <div class="col-md-4">
+                <div class="form-check">
+                  {{ form_apertura.fuma }}
+                  <label class="form-check-label small fw-semibold" for="{{ form_apertura.fuma.id_for_label }}">Fuma</label>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-check">
+                  {{ form_apertura.consume_alcohol }}
+                  <label class="form-check-label small fw-semibold" for="{{ form_apertura.consume_alcohol.id_for_label }}">Consume alcohol</label>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-check">
+                  {{ form_apertura.consume_otras_sustancias }}
+                  <label class="form-check-label small fw-semibold" for="{{ form_apertura.consume_otras_sustancias.id_for_label }}">Otras sustancias</label>
+                </div>
+              </div>
+              <div class="col-12" id="row-cuales-sustancias">
+                <label class="form-label small fw-semibold">¿Cuáles?</label>
+                {{ form_apertura.cuales_sustancias }}
+              </div>
+            </div>
+
+            <!-- ── HÁBITOS ─────────────────────────────────────────── -->
+            <div class="slbl">Hábitos</div>
+            <div class="row g-3 mb-4">
+              <div class="col-md-3">
+                <label class="form-label small fw-semibold">Comidas al día</label>
+                {{ form_apertura.comidas_al_dia }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small fw-semibold">Horas de sueño al día</label>
+                {{ form_apertura.horas_sueno }}
+              </div>
+              <div class="col-md-6">
+                <div class="form-check mt-4">
+                  {{ form_apertura.actividad_fisica }}
+                  <label class="form-check-label small fw-semibold" for="{{ form_apertura.actividad_fisica.id_for_label }}">
+                    ¿Realiza actividad física?
+                  </label>
+                </div>
+              </div>
+              <div class="col-12" id="row-cual-actividad">
+                <label class="form-label small fw-semibold">¿Cuál actividad física?</label>
+                {{ form_apertura.cual_actividad_fisica }}
+              </div>
+            </div>
+
+            <!-- ── INTENTO SUICIDA ─────────────────────────────────── -->
+            <div class="slbl">Riesgo Suicida</div>
+            <div class="row g-3 mb-4">
+              <div class="col-12">
+                <div class="form-check">
+                  {{ form_apertura.intento_suicida }}
+                  <label class="form-check-label small fw-semibold" for="{{ form_apertura.intento_suicida.id_for_label }}">
+                    ¿Ha intentado quitarse la vida?
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-4" id="row-intento-hace-cuanto">
+                <label class="form-label small fw-semibold">¿Hace cuánto?</label>
+                {{ form_apertura.intento_suicida_hace_cuanto }}
+              </div>
+              <div class="col-md-8" id="row-intento-que-hizo">
+                <label class="form-label small fw-semibold">¿Qué hizo?</label>
+                {{ form_apertura.intento_suicida_que_hizo }}
+              </div>
+              <div class="col-12" id="row-intento-motivo">
+                <label class="form-label small fw-semibold">¿Por qué?</label>
+                {{ form_apertura.intento_suicida_motivo }}
+              </div>
+            </div>
+
+            <!-- ── VIDA SEXUAL ─────────────────────────────────────── -->
+            <div class="slbl">Vida Sexual</div>
+            <div class="mb-4">
+              <div class="form-check">
+                {{ form_apertura.vida_sexual_activa }}
+                <label class="form-check-label small fw-semibold" for="{{ form_apertura.vida_sexual_activa.id_for_label }}">
+                  ¿Tiene vida sexual activa en este momento?
+                </label>
+              </div>
+            </div>
+
             <div class="d-flex justify-content-end">
               <button type="submit" class="btn-teal btn">
                 <i class="bi bi-save me-1"></i>
@@ -820,6 +975,27 @@ document.getElementById('colApertura').addEventListener('show.bs.collapse', func
 document.getElementById('colApertura').addEventListener('hide.bs.collapse', function() {
   document.getElementById('chevApertura').className = 'bi bi-chevron-down';
 });
+
+// Mostrar/ocultar campos condicionales en apertura
+function toggleCondicional(checkId, rowIds) {
+  const chk = document.getElementById(checkId);
+  if (!chk) return;
+  function actualizar() {
+    rowIds.forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = chk.checked ? '' : 'none';
+    });
+  }
+  chk.addEventListener('change', actualizar);
+  actualizar();
+}
+
+toggleCondicional('id_tiene_enfermedad',        ['row-cual-enfermedad']);
+toggleCondicional('id_tx_psiquiatrico',          ['row-tx-psiq-hace-cuanto', 'row-tx-psiq-medicamento', 'row-tx-psiq-motivo']);
+toggleCondicional('id_ha_tomado_terapia',        ['row-terapia-hace-cuanto', 'row-terapia-duracion', 'row-terapia-motivo']);
+toggleCondicional('id_consume_otras_sustancias', ['row-cuales-sustancias']);
+toggleCondicional('id_actividad_fisica',         ['row-cual-actividad']);
+toggleCondicional('id_intento_suicida',          ['row-intento-hace-cuanto', 'row-intento-que-hizo', 'row-intento-motivo']);
 </script>
 
 {# ─── MODAL HISTORIAL COMPLETO DE CITAS ─── #}

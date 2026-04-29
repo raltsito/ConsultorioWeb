@@ -31,6 +31,8 @@ from .models import (
     DocumentoPaciente,
     Empresa,
     ExpedienteGrupal,
+    Host,
+    HostChecklistTask,
     NotaExpedienteGrupal,
     Paciente,
     PacienteTerapeutaAcceso,
@@ -322,6 +324,9 @@ def home(request):
     if hasattr(request.user, 'perfil_empresa'):
         return redirect('portal_empresa')
 
+    if hasattr(request.user, 'perfil_host'):
+        return redirect('portal_host')
+
     hoy = timezone.now().date()
     mes_actual = timezone.now().month
 
@@ -391,6 +396,181 @@ def home(request):
         'reagendos_pendientes': reagendos_pendientes,
         'manual_portal': manual_portal,
         'manual_form': manual_form,
+    })
+
+
+@login_required
+def portal_host(request):
+    if not hasattr(request.user, 'perfil_host'):
+        return redirect('home')
+
+    sedes_excluidas = {'zoom', 'externo'}
+    sede_labels = dict(Consultorio.SEDE_CHOICES)
+    sedes_disponibles = [
+        {
+            'value': sede,
+            'label': sede_labels.get(sede, sede),
+        }
+        for sede in (
+            Consultorio.objects
+            .exclude(sede__in=sedes_excluidas)
+            .exclude(sede__isnull=True)
+            .exclude(sede='')
+            .values_list('sede', flat=True)
+            .distinct()
+            .order_by('sede')
+        )
+    ]
+    sedes_validas = {sede['value'] for sede in sedes_disponibles}
+
+    if request.method == 'POST':
+        sede_seleccionada = request.POST.get('consultorio_sede', '').strip()
+        if sede_seleccionada in sedes_validas:
+            request.session['host_consultorio_sede'] = sede_seleccionada
+            messages.success(request, f"Consultorio seleccionado: {sede_labels.get(sede_seleccionada, sede_seleccionada)}.")
+        else:
+            request.session.pop('host_consultorio_sede', None)
+            messages.error(request, 'Selecciona un consultorio valido para continuar.')
+        return redirect('portal_host')
+
+    sede_actual = request.session.get('host_consultorio_sede')
+    if sede_actual not in sedes_validas:
+        sede_actual = None
+        request.session.pop('host_consultorio_sede', None)
+
+    hoy = timezone.localdate()
+    ahora = timezone.localtime().time()
+    citas = Cita.objects.none()
+    proxima_cita = None
+
+    if sede_actual:
+        citas = (
+            Cita.objects
+            .filter(
+                fecha=hoy,
+                consultorio__sede=sede_actual,
+                estatus__in=Cita.ESTATUS_ACTIVOS,
+            )
+            .select_related('paciente', 'terapeuta', 'servicio', 'consultorio')
+            .prefetch_related('pacientes_adicionales')
+            .order_by('hora')
+        )
+        proxima_cita = citas.filter(hora__gte=ahora).first() or citas.first()
+
+    avatar_classes = ['av-teal', 'av-coral', 'av-slate']
+    citas_host = []
+    for index, cita in enumerate(citas):
+        nombre = cita.pacientes_display_natural() or 'Paciente sin nombre'
+        iniciales = ''.join([parte[0] for parte in nombre.split()[:2]]).upper() or 'IN'
+        citas_host.append({
+            'nombre': nombre,
+            'tipo': cita.servicio.nombre if cita.servicio else cita.get_tipo_paciente_display(),
+            'terapeuta': cita.terapeuta.nombre if cita.terapeuta else 'Sin terapeuta',
+            'hora': cita.hora.strftime('%H:%M'),
+            'sala': cita.consultorio.nombre if cita.consultorio else 'Sin consultorio',
+            'estatus': cita.get_estatus_display(),
+            'iniciales': iniciales,
+            'avatar_class': avatar_classes[index % len(avatar_classes)],
+        })
+
+    tareas_checklist = (
+        HostChecklistTask.objects
+        .filter(activo=True)
+        .filter(Q(hosts=request.user.perfil_host) | Q(hosts__isnull=True))
+        .distinct()
+        .order_by('orden', 'id')
+    )
+
+    return render(request, 'clinica/portal_host.html', {
+        'host': request.user.perfil_host,
+        'sedes_disponibles': sedes_disponibles,
+        'sede_actual': sede_actual,
+        'sede_actual_label': sede_labels.get(sede_actual, '') if sede_actual else '',
+        'requiere_consultorio': not bool(sede_actual),
+        'citas_host': citas_host,
+        'citas_total': len(citas_host),
+        'proxima_cita': proxima_cita,
+        'tareas_checklist': tareas_checklist,
+        'tareas_total': tareas_checklist.count(),
+        'hoy': hoy,
+    })
+
+
+@login_required
+def checklist_host_config(request):
+    es_usuario_portal = (
+        hasattr(request.user, 'perfil_terapeuta') or
+        hasattr(request.user, 'perfil_paciente') or
+        hasattr(request.user, 'perfil_empresa') or
+        hasattr(request.user, 'perfil_host')
+    )
+    if es_usuario_portal and not (request.user.is_superuser or request.user.is_staff):
+        return redirect('home')
+
+    hosts = Host.objects.select_related('usuario').order_by('nombre')
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion', 'crear')
+        tarea_id = request.POST.get('tarea_id')
+
+        if accion in ('crear', 'actualizar'):
+            titulo = request.POST.get('titulo', '').strip()
+            if not titulo:
+                messages.error(request, 'El titulo de la tarea es obligatorio.')
+                return redirect('checklist_host_config')
+
+            if accion == 'actualizar':
+                tarea = get_object_or_404(HostChecklistTask, id=tarea_id)
+            else:
+                tarea = HostChecklistTask()
+
+            try:
+                orden = int(request.POST.get('orden') or 0)
+            except ValueError:
+                orden = 0
+
+            tarea.titulo = titulo
+            tarea.subtitulo = request.POST.get('subtitulo', '').strip()
+            tarea.etiqueta = request.POST.get('etiqueta', '').strip()
+            tarea.urgente = request.POST.get('urgente') == 'on'
+            tarea.activo = request.POST.get('activo') == 'on'
+            tarea.orden = orden
+            tarea.save()
+
+            host_ids = request.POST.getlist('hosts')
+            tarea.hosts.set(Host.objects.filter(id__in=host_ids))
+            messages.success(request, 'Tarea de checklist guardada correctamente.')
+            return redirect('checklist_host_config')
+
+        if accion == 'toggle':
+            tarea = get_object_or_404(HostChecklistTask, id=tarea_id)
+            tarea.activo = not tarea.activo
+            tarea.save(update_fields=['activo'])
+            messages.success(request, 'Estado de la tarea actualizado.')
+            return redirect('checklist_host_config')
+
+        if accion == 'eliminar':
+            tarea = get_object_or_404(HostChecklistTask, id=tarea_id)
+            tarea.delete()
+            messages.success(request, 'Tarea eliminada del checklist.')
+            return redirect('checklist_host_config')
+
+    tareas = list(
+        HostChecklistTask.objects
+        .prefetch_related('hosts')
+        .order_by('orden', 'id')
+    )
+    tareas_config = [
+        {
+            'obj': tarea,
+            'host_ids': list(tarea.hosts.values_list('id', flat=True)),
+            'hosts_display': ', '.join(tarea.hosts.values_list('nombre', flat=True)) or 'Todos los hosts',
+        }
+        for tarea in tareas
+    ]
+    return render(request, 'clinica/checklist_host_config.html', {
+        'tareas_config': tareas_config,
+        'hosts': hosts,
     })
 
 
@@ -663,6 +843,88 @@ def _generar_pdf_apertura(apertura):
     elems.append(Table(
         [[lbl('¿Cómo se enteró de nosotros?'), val(apertura.como_se_entero or '—')]],
         colWidths=['28%', '72%'],
+    ))
+
+    # ── Antecedentes Médicos ────────────────────────────────────────────────
+    elems.append(Paragraph('Antecedentes Médicos', T_SECTION))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    elems.append(grid([
+        [lbl('¿Tiene alguna enfermedad?'), val('Sí' if apertura.tiene_enfermedad else 'No'),
+         lbl('¿Cuál?'), val(apertura.cual_enfermedad or '—')],
+    ]))
+
+    # ── Tratamiento Psiquiátrico ────────────────────────────────────────────
+    elems.append(Paragraph('Tratamiento Psiquiátrico', T_SECTION))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    elems.append(grid([
+        [lbl('¿Está o ha estado en Tx psiquiátrico?'), val('Sí' if apertura.tx_psiquiatrico else 'No'),
+         lbl('¿Hace cuánto?'), val(apertura.tx_psiquiatrico_hace_cuanto or '—')],
+        [lbl('Medicamento(s)'), val(apertura.tx_psiquiatrico_medicamento or '—'),
+         lbl(''), val('')],
+    ]))
+    if apertura.tx_psiquiatrico and apertura.tx_psiquiatrico_motivo:
+        elems.append(Table(
+            [[lbl('Motivo del tratamiento'), val(apertura.tx_psiquiatrico_motivo)]],
+            colWidths=['22%', '78%'],
+        ))
+
+    # ── Terapia Previa ──────────────────────────────────────────────────────
+    elems.append(Paragraph('Terapia Previa', T_SECTION))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    elems.append(grid([
+        [lbl('¿Ha tomado terapia anteriormente?'), val('Sí' if apertura.ha_tomado_terapia else 'No'),
+         lbl('¿Hace cuánto?'), val(apertura.terapia_hace_cuanto or '—')],
+        [lbl('¿Cuánto duró?'), val(apertura.terapia_duracion or '—'),
+         lbl(''), val('')],
+    ]))
+    if apertura.ha_tomado_terapia and apertura.terapia_motivo:
+        elems.append(Table(
+            [[lbl('Motivo'), val(apertura.terapia_motivo)]],
+            colWidths=['22%', '78%'],
+        ))
+
+    # ── Sustancias ──────────────────────────────────────────────────────────
+    elems.append(Paragraph('Sustancias', T_SECTION))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    elems.append(grid([
+        [lbl('Fuma'), val('Sí' if apertura.fuma else 'No'),
+         lbl('Consume alcohol'), val('Sí' if apertura.consume_alcohol else 'No')],
+        [lbl('Otras sustancias'), val('Sí' if apertura.consume_otras_sustancias else 'No'),
+         lbl('¿Cuáles?'), val(apertura.cuales_sustancias or '—')],
+    ]))
+
+    # ── Hábitos ─────────────────────────────────────────────────────────────
+    elems.append(Paragraph('Hábitos', T_SECTION))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    elems.append(grid([
+        [lbl('Comidas al día'), val(str(apertura.comidas_al_dia) if apertura.comidas_al_dia is not None else '—'),
+         lbl('Horas de sueño al día'), val(str(apertura.horas_sueno) if apertura.horas_sueno is not None else '—')],
+        [lbl('Actividad física'), val('Sí' if apertura.actividad_fisica else 'No'),
+         lbl('¿Cuál?'), val(apertura.cual_actividad_fisica or '—')],
+    ]))
+
+    # ── Riesgo Suicida ──────────────────────────────────────────────────────
+    elems.append(Paragraph('Riesgo Suicida', T_SECTION))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    elems.append(grid([
+        [lbl('¿Ha intentado quitarse la vida?'), val('Sí' if apertura.intento_suicida else 'No'),
+         lbl('¿Hace cuánto?'), val(apertura.intento_suicida_hace_cuanto or '—')],
+    ]))
+    if apertura.intento_suicida:
+        rows_suicida = []
+        if apertura.intento_suicida_que_hizo:
+            rows_suicida.append([lbl('¿Qué hizo?'), val(apertura.intento_suicida_que_hizo)])
+        if apertura.intento_suicida_motivo:
+            rows_suicida.append([lbl('¿Por qué?'), val(apertura.intento_suicida_motivo)])
+        for r in rows_suicida:
+            elems.append(Table([r], colWidths=['22%', '78%']))
+
+    # ── Vida Sexual ─────────────────────────────────────────────────────────
+    elems.append(Paragraph('Vida Sexual', T_SECTION))
+    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    elems.append(Table(
+        [[lbl('¿Tiene vida sexual activa?'), val('Sí' if apertura.vida_sexual_activa else 'No'), lbl(''), val('')]],
+        colWidths=['28%', '22%', '18%', '32%'],
     ))
 
     # ── Aviso de Privacidad ─────────────────────────────────────────────────

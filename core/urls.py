@@ -88,6 +88,10 @@ urlpatterns = [
     path('empresa/citas-en-proceso/', clinica_views.citas_en_proceso_empresa, name='citas_en_proceso_empresa'),
     path('empresa/terapeutas-paciente/', clinica_views.terapeutas_paciente_empresa, name='terapeutas_paciente_empresa'),
 
+    # Portal Host
+    path('host/', clinica_views.portal_host, name='portal_host'),
+    path('host/checklist/', clinica_views.checklist_host_config, name='checklist_host_config'),
+
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,247 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-4">
+    <div>
+        <h2 class="fw-bold text-secondary-emphasis mb-1">
+            <i class="bi bi-ui-checks-grid me-2 text-info"></i>Checklist Host
+        </h2>
+        <p class="text-muted mb-0">Configura las tareas diarias generales o asignadas a hosts especificos.</p>
+    </div>
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Recepcion
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <p class="text-uppercase fw-bold text-info small mb-2" style="letter-spacing:.12em;">Nueva tarea</p>
+                <h5 class="fw-bold mb-3">Agregar al checklist</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="crear">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Titulo</label>
+                        <input type="text" name="titulo" class="form-control" maxlength="140" required placeholder="Ej. Revisar agenda del consultorio">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Descripcion breve</label>
+                        <input type="text" name="subtitulo" class="form-control" maxlength="180" placeholder="Ej. Confirmar citas y terapeutas">
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-7">
+                            <label class="form-label fw-semibold">Etiqueta</label>
+                            <input type="text" name="etiqueta" class="form-control" maxlength="40" placeholder="Prioritario">
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label fw-semibold">Orden</label>
+                            <input type="number" name="orden" class="form-control" value="0" min="0">
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch my-3">
+                        <input class="form-check-input" type="checkbox" role="switch" name="urgente" id="nuevaUrgente">
+                        <label class="form-check-label" for="nuevaUrgente">Marcar como urgente</label>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" name="activo" id="nuevaActiva" checked>
+                        <label class="form-check-label" for="nuevaActiva">Activa</label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Asignar a hosts</label>
+                        <select name="hosts" class="form-select" multiple size="5">
+                            {% for host in hosts %}
+                                <option value="{{ host.id }}">{{ host.nombre }}{% if host.usuario %} · {{ host.usuario.username }}{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Si no seleccionas ninguno, la tarea aplica a todos los hosts.</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-circle me-1"></i> Guardar tarea
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                    <div>
+                        <p class="text-uppercase fw-bold text-info small mb-1" style="letter-spacing:.12em;">Tareas configuradas</p>
+                        <h5 class="fw-bold mb-0">Checklist diario</h5>
+                    </div>
+                    <span class="badge rounded-pill bg-info-subtle text-info border">{{ tareas_config|length }} tareas</span>
+                </div>
+            </div>
+            <div class="card-body p-4 pt-2">
+                <div class="host-task-list">
+                    {% for item in tareas_config %}
+                        {% with tarea=item.obj %}
+                        <div class="host-task">
+                            <div class="host-task-summary">
+                                <div class="host-task-order">{{ tarea.orden }}</div>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <h6 class="fw-bold mb-0">{{ tarea.titulo }}</h6>
+                                        {% if tarea.etiqueta %}
+                                            <span class="badge {% if tarea.urgente %}text-bg-danger{% else %}text-bg-info{% endif %}">{{ tarea.etiqueta }}</span>
+                                        {% endif %}
+                                        {% if tarea.activo %}
+                                            <span class="badge text-bg-success">Activa</span>
+                                        {% else %}
+                                            <span class="badge text-bg-secondary">Inactiva</span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="text-muted small mb-1">{{ tarea.subtitulo|default:"Sin descripcion" }}</p>
+                                    <div class="small text-secondary">
+                                        <i class="bi bi-people me-1"></i>{{ item.hosts_display }}
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#editarTarea{{ tarea.id }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="accion" value="toggle">
+                                        <input type="hidden" name="tarea_id" value="{{ tarea.id }}">
+                                        <button class="btn btn-sm btn-outline-secondary" type="submit" title="Activar o desactivar">
+                                            <i class="bi bi-power"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" onsubmit="return confirm('¿Eliminar esta tarea del checklist host?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="accion" value="eliminar">
+                                        <input type="hidden" name="tarea_id" value="{{ tarea.id }}">
+                                        <button class="btn btn-sm btn-outline-danger" type="submit" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="collapse" id="editarTarea{{ tarea.id }}">
+                                <form method="post" class="host-task-edit">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="actualizar">
+                                    <input type="hidden" name="tarea_id" value="{{ tarea.id }}">
+
+                                    <div class="row g-2">
+                                        <div class="col-md-7">
+                                            <label class="form-label small fw-semibold">Titulo</label>
+                                            <input type="text" name="titulo" class="form-control" value="{{ tarea.titulo }}" maxlength="140" required>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-semibold">Etiqueta</label>
+                                            <input type="text" name="etiqueta" class="form-control" value="{{ tarea.etiqueta }}" maxlength="40">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label small fw-semibold">Orden</label>
+                                            <input type="number" name="orden" class="form-control" value="{{ tarea.orden }}" min="0">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label small fw-semibold">Descripcion breve</label>
+                                            <input type="text" name="subtitulo" class="form-control" value="{{ tarea.subtitulo }}" maxlength="180">
+                                        </div>
+                                        <div class="col-md-7">
+                                            <label class="form-label small fw-semibold">Hosts especificos</label>
+                                            <select name="hosts" class="form-select" multiple size="4">
+                                                {% for host in hosts %}
+                                                    <option value="{{ host.id }}" {% if host.id in item.host_ids %}selected{% endif %}>
+                                                        {{ host.nombre }}{% if host.usuario %} · {{ host.usuario.username }}{% endif %}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="form-text">Vacio = todos los hosts.</div>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <label class="form-label small fw-semibold">Estado</label>
+                                            <div class="p-3 rounded-3 bg-light border">
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" role="switch" name="urgente" id="urgente{{ tarea.id }}" {% if tarea.urgente %}checked{% endif %}>
+                                                    <label class="form-check-label" for="urgente{{ tarea.id }}">Urgente</label>
+                                                </div>
+                                                <div class="form-check form-switch mt-2">
+                                                    <input class="form-check-input" type="checkbox" role="switch" name="activo" id="activo{{ tarea.id }}" {% if tarea.activo %}checked{% endif %}>
+                                                    <label class="form-check-label" for="activo{{ tarea.id }}">Activa</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-end mt-3">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-check2-circle me-1"></i> Actualizar
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        {% endwith %}
+                    {% empty %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-ui-checks-grid fs-1 d-block mb-2"></i>
+                            Aun no hay tareas configuradas.
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .host-task-list {
+        display: grid;
+        gap: .9rem;
+    }
+    .host-task {
+        background: #F8FAFC;
+        border: 1px solid #E8EEF5;
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+    .host-task-summary {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+    }
+    .host-task-order {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        color: #00838F;
+        font-weight: 800;
+        background: rgba(38,198,218,.14);
+        border: 1px solid rgba(38,198,218,.22);
+    }
+    .host-task-edit {
+        border-top: 1px solid #E8EEF5;
+        padding: 1rem;
+        background: #fff;
+    }
+    .min-w-0 {
+        min-width: 0;
+    }
+    @media (max-width: 768px) {
+        .host-task-summary {
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+    }
+</style>
+{% endblock %}

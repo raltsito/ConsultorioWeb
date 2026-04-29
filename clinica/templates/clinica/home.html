@@ -208,6 +208,16 @@
                         <span class="dock-sub">Quejas y sugerencias</span>
                     </span>
                 </a>
+
+                <a href="{% url 'checklist_host_config' %}" class="dock-tile">
+                    <span class="dock-chip" style="--c1:#26C6DA;--c2:#006064;">
+                        <i class="bi bi-ui-checks-grid"></i>
+                    </span>
+                    <span class="dock-text">
+                        <span class="dock-label">Checklist Host</span>
+                        <span class="dock-sub">Tareas diarias</span>
+                    </span>
+                </a>
                 {% endif %}
 
                 {% if user.is_superuser %}
