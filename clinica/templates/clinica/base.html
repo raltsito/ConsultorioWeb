@@ -88,6 +88,238 @@
             justify-content: center;
             border-radius: 50%;
         }
+
+        /* ====== Campanita de notificaciones ====== */
+        .btn-campanita {
+            position: relative;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 1px solid #E0E6EC;
+            background: #fff;
+            color: #546E7A;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            transition: all .2s ease;
+            cursor: pointer;
+        }
+        .btn-campanita:hover {
+            border-color: var(--intra-primary);
+            color: var(--intra-primary);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(38,198,218,.18);
+        }
+        .btn-campanita:focus { outline: none; box-shadow: 0 0 0 3px rgba(38,198,218,.25); }
+
+        .btn-campanita .notif-dot {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            border-radius: 9px;
+            background: var(--intra-secondary);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 6px rgba(239,83,80,.4);
+        }
+        @keyframes notif-pulse {
+            0%   { box-shadow: 0 0 0 0 rgba(239,83,80,.55); }
+            70%  { box-shadow: 0 0 0 10px rgba(239,83,80,0); }
+            100% { box-shadow: 0 0 0 0 rgba(239,83,80,0); }
+        }
+        .btn-campanita.tiene-notifs .notif-dot {
+            animation: notif-pulse 2s ease-out infinite;
+        }
+
+        /* Nubecita / speech bubble */
+        .notif-bubble {
+            position: absolute;
+            top: calc(100% + 14px);
+            right: 0;
+            background: linear-gradient(135deg, #FFB300 0%, #FB8C00 100%);
+            color: #fff;
+            padding: .65rem .9rem .65rem 1rem;
+            border-radius: 14px;
+            font-size: .82rem;
+            font-weight: 600;
+            white-space: nowrap;
+            box-shadow: 0 8px 24px rgba(251,140,0,.35);
+            z-index: 1050;
+            display: none;
+            align-items: center;
+            gap: .5rem;
+            animation: bubble-appear .35s ease-out, bubble-bounce 2.4s ease-in-out .35s infinite;
+            transform-origin: top right;
+        }
+        .notif-bubble.is-visible { display: inline-flex; }
+        .notif-bubble::before {
+            content: "";
+            position: absolute;
+            top: -7px;
+            right: 16px;
+            width: 14px;
+            height: 14px;
+            background: #FFB300;
+            transform: rotate(45deg);
+            border-radius: 3px;
+        }
+        .notif-bubble .bubble-close {
+            background: rgba(255,255,255,.25);
+            border: none;
+            color: #fff;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .7rem;
+            cursor: pointer;
+            transition: background .2s;
+            padding: 0;
+            line-height: 1;
+        }
+        .notif-bubble .bubble-close:hover { background: rgba(255,255,255,.4); }
+        .notif-bubble i.bi-megaphone-fill { font-size: 1rem; }
+
+        @keyframes bubble-appear {
+            from { opacity: 0; transform: scale(.6) translateY(-6px); }
+            to   { opacity: 1; transform: scale(1)  translateY(0); }
+        }
+        @keyframes bubble-bounce {
+            0%, 100%   { transform: translateY(0); }
+            50%        { transform: translateY(-4px); }
+        }
+
+        @media (max-width: 480px) {
+            .notif-bubble { font-size: .76rem; padding: .55rem .75rem; }
+        }
+
+        /* Panel offcanvas */
+        .notif-panel {
+            width: 400px !important;
+            max-width: 100vw;
+            border: none;
+        }
+        .notif-panel .offcanvas-header {
+            background: linear-gradient(135deg, #26C6DA 0%, #0097A7 100%);
+            color: #fff;
+            padding: 1.25rem 1.5rem;
+            border-bottom: none;
+        }
+        .notif-panel .offcanvas-header .offcanvas-title {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: .55rem;
+        }
+        .notif-panel .offcanvas-header .header-sub {
+            display: block;
+            font-size: .76rem;
+            font-weight: 400;
+            opacity: .85;
+            margin-top: .15rem;
+        }
+        .notif-panel .offcanvas-body {
+            background: #F7F9FC;
+            padding: 1rem;
+        }
+
+        .notif-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: .9rem 1rem .9rem 1.1rem;
+            margin-bottom: .65rem;
+            box-shadow: 0 2px 6px rgba(15,23,42,.04);
+            border-left: 4px solid #CFD8DC;
+            display: flex;
+            gap: .75rem;
+            align-items: flex-start;
+        }
+        .notif-card .notif-ico {
+            flex: 0 0 36px;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+            color: #fff;
+        }
+        .notif-card .notif-cuerpo { flex: 1; min-width: 0; }
+        .notif-card .notif-tipo {
+            font-size: .68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: .15rem;
+        }
+        .notif-card .notif-msg {
+            color: #37474F;
+            font-size: .88rem;
+            line-height: 1.4;
+        }
+        .notif-card .notif-fecha {
+            font-size: .72rem;
+            color: #90A4AE;
+            margin-top: .35rem;
+            display: flex;
+            align-items: center;
+            gap: .3rem;
+        }
+
+        .notif-card.t-cita_aceptada     { border-left-color: #26C6DA; }
+        .notif-card.t-cita_aceptada     .notif-ico { background: #26C6DA; }
+        .notif-card.t-cita_aceptada     .notif-tipo { color: #00838F; }
+
+        .notif-card.t-cita_rechazada    { border-left-color: #EF5350; }
+        .notif-card.t-cita_rechazada    .notif-ico { background: #EF5350; }
+        .notif-card.t-cita_rechazada    .notif-tipo { color: #C62828; }
+
+        .notif-card.t-reagendo_aprobado  { border-left-color: #66BB6A; }
+        .notif-card.t-reagendo_aprobado  .notif-ico { background: #66BB6A; }
+        .notif-card.t-reagendo_aprobado  .notif-tipo { color: #2E7D32; }
+
+        .notif-card.t-reagendo_rechazado { border-left-color: #FFA726; }
+        .notif-card.t-reagendo_rechazado .notif-ico { background: #FFA726; }
+        .notif-card.t-reagendo_rechazado .notif-tipo { color: #E65100; }
+
+        .notif-card.t-cita_modificada    { border-left-color: #5C6BC0; }
+        .notif-card.t-cita_modificada    .notif-ico { background: #5C6BC0; }
+        .notif-card.t-cita_modificada    .notif-tipo { color: #283593; }
+
+        .notif-empty {
+            text-align: center;
+            padding: 3rem 1rem 2rem;
+            color: #90A4AE;
+        }
+        .notif-empty i {
+            font-size: 3rem;
+            color: #CFD8DC;
+            display: block;
+            margin-bottom: .5rem;
+        }
+        .notif-empty .empty-title {
+            font-weight: 600;
+            color: #546E7A;
+            margin-bottom: .15rem;
+        }
+        .notif-empty .empty-sub {
+            font-size: .82rem;
+        }
     </style>
 </head>
 {% if messages %}
@@ -119,6 +351,28 @@
                     Hola, {{ user.username|title }}
                 </span>
 
+                {% if user.perfil_terapeuta %}
+                <div class="position-relative">
+                    <button id="btn-campanita"
+                            class="btn-campanita"
+                            type="button"
+                            data-bs-toggle="offcanvas"
+                            data-bs-target="#notifPanel"
+                            title="Notificaciones"
+                            aria-label="Ver notificaciones">
+                        <i class="bi bi-bell-fill"></i>
+                        <span id="notif-badge" class="notif-dot d-none">0</span>
+                    </button>
+                    <div id="notif-bubble" class="notif-bubble" role="status">
+                        <i class="bi bi-megaphone-fill"></i>
+                        <span id="notif-bubble-text">¡Tienes notificaciones, léelas!</span>
+                        <button type="button" class="bubble-close" id="notif-bubble-close" aria-label="Cerrar aviso">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+
 <form action="{% url 'logout' %}" method="post">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle" title="Cerrar Sesión">
@@ -128,6 +382,29 @@
             </div>
         </div>
     </nav>
+
+    {% if user.perfil_terapeuta %}
+    <!-- Panel lateral de notificaciones -->
+    <div class="offcanvas offcanvas-end notif-panel" tabindex="-1" id="notifPanel" aria-labelledby="notifPanelLabel">
+        <div class="offcanvas-header">
+            <div>
+                <h5 class="offcanvas-title" id="notifPanelLabel">
+                    <i class="bi bi-bell-fill"></i>
+                    Notificaciones
+                </h5>
+                <span class="header-sub" id="notif-header-sub">Mantente al día con tus citas</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+        </div>
+        <div class="offcanvas-body" id="notif-lista">
+            <div class="notif-empty" id="notif-vacio">
+                <i class="bi bi-bell-slash"></i>
+                <div class="empty-title">Sin notificaciones</div>
+                <div class="empty-sub">Aquí verás avisos cuando recepción acepte, rechace o reagende tus citas.</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     <div class="container mt-3">
     {% if messages %}
         {% for message in messages %}
@@ -145,8 +422,142 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     {% block scripts %}{% endblock %}
+
+{% if user.perfil_terapeuta %}
+<script>
+(function () {
+    'use strict';
+
+    const ICONO = {
+        cita_aceptada:      'bi-calendar-check-fill',
+        cita_rechazada:     'bi-calendar-x-fill',
+        cita_modificada:    'bi-pencil-square',
+        reagendo_aprobado:  'bi-arrow-repeat',
+        reagendo_rechazado: 'bi-x-circle-fill',
+    };
+    const ETIQUETA = {
+        cita_aceptada:      'Cita aceptada',
+        cita_rechazada:     'Cita rechazada',
+        cita_modificada:    'Cita modificada',
+        reagendo_aprobado:  'Reagendo aprobado',
+        reagendo_rechazado: 'Reagendo rechazado',
+    };
+
+    const btn        = document.getElementById('btn-campanita');
+    const badge      = document.getElementById('notif-badge');
+    const lista      = document.getElementById('notif-lista');
+    const vacio      = document.getElementById('notif-vacio');
+    const panel      = document.getElementById('notifPanel');
+    const headerSub  = document.getElementById('notif-header-sub');
+    const bubble     = document.getElementById('notif-bubble');
+    const bubbleText = document.getElementById('notif-bubble-text');
+    const bubbleClose= document.getElementById('notif-bubble-close');
+    let notifIds     = [];
+    let bubbleCerrada= false;
+
+    function escapeHTML(str) {
+        return String(str).replace(/[&<>"']/g, s => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[s]));
+    }
+
+    function renderNotifs(notifs) {
+        Array.from(lista.children).forEach(el => { if (el.id !== 'notif-vacio') el.remove(); });
+
+        if (!notifs.length) {
+            vacio.style.display = '';
+            headerSub.textContent = 'Mantente al día con tus citas';
+            return;
+        }
+        vacio.style.display = 'none';
+        headerSub.textContent = notifs.length === 1
+            ? '1 notificación'
+            : `${notifs.length} notificaciones`;
+
+        notifs.forEach(n => {
+            const ico  = ICONO[n.tipo]    || 'bi-bell-fill';
+            const etiq = ETIQUETA[n.tipo] || n.tipo;
+            const el = document.createElement('div');
+            el.className = `notif-card t-${n.tipo}`;
+            el.innerHTML = `
+                <div class="notif-ico"><i class="bi ${ico}"></i></div>
+                <div class="notif-cuerpo">
+                    <div class="notif-tipo">${escapeHTML(etiq)}</div>
+                    <div class="notif-msg">${escapeHTML(n.mensaje)}</div>
+                    <div class="notif-fecha"><i class="bi bi-clock"></i>${escapeHTML(n.creada_en)}</div>
+                </div>`;
+            lista.insertBefore(el, vacio);
+        });
+    }
+
+    function actualizarBadge(total) {
+        if (total > 0) {
+            badge.textContent = total > 99 ? '99+' : total;
+            badge.classList.remove('d-none');
+            btn.classList.add('tiene-notifs');
+            mostrarBubble(total);
+        } else {
+            badge.classList.add('d-none');
+            btn.classList.remove('tiene-notifs');
+            ocultarBubble();
+        }
+    }
+
+    function mostrarBubble(total) {
+        if (bubbleCerrada) return;
+        bubbleText.textContent = total === 1
+            ? '¡Tienes 1 notificación, léela!'
+            : `¡Tienes ${total} notificaciones, léelas!`;
+        bubble.classList.add('is-visible');
+    }
+
+    function ocultarBubble() {
+        bubble.classList.remove('is-visible');
+    }
+
+    bubbleClose.addEventListener('click', function (e) {
+        e.stopPropagation();
+        bubbleCerrada = true;
+        ocultarBubble();
+    });
+
+    function fetchNotifs() {
+        fetch('/api/notificaciones-terapeuta/', { credentials: 'same-origin' })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                actualizarBadge(data.total);
+                notifIds = data.notificaciones.map(n => n.id);
+                renderNotifs(data.notificaciones);
+            })
+            .catch(() => {});
+    }
+
+    function marcarLeidas() {
+        const csrf = document.cookie.split('; ').find(r => r.startsWith('csrftoken='));
+        const token = csrf ? csrf.split('=')[1] : '';
+        fetch('/api/notificaciones-terapeuta/leer/', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-CSRFToken': token },
+        }).then(() => {
+            actualizarBadge(0);
+            notifIds = [];
+        }).catch(() => {});
+    }
+
+    panel.addEventListener('show.bs.offcanvas', function () {
+        ocultarBubble();
+        if (notifIds.length) marcarLeidas();
+    });
+
+    fetchNotifs();
+    setInterval(fetchNotifs, 45000);
+})();
+</script>
+{% endif %}
 
 </body>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

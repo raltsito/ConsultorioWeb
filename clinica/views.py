@@ -43,6 +43,7 @@ from .models import (
     Horario,
     SolicitudCita,
     SolicitudReagendo,
+    NotificacionTerapeuta,
     obtener_bloqueo_terapeuta_en_fecha,
     ReporteIncidente,
     RecursoPropio,
@@ -1500,6 +1501,12 @@ def crear_cita(request):
                     solicitud = SolicitudCita.objects.get(id=solicitud_id)
                     solicitud.estado = 'aceptada'
                     solicitud.save()
+                    if solicitud.terapeuta:
+                        NotificacionTerapeuta.objects.create(
+                            terapeuta=solicitud.terapeuta,
+                            tipo=NotificacionTerapeuta.TIPO_CITA_ACEPTADA,
+                            mensaje=f"Tu solicitud de cita para {solicitud.paciente_nombre} el {solicitud.fecha_deseada.strftime('%d/%m/%Y')} fue aceptada y agendada.",
+                        )
                 except SolicitudCita.DoesNotExist:
                     pass
             # ------------------------------------------------------
@@ -1692,7 +1699,11 @@ def verificar_disponibilidad(request):
 @login_required
 def editar_cita(request, cita_id):
     cita = get_object_or_404(Cita, id=cita_id)
-    
+
+    fecha_anterior     = cita.fecha
+    hora_anterior      = cita.hora
+    terapeuta_anterior = cita.terapeuta
+
     if request.method == 'POST':
         form = CitaForm(request.POST, instance=cita)
         if form.is_valid():
@@ -1705,6 +1716,44 @@ def editar_cita(request, cita_id):
             else:
                 cita.pacientes_adicionales.clear()
             _vincular_expediente_grupal(cita)
+
+            cambio_fecha     = cita.fecha != fecha_anterior
+            cambio_hora      = cita.hora  != hora_anterior
+            cambio_terapeuta = cita.terapeuta_id != (terapeuta_anterior.id if terapeuta_anterior else None)
+
+            editor_es_terapeuta = hasattr(request.user, 'perfil_terapeuta')
+
+            if (cambio_fecha or cambio_hora) and cita.terapeuta and not (
+                editor_es_terapeuta and request.user.perfil_terapeuta == cita.terapeuta
+            ):
+                cambios = []
+                if cambio_fecha:
+                    cambios.append(f"fecha: {fecha_anterior.strftime('%d/%m/%Y')} → {cita.fecha.strftime('%d/%m/%Y')}")
+                if cambio_hora:
+                    cambios.append(f"hora: {hora_anterior.strftime('%H:%M')} → {cita.hora.strftime('%H:%M')}")
+                NotificacionTerapeuta.objects.create(
+                    terapeuta=cita.terapeuta,
+                    tipo=NotificacionTerapeuta.TIPO_CITA_MODIFICADA,
+                    mensaje=f"La cita de {cita.paciente} fue modificada. {' | '.join(cambios)}.",
+                )
+
+            if cambio_terapeuta and terapeuta_anterior and not (
+                editor_es_terapeuta and request.user.perfil_terapeuta == terapeuta_anterior
+            ):
+                NotificacionTerapeuta.objects.create(
+                    terapeuta=terapeuta_anterior,
+                    tipo=NotificacionTerapeuta.TIPO_CITA_MODIFICADA,
+                    mensaje=f"La cita de {cita.paciente} del {fecha_anterior.strftime('%d/%m/%Y')} a las {hora_anterior.strftime('%H:%M')} fue reasignada a otro terapeuta.",
+                )
+            if cambio_terapeuta and cita.terapeuta and not (
+                editor_es_terapeuta and request.user.perfil_terapeuta == cita.terapeuta
+            ):
+                NotificacionTerapeuta.objects.create(
+                    terapeuta=cita.terapeuta,
+                    tipo=NotificacionTerapeuta.TIPO_CITA_MODIFICADA,
+                    mensaje=f"Se te asignó una cita con {cita.paciente} el {cita.fecha.strftime('%d/%m/%Y')} a las {cita.hora.strftime('%H:%M')}.",
+                )
+
             messages.success(request, '¡Cita actualizada correctamente! ')
             
             origen = request.GET.get('next', 'home')
@@ -2189,7 +2238,13 @@ def rechazar_solicitud(request, solicitud_id):
             solicitud.estado = 'rechazada'
             solicitud.motivo_rechazo = motivo
             solicitud.save()
-            
+            if solicitud.terapeuta:
+                motivo_texto = f" Motivo: {motivo}" if motivo else ""
+                NotificacionTerapeuta.objects.create(
+                    terapeuta=solicitud.terapeuta,
+                    tipo=NotificacionTerapeuta.TIPO_CITA_RECHAZADA,
+                    mensaje=f"Tu solicitud de cita para {solicitud.paciente_nombre} el {solicitud.fecha_deseada.strftime('%d/%m/%Y')} fue rechazada.{motivo_texto}",
+                )
             messages.warning(request, f'La solicitud de {solicitud.paciente_nombre} fue rechazada correctamente.')
         except SolicitudCita.DoesNotExist:
             pass
@@ -2214,6 +2269,7 @@ def solicitar_cita_terapeuta(request):
         hora = request.POST.get('hora_deseada')
         notas = request.POST.get('notas_terapeuta', '')
         consultorio_id = request.POST.get('consultorio')
+        servicio_id = request.POST.get('servicio')
 
         SolicitudCita.objects.create(
             paciente_nombre=paciente,
@@ -2222,6 +2278,7 @@ def solicitar_cita_terapeuta(request):
             hora_deseada=hora if hora else None,
             terapeuta=mi_perfil,
             consultorio_id=consultorio_id if consultorio_id else None,
+            servicio_id=servicio_id if servicio_id else None,
             notas_paciente=f"SOLICITADO POR TERAPEUTA: {notas}",
             estado='pendiente'
         )
@@ -2231,12 +2288,14 @@ def solicitar_cita_terapeuta(request):
         
     # --- NUEVO: Traemos la lista de pacientes ordenados alfabeticamente ---
     pacientes = Paciente.objects.all().order_by('nombre')
-    from .models import Consultorio
+    from .models import Consultorio, Servicio
     consultorios = Consultorio.objects.all()
+    servicios = Servicio.objects.all().order_by('nombre')
 
     return render(request, 'clinica/solicitar_cita_terapeuta.html', {
         'pacientes': pacientes,
         'consultorios': consultorios,
+        'servicios': servicios,
         'mi_perfil': mi_perfil,
     })
 
@@ -4080,6 +4139,12 @@ def aprobar_reagendo(request, solicitud_id):
     solicitud.nota_recepcion = request.POST.get('nota_recepcion', '').strip()
     solicitud.save(update_fields=['estado', 'nota_recepcion'])
 
+    NotificacionTerapeuta.objects.create(
+        terapeuta=solicitud.terapeuta,
+        tipo=NotificacionTerapeuta.TIPO_REAGENDO_APROBADO,
+        mensaje=f"Tu solicitud de reagendo para la cita del paciente {cita.paciente} fue aprobada. Nueva fecha: {cita.fecha:%d/%m/%Y} a las {cita.hora:%H:%M}.",
+    )
+
     messages.success(request, f'Reagendo aprobado. Cita movida al {cita.fecha:%d/%m/%Y} a las {cita.hora:%H:%M}.')
     return redirect('home')
 
@@ -4097,6 +4162,13 @@ def rechazar_reagendo(request, solicitud_id):
     cita = solicitud.cita
     cita.estatus = Cita.ESTATUS_CONFIRMADA
     cita.save(update_fields=['estatus'])
+
+    nota_texto = f" Nota: {solicitud.nota_recepcion}" if solicitud.nota_recepcion else ""
+    NotificacionTerapeuta.objects.create(
+        terapeuta=solicitud.terapeuta,
+        tipo=NotificacionTerapeuta.TIPO_REAGENDO_RECHAZADO,
+        mensaje=f"Tu solicitud de reagendo para la cita del paciente {cita.paciente} fue rechazada. La cita se mantiene el {cita.fecha:%d/%m/%Y} a las {cita.hora:%H:%M}.{nota_texto}",
+    )
 
     messages.info(request, 'Solicitud de reagendo rechazada. La cita se mantuvo en su fecha original.')
     return redirect('home')
@@ -4322,3 +4394,43 @@ def expediente_grupal_detalle(request, expediente_id):
         'terapeuta': terapeuta,
         'cita_hoy': cita_hoy,
     })
+
+
+@login_required
+def api_notificaciones_terapeuta(request):
+    """Devuelve las notificaciones no leídas del terapeuta como JSON."""
+    from django.http import JsonResponse
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    terapeuta = request.user.perfil_terapeuta
+    notifs = NotificacionTerapeuta.objects.filter(
+        terapeuta=terapeuta, leida=False
+    ).order_by('-creada_en')[:20]
+
+    data = [
+        {
+            'id': n.id,
+            'tipo': n.tipo,
+            'mensaje': n.mensaje,
+            'creada_en': n.creada_en.strftime('%d/%m/%Y %H:%M'),
+        }
+        for n in notifs
+    ]
+    return JsonResponse({'notificaciones': data, 'total': len(data)})
+
+
+@login_required
+def marcar_notificaciones_leidas(request):
+    """Marca como leídas todas las notificaciones del terapeuta."""
+    from django.http import JsonResponse
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    terapeuta = request.user.perfil_terapeuta
+    NotificacionTerapeuta.objects.filter(
+        terapeuta=terapeuta, leida=False
+    ).update(leida=True)
+    return JsonResponse({'ok': True})

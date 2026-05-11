@@ -57,6 +57,16 @@
                             </select>
                         </div>
 
+                        <div class="mb-3">
+                            <label for="servicio" class="form-label text-muted fw-semibold">Tipo de servicio</label>
+                            <select class="form-select bg-light" id="servicio" name="servicio">
+                                <option value="">Sin especificar</option>
+                                {% for s in servicios %}
+                                    <option value="{{ s.id }}">{{ s.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
                         <div class="mb-4">
                             <label for="notas_terapeuta" class="form-label text-muted fw-semibold">Comentarios para Recepción</label>
                             <textarea class="form-control bg-light" id="notas_terapeuta" name="notas_terapeuta" rows="2" placeholder="Ej. Necesito el consultorio 1 porque tiene proyector."></textarea>

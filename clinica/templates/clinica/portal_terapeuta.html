@@ -910,34 +910,7 @@
                         Selecciona el resultado de la sesión.
                     </div>
 
-                    {# ── SECCIÓN 2: Pago ── #}
-                    <div class="checkout-section-label mt-4">
-                        <span class="checkout-step">2</span>Pago recibido <span class="text-muted fw-normal fs-6">(opcional)</span>
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary small">Método de Pago</label>
-                            <select name="metodo_pago" class="form-select">
-                                <option value="">— Sin pago —</option>
-                                <option value="Efectivo">Efect
-
-
-ivo</option>
-                                <option value="Terminal">Terminal</option>
-                                <option value="Transferencia">Transferencia</option>
-                                <option value="Pase">Pase</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary small">Monto cobrado al paciente ($)</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light text-muted">$</span>
-                                <input type="number" name="costo" class="form-control" placeholder="0.00" step="0.01" min="0">
-                            </div>
-                        </div>
-                    </div>
-
-                    {# ── SECCIÓN 3: Siguiente Cita (toggle) ── #}
+                    {# ── SECCIÓN 2: Siguiente Cita (toggle) ── #}
                     <div class="siguiente-toggle-wrapper mt-4">
                         <div class="d-flex align-items-center justify-content-between">
                             <div>

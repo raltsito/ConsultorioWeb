@@ -94,6 +94,10 @@ urlpatterns = [
     path('host/', clinica_views.portal_host, name='portal_host'),
     path('host/checklist/', clinica_views.checklist_host_config, name='checklist_host_config'),
 
+    # Notificaciones terapeuta
+    path('api/notificaciones-terapeuta/', clinica_views.api_notificaciones_terapeuta, name='api_notificaciones_terapeuta'),
+    path('api/notificaciones-terapeuta/leer/', clinica_views.marcar_notificaciones_leidas, name='marcar_notificaciones_leidas'),
+
 ]
 
 if settings.DEBUG:

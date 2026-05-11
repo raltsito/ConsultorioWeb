@@ -1302,3 +1302,33 @@ class ReporteIncidente(models.Model):
         verbose_name = "Reporte / Incidente"
         verbose_name_plural = "Reportes e Incidentes"
         ordering = ['-fecha_creacion']
+
+
+class NotificacionTerapeuta(models.Model):
+    TIPO_CITA_ACEPTADA    = 'cita_aceptada'
+    TIPO_CITA_RECHAZADA   = 'cita_rechazada'
+    TIPO_CITA_MODIFICADA  = 'cita_modificada'
+    TIPO_REAGENDO_APROBADO  = 'reagendo_aprobado'
+    TIPO_REAGENDO_RECHAZADO = 'reagendo_rechazado'
+
+    TIPO_CHOICES = [
+        (TIPO_CITA_ACEPTADA,    'Cita aceptada'),
+        (TIPO_CITA_RECHAZADA,   'Cita rechazada'),
+        (TIPO_CITA_MODIFICADA,  'Cita modificada'),
+        (TIPO_REAGENDO_APROBADO,  'Reagendo aprobado'),
+        (TIPO_REAGENDO_RECHAZADO, 'Reagendo rechazado'),
+    ]
+
+    terapeuta  = models.ForeignKey('Terapeuta', on_delete=models.CASCADE, related_name='notificaciones')
+    tipo       = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    mensaje    = models.TextField()
+    leida      = models.BooleanField(default=False)
+    creada_en  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Notificación de Terapeuta"
+        verbose_name_plural = "Notificaciones de Terapeutas"
+        ordering = ['-creada_en']
+
+    def __str__(self):
+        return f"[{self.get_tipo_display()}] {self.terapeuta} — {'leída' if self.leida else 'nueva'}"
