@@ -81,6 +81,7 @@ urlpatterns = [
 
     # Reportes e Incidentes
     path('incidentes/reportar/', clinica_views.reportar_incidente, name='reportar_incidente'),
+    path('incidentes/responder/', clinica_views.responder_incidente, name='responder_incidente'),
     path('incidentes/', clinica_views.lista_incidentes, name='lista_incidentes'),
 
     # Portal Empresa

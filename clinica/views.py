@@ -4287,6 +4287,36 @@ def lista_incidentes(request):
 
 
 @login_required
+def responder_incidente(request):
+    if not (request.user.is_superuser or request.user.is_staff):
+        return redirect('home')
+    if request.method != 'POST':
+        return redirect('lista_incidentes')
+
+    incidente_id = request.POST.get('incidente_id')
+    respuesta = request.POST.get('respuesta', '').strip()
+
+    if not respuesta:
+        messages.error(request, 'La respuesta no puede estar vacía.')
+        return redirect('lista_incidentes')
+
+    incidente = get_object_or_404(ReporteIncidente, id=incidente_id)
+    incidente.respuesta = respuesta
+    incidente.respuesta_fecha = timezone.now()
+    incidente.estado = ReporteIncidente.ESTADO_REVISADO
+    incidente.save(update_fields=['respuesta', 'respuesta_fecha', 'estado'])
+
+    NotificacionTerapeuta.objects.create(
+        terapeuta=incidente.terapeuta,
+        tipo=NotificacionTerapeuta.TIPO_RESPUESTA_INCIDENTE,
+        mensaje=f'Recepción respondió tu reporte "{incidente.titulo}": {respuesta}',
+    )
+
+    messages.success(request, 'Respuesta enviada correctamente.')
+    return redirect('lista_incidentes')
+
+
+@login_required
 def expedientes_grupales_lista(request):
     if not hasattr(request.user, 'perfil_terapeuta'):
         return redirect('home')

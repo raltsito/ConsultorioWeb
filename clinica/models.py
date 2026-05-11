@@ -1294,6 +1294,8 @@ class ReporteIncidente(models.Model):
     descripcion = models.TextField()
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default=ESTADO_PENDIENTE)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    respuesta = models.TextField(blank=True, default='')
+    respuesta_fecha = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"[{self.get_tipo_display()}] {self.titulo} — {self.terapeuta}"
@@ -1305,18 +1307,20 @@ class ReporteIncidente(models.Model):
 
 
 class NotificacionTerapeuta(models.Model):
-    TIPO_CITA_ACEPTADA    = 'cita_aceptada'
-    TIPO_CITA_RECHAZADA   = 'cita_rechazada'
-    TIPO_CITA_MODIFICADA  = 'cita_modificada'
-    TIPO_REAGENDO_APROBADO  = 'reagendo_aprobado'
-    TIPO_REAGENDO_RECHAZADO = 'reagendo_rechazado'
+    TIPO_CITA_ACEPTADA       = 'cita_aceptada'
+    TIPO_CITA_RECHAZADA      = 'cita_rechazada'
+    TIPO_CITA_MODIFICADA     = 'cita_modificada'
+    TIPO_REAGENDO_APROBADO   = 'reagendo_aprobado'
+    TIPO_REAGENDO_RECHAZADO  = 'reagendo_rechazado'
+    TIPO_RESPUESTA_INCIDENTE = 'respuesta_incidente'
 
     TIPO_CHOICES = [
-        (TIPO_CITA_ACEPTADA,    'Cita aceptada'),
-        (TIPO_CITA_RECHAZADA,   'Cita rechazada'),
-        (TIPO_CITA_MODIFICADA,  'Cita modificada'),
-        (TIPO_REAGENDO_APROBADO,  'Reagendo aprobado'),
-        (TIPO_REAGENDO_RECHAZADO, 'Reagendo rechazado'),
+        (TIPO_CITA_ACEPTADA,       'Cita aceptada'),
+        (TIPO_CITA_RECHAZADA,      'Cita rechazada'),
+        (TIPO_CITA_MODIFICADA,     'Cita modificada'),
+        (TIPO_REAGENDO_APROBADO,   'Reagendo aprobado'),
+        (TIPO_REAGENDO_RECHAZADO,  'Reagendo rechazado'),
+        (TIPO_RESPUESTA_INCIDENTE, 'Respuesta a reporte'),
     ]
 
     terapeuta  = models.ForeignKey('Terapeuta', on_delete=models.CASCADE, related_name='notificaciones')
