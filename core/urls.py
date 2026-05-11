@@ -94,6 +94,12 @@ urlpatterns = [
     path('host/', clinica_views.portal_host, name='portal_host'),
     path('host/checklist/', clinica_views.checklist_host_config, name='checklist_host_config'),
 
+    # Notas de Recepción
+    path('notas-recepcion/agregar/', clinica_views.agregar_nota_recepcion, name='agregar_nota_recepcion'),
+    path('notas-recepcion/<int:nota_id>/eliminar/', clinica_views.eliminar_nota_recepcion, name='eliminar_nota_recepcion'),
+    path('notas-recepcion/<int:nota_id>/reaccion/', clinica_views.toggle_reaccion_nota, name='toggle_reaccion_nota'),
+    path('notas-recepcion/<int:nota_id>/comentar/', clinica_views.agregar_comentario_nota, name='agregar_comentario_nota'),
+
     # Notificaciones terapeuta
     path('api/notificaciones-terapeuta/', clinica_views.api_notificaciones_terapeuta, name='api_notificaciones_terapeuta'),
     path('api/notificaciones-terapeuta/leer/', clinica_views.marcar_notificaciones_leidas, name='marcar_notificaciones_leidas'),

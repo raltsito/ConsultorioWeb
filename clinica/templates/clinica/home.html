@@ -84,6 +84,366 @@
     </div>
 </div>
 
+{# ─────────────────────────── NOTAS DE RECEPCIÓN ─────────────────────────── #}
+<style>
+    .reaccion-btn {
+        border-radius: 999px;
+        font-size: .85rem;
+        padding: .15rem .55rem;
+        border: 1.5px solid #e5e7eb;
+        background: #f9fafb;
+        color: #374151;
+        line-height: 1.6;
+        transition: all .15s ease;
+    }
+    .reaccion-btn:hover { background: #f3f4f6; border-color: #d1d5db; }
+    .reaccion-btn.reaccion-activa { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; font-weight: 600; }
+    .nota-comment-bubble {
+        background: #f3f4f6;
+        border-radius: .75rem;
+        padding: .35rem .7rem;
+        font-size: .83rem;
+        line-height: 1.45;
+    }
+    .emoji-pick-btn {
+        font-size: 1.15rem;
+        padding: .2rem .35rem;
+        border: 0;
+        background: transparent;
+        border-radius: .5rem;
+        cursor: pointer;
+        transition: background .12s;
+    }
+    .emoji-pick-btn:hover { background: #f3f4f6; }
+</style>
+
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-white border-bottom px-4 py-3 d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
+             style="width:42px;height:42px;background:linear-gradient(135deg,#f59e0b,#d97706);">
+            <i class="bi bi-pin-angle-fill text-white fs-5"></i>
+        </div>
+        <div class="flex-grow-1">
+            <h5 class="fw-bold mb-0 text-dark">Notas Recepción</h5>
+            <p class="text-muted mb-0" style="font-size:.82rem;">
+                Este apartado es para mejorar la comunicación entre los trabajadores en recepción, úsalo como un espacio de "No olvidar".
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm fw-semibold"
+                    style="background:#f3f4f6;color:#374151;border:1.5px solid #e5e7eb;border-radius:.75rem;"
+                    data-bs-toggle="modal" data-bs-target="#modalTodasNotas">
+                <i class="bi bi-journals me-1"></i>Ver todas
+                {% if total_notas %}<span class="badge rounded-pill ms-1" style="background:#d97706;font-size:.7rem;">{{ total_notas }}</span>{% endif %}
+            </button>
+            <button class="btn btn-sm fw-semibold"
+                    style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:0;border-radius:.75rem;"
+                    data-bs-toggle="collapse" data-bs-target="#formNuevaNota" aria-expanded="false">
+                <i class="bi bi-plus-lg me-1"></i>Nueva nota
+            </button>
+        </div>
+    </div>
+
+    <div class="collapse" id="formNuevaNota">
+        <div class="px-4 py-3 border-bottom bg-light">
+            <form method="post" action="{% url 'agregar_nota_recepcion' %}" class="d-flex gap-2 align-items-start">
+                {% csrf_token %}
+                <textarea name="texto" class="form-control" rows="2"
+                          placeholder="Escribe aquí lo que no se debe olvidar..." required
+                          style="resize:none;border-radius:.75rem;font-size:.9rem;"></textarea>
+                <button type="submit" class="btn fw-bold flex-shrink-0"
+                        style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:0;border-radius:.75rem;padding:.5rem 1.1rem;">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        {% if notas_recepcion %}
+        <div class="list-group list-group-flush">
+            {% for n in notas_recepcion|slice:":3" %}
+            <div class="list-group-item px-4 py-3">
+                <div class="d-flex align-items-start gap-3">
+
+                    <span class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1"
+                          style="width:36px;height:36px;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#b45309;font-weight:800;font-size:.8rem;">
+                        {{ n.obj.creado_por.username|slice:":2"|upper }}
+                    </span>
+
+                    <div class="flex-grow-1 min-w-0">
+                        <p class="mb-1 text-dark" style="font-size:.93rem;line-height:1.5;">{{ n.obj.texto }}</p>
+                        <small class="text-muted d-block mb-2">
+                            <i class="bi bi-person me-1"></i>{{ n.obj.creado_por.username|title }}
+                            &nbsp;·&nbsp;
+                            <i class="bi bi-clock me-1"></i>{{ n.obj.creado_en|date:"d M Y, H:i" }}
+                        </small>
+
+                        {# ── Reacciones ── #}
+                        <div class="d-flex align-items-center flex-wrap gap-1 mb-2" id="reacciones-{{ n.obj.id }}">
+                            {% for r in n.reacciones %}
+                            <button type="button"
+                                    class="reaccion-btn {% if r.yo %}reaccion-activa{% endif %}"
+                                    data-nota="{{ n.obj.id }}"
+                                    data-emoji="{{ r.emoji }}">
+                                {{ r.emoji }} <span class="reaccion-count">{{ r.count }}</span>
+                            </button>
+                            {% endfor %}
+                            <div class="dropdown">
+                                <button type="button"
+                                        class="reaccion-btn dropdown-toggle"
+                                        data-bs-toggle="dropdown"
+                                        style="font-size:.78rem;padding:.15rem .5rem;">
+                                    ＋
+                                </button>
+                                <div class="dropdown-menu p-2 shadow-sm" style="min-width:auto;border-radius:.85rem;">
+                                    <div class="d-flex gap-1">
+                                        <button class="emoji-pick-btn" data-nota="{{ n.obj.id }}" data-emoji="👍">👍</button>
+                                        <button class="emoji-pick-btn" data-nota="{{ n.obj.id }}" data-emoji="❤️">❤️</button>
+                                        <button class="emoji-pick-btn" data-nota="{{ n.obj.id }}" data-emoji="😂">😂</button>
+                                        <button class="emoji-pick-btn" data-nota="{{ n.obj.id }}" data-emoji="😮">😮</button>
+                                        <button class="emoji-pick-btn" data-nota="{{ n.obj.id }}" data-emoji="👏">👏</button>
+                                        <button class="emoji-pick-btn" data-nota="{{ n.obj.id }}" data-emoji="🔥">🔥</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {# ── Comentarios ── #}
+                        <button class="btn btn-sm p-0 text-muted fw-semibold"
+                                style="font-size:.8rem;"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#comentarios-{{ n.obj.id }}">
+                            <i class="bi bi-chat me-1"></i>
+                            {% if n.comentarios %}{{ n.comentarios|length }} comentario{% if n.comentarios|length != 1 %}s{% endif %}{% else %}Comentar{% endif %}
+                        </button>
+
+                        <div class="collapse mt-2" id="comentarios-{{ n.obj.id }}">
+                            {% for c in n.comentarios %}
+                            <div class="d-flex gap-2 mb-2">
+                                <span class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1"
+                                      style="width:26px;height:26px;background:#e5e7eb;color:#6b7280;font-weight:700;font-size:.65rem;">
+                                    {{ c.creado_por.username|slice:":2"|upper }}
+                                </span>
+                                <div class="nota-comment-bubble">
+                                    <strong style="font-size:.75rem;color:#6b7280;">{{ c.creado_por.username|title }}</strong>
+                                    <p class="mb-0">{{ c.texto }}</p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            <form method="post" action="{% url 'agregar_comentario_nota' n.obj.id %}"
+                                  class="d-flex gap-2 mt-2">
+                                {% csrf_token %}
+                                <input type="text" name="texto" class="form-control form-control-sm"
+                                       placeholder="Escribe un comentario..." required
+                                       style="border-radius:999px;font-size:.85rem;">
+                                <button type="submit" class="btn btn-sm btn-primary flex-shrink-0"
+                                        style="border-radius:999px;padding:.3rem .75rem;">
+                                    <i class="bi bi-send"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <form method="post" action="{% url 'eliminar_nota_recepcion' n.obj.id %}" class="flex-shrink-0">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-3"
+                                onclick="return confirm('¿Eliminar esta nota?');"
+                                title="Eliminar nota">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if total_notas > 3 %}
+        <div class="px-4 py-3 border-top text-center">
+            <button class="btn btn-sm fw-semibold text-muted"
+                    style="font-size:.82rem;"
+                    data-bs-toggle="modal" data-bs-target="#modalTodasNotas">
+                <i class="bi bi-chevron-down me-1"></i>Ver {{ total_notas|add:"-3" }} nota{{ total_notas|add:"-3"|pluralize:"s" }} más
+            </button>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-pin-angle" style="font-size:2.5rem;opacity:.35;"></i>
+            <p class="mt-2 mb-0" style="font-size:.9rem;">No hay notas aún. ¡Agrega la primera!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# ── MODAL TODAS LAS NOTAS ── #}
+<div class="modal fade" id="modalTodasNotas" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4 overflow-hidden">
+            <div class="modal-header border-bottom px-4 py-3"
+                 style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-pin-angle-fill text-white fs-5"></i>
+                    <h5 class="modal-title fw-bold text-white mb-0">
+                        Todas las Notas
+                        <span class="badge rounded-pill ms-2" style="background:rgba(255,255,255,.25);font-size:.75rem;">{{ total_notas }}</span>
+                    </h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                {% if notas_recepcion %}
+                <div class="list-group list-group-flush">
+                    {% for n in notas_recepcion %}
+                    <div class="list-group-item px-4 py-3">
+                        <div class="d-flex align-items-start gap-3">
+                            <span class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1"
+                                  style="width:36px;height:36px;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#b45309;font-weight:800;font-size:.8rem;">
+                                {{ n.obj.creado_por.username|slice:":2"|upper }}
+                            </span>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="mb-1 text-dark" style="font-size:.93rem;line-height:1.5;">{{ n.obj.texto }}</p>
+                                <small class="text-muted d-block mb-2">
+                                    <i class="bi bi-person me-1"></i>{{ n.obj.creado_por.username|title }}
+                                    &nbsp;·&nbsp;
+                                    <i class="bi bi-clock me-1"></i>{{ n.obj.creado_en|date:"d M Y, H:i" }}
+                                </small>
+                                <div class="d-flex align-items-center flex-wrap gap-1 mb-2" id="reacciones-modal-{{ n.obj.id }}">
+                                    {% for r in n.reacciones %}
+                                    <button type="button"
+                                            class="reaccion-btn {% if r.yo %}reaccion-activa{% endif %}"
+                                            data-nota="{{ n.obj.id }}"
+                                            data-emoji="{{ r.emoji }}"
+                                            data-container="modal">
+                                        {{ r.emoji }} <span class="reaccion-count">{{ r.count }}</span>
+                                    </button>
+                                    {% endfor %}
+                                    <div class="dropdown">
+                                        <button type="button" class="reaccion-btn dropdown-toggle" data-bs-toggle="dropdown" style="font-size:.78rem;padding:.15rem .5rem;">＋</button>
+                                        <div class="dropdown-menu p-2 shadow-sm" style="min-width:auto;border-radius:.85rem;">
+                                            <div class="d-flex gap-1">
+                                                <button class="emoji-pick-btn" data-nota="{{ n.obj.id }}" data-emoji="👍" data-container="modal">👍</button>
+                                                <button class="emoji-pick-btn" data-nota="{{ n.obj.id }}" data-emoji="❤️" data-container="modal">❤️</button>
+                                                <button class="emoji-pick-btn" data-nota="{{ n.obj.id }}" data-emoji="😂" data-container="modal">😂</button>
+                                                <button class="emoji-pick-btn" data-nota="{{ n.obj.id }}" data-emoji="😮" data-container="modal">😮</button>
+                                                <button class="emoji-pick-btn" data-nota="{{ n.obj.id }}" data-emoji="👏" data-container="modal">👏</button>
+                                                <button class="emoji-pick-btn" data-nota="{{ n.obj.id }}" data-emoji="🔥" data-container="modal">🔥</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm p-0 text-muted fw-semibold" style="font-size:.8rem;"
+                                        data-bs-toggle="collapse" data-bs-target="#comentarios-modal-{{ n.obj.id }}">
+                                    <i class="bi bi-chat me-1"></i>
+                                    {% if n.comentarios %}{{ n.comentarios|length }} comentario{% if n.comentarios|length != 1 %}s{% endif %}{% else %}Comentar{% endif %}
+                                </button>
+                                <div class="collapse mt-2" id="comentarios-modal-{{ n.obj.id }}">
+                                    {% for c in n.comentarios %}
+                                    <div class="d-flex gap-2 mb-2">
+                                        <span class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 mt-1"
+                                              style="width:26px;height:26px;background:#e5e7eb;color:#6b7280;font-weight:700;font-size:.65rem;">
+                                            {{ c.creado_por.username|slice:":2"|upper }}
+                                        </span>
+                                        <div class="nota-comment-bubble">
+                                            <strong style="font-size:.75rem;color:#6b7280;">{{ c.creado_por.username|title }}</strong>
+                                            <p class="mb-0">{{ c.texto }}</p>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                    <form method="post" action="{% url 'agregar_comentario_nota' n.obj.id %}" class="d-flex gap-2 mt-2">
+                                        {% csrf_token %}
+                                        <input type="text" name="texto" class="form-control form-control-sm"
+                                               placeholder="Escribe un comentario..." required
+                                               style="border-radius:999px;font-size:.85rem;">
+                                        <button type="submit" class="btn btn-sm btn-primary flex-shrink-0" style="border-radius:999px;padding:.3rem .75rem;">
+                                            <i class="bi bi-send"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <form method="post" action="{% url 'eliminar_nota_recepcion' n.obj.id %}" class="flex-shrink-0">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-3"
+                                        onclick="return confirm('¿Eliminar esta nota?');" title="Eliminar nota">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-pin-angle" style="font-size:2.5rem;opacity:.35;"></i>
+                    <p class="mt-2 mb-0">No hay notas aún.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    function getCsrf() {
+        const el = document.querySelector('[name=csrfmiddlewaretoken]');
+        return el ? el.value : '';
+    }
+
+    async function toggleReaccion(notaId, emoji, cid) {
+        const res = await fetch(`/notas-recepcion/${notaId}/reaccion/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrf(), 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `emoji=${encodeURIComponent(emoji)}`,
+        });
+        const data = await res.json();
+        const container = document.getElementById(cid);
+        if (!container) return;
+
+        const existing = container.querySelector(`.reaccion-btn[data-emoji="${emoji}"]`);
+        const dropdown = container.querySelector('.dropdown');
+
+        if (data.count === 0 && existing) {
+            existing.remove();
+        } else if (existing) {
+            existing.querySelector('.reaccion-count').textContent = data.count;
+            existing.classList.toggle('reaccion-activa', data.yo);
+        } else if (data.count > 0) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'reaccion-btn' + (data.yo ? ' reaccion-activa' : '');
+            btn.dataset.nota = notaId;
+            btn.dataset.emoji = emoji;
+            if (cid.includes('modal')) btn.dataset.container = 'modal';
+            btn.innerHTML = `${emoji} <span class="reaccion-count">${data.count}</span>`;
+            btn.addEventListener('click', () => toggleReaccion(notaId, emoji, cid));
+            container.insertBefore(btn, dropdown);
+        }
+    }
+
+    function containerId(btn) {
+        return btn.dataset.container === 'modal'
+            ? `reacciones-modal-${btn.dataset.nota}`
+            : `reacciones-${btn.dataset.nota}`;
+    }
+
+    document.querySelectorAll('.reaccion-btn[data-emoji]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            toggleReaccion(this.dataset.nota, this.dataset.emoji, containerId(this));
+        });
+    });
+
+    document.querySelectorAll('.emoji-pick-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const notaId = this.dataset.nota;
+            const emoji  = this.dataset.emoji;
+            const toggle = this.closest('.dropdown').querySelector('[data-bs-toggle="dropdown"]');
+            bootstrap.Dropdown.getInstance(toggle)?.hide();
+            toggleReaccion(notaId, emoji, containerId(this));
+        });
+    });
+})();
+</script>
+
 <div class="row g-4 mb-2">
     <div class="col-12">
         <div class="dock-card">

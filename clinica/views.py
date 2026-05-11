@@ -49,6 +49,7 @@ from .models import (
     RecursoPropio,
 )
 from .models import CorteSemanal, LineaNomina, BonoExtra
+from .models import NotaRecepcion, ReaccionNota, ComentarioNota
 from .forms import (
     AperturaExpedienteForm,
     AperturaExpedienteGrupalForm,
@@ -383,6 +384,28 @@ def home(request):
         'titulo': manual_portal.titulo if manual_portal else 'Manual del sistema',
     })
 
+    from collections import defaultdict
+    from django.db.models import Prefetch
+    notas_raw = NotaRecepcion.objects.select_related('creado_por').prefetch_related(
+        Prefetch('reacciones', queryset=ReaccionNota.objects.select_related('usuario')),
+        Prefetch('comentarios', queryset=ComentarioNota.objects.select_related('creado_por')),
+    ).all()
+
+    notas_recepcion = []
+    for nota in notas_raw:
+        grupos = defaultdict(list)
+        for r in nota.reacciones.all():
+            grupos[r.emoji].append(r.usuario_id)
+        notas_recepcion.append({
+            'obj': nota,
+            'reacciones': [
+                {'emoji': e, 'count': len(uids), 'yo': request.user.id in uids}
+                for e, uids in grupos.items()
+            ],
+            'comentarios': list(nota.comentarios.all()),
+        })
+    total_notas = len(notas_recepcion)
+
     return render(request, 'clinica/home.html', {
         'citas_hoy': citas_hoy_count,
         'pacientes_nuevos': pacientes_nuevos,
@@ -398,6 +421,8 @@ def home(request):
         'reagendos_pendientes': reagendos_pendientes,
         'manual_portal': manual_portal,
         'manual_form': manual_form,
+        'notas_recepcion': notas_recepcion,
+        'total_notas': total_notas,
     })
 
 
@@ -4434,3 +4459,47 @@ def marcar_notificaciones_leidas(request):
         terapeuta=terapeuta, leida=False
     ).update(leida=True)
     return JsonResponse({'ok': True})
+
+
+@login_required
+def agregar_nota_recepcion(request):
+    if request.method == 'POST':
+        texto = request.POST.get('texto', '').strip()
+        if texto:
+            NotaRecepcion.objects.create(texto=texto, creado_por=request.user)
+    return redirect('home')
+
+
+@login_required
+def eliminar_nota_recepcion(request, nota_id):
+    nota = get_object_or_404(NotaRecepcion, id=nota_id)
+    nota.delete()
+    return redirect('home')
+
+
+@login_required
+def toggle_reaccion_nota(request, nota_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    nota = get_object_or_404(NotaRecepcion, id=nota_id)
+    emoji = request.POST.get('emoji', '').strip()
+    if not emoji:
+        return JsonResponse({'error': 'emoji required'}, status=400)
+    obj, created = ReaccionNota.objects.get_or_create(nota=nota, usuario=request.user, emoji=emoji)
+    if not created:
+        obj.delete()
+        yo = False
+    else:
+        yo = True
+    count = ReaccionNota.objects.filter(nota=nota, emoji=emoji).count()
+    return JsonResponse({'emoji': emoji, 'count': count, 'yo': yo})
+
+
+@login_required
+def agregar_comentario_nota(request, nota_id):
+    if request.method == 'POST':
+        nota = get_object_or_404(NotaRecepcion, id=nota_id)
+        texto = request.POST.get('texto', '').strip()
+        if texto:
+            ComentarioNota.objects.create(nota=nota, creado_por=request.user, texto=texto)
+    return redirect('home')

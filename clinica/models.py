@@ -1332,3 +1332,38 @@ class NotificacionTerapeuta(models.Model):
 
     def __str__(self):
         return f"[{self.get_tipo_display()}] {self.terapeuta} — {'leída' if self.leida else 'nueva'}"
+
+
+class NotaRecepcion(models.Model):
+    texto      = models.TextField()
+    creado_por = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, null=True, related_name='notas_recepcion'
+    )
+    creado_en  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Nota de Recepción"
+        verbose_name_plural = "Notas de Recepción"
+        ordering = ['-creado_en']
+
+    def __str__(self):
+        return f"{self.creado_por} — {self.creado_en:%d/%m/%Y}"
+
+
+class ReaccionNota(models.Model):
+    nota    = models.ForeignKey(NotaRecepcion, on_delete=models.CASCADE, related_name='reacciones')
+    usuario = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='reacciones_notas')
+    emoji   = models.CharField(max_length=10)
+
+    class Meta:
+        unique_together = ('nota', 'usuario', 'emoji')
+
+
+class ComentarioNota(models.Model):
+    nota       = models.ForeignKey(NotaRecepcion, on_delete=models.CASCADE, related_name='comentarios')
+    creado_por = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='comentarios_notas')
+    texto      = models.TextField()
+    creado_en  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['creado_en']
