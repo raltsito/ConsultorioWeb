@@ -259,7 +259,6 @@
       font-size: .8rem;
     }
 
-    .empty-icon { font-size: 1.6rem; display: block; margin-bottom: .4rem; }
 
     /* ── TOAST ──────────────────────────────────────────────── */
     .toast-stack {
@@ -400,7 +399,6 @@
             {% else %}
               <tr class="empty-row">
                 <td colspan="5">
-                  <span class="empty-icon">📋</span>
                   No hay solicitudes pendientes.
                   <a href="{% url 'agendar_cita_empresa' %}" style="color:var(--cyan);font-weight:600;text-decoration:none;margin-left:.3rem;">Agendar una →</a>
                 </td>
@@ -453,7 +451,6 @@
             {% else %}
               <tr class="empty-row">
                 <td colspan="5">
-                  <span class="empty-icon">📅</span>
                   No hay citas próximas confirmadas.
                 </td>
               </tr>
