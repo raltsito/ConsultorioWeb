@@ -14,9 +14,32 @@ def quitar_tildes(texto):
 class Terapeuta(models.Model):
     # El puente hacia el sistema de login de Django
     usuario = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='perfil_terapeuta')
-    
+
     nombre = models.CharField(max_length=100)
-    activo = models.BooleanField(default=True) 
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
+
+
+class PerfilCatalogo(models.Model):
+    TITULO_CHOICES = [('Licenciatura', 'Licenciatura'), ('Maestría', 'Maestría')]
+
+    terapeuta   = models.OneToOneField(
+        'Terapeuta', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='perfil_catalogo'
+    )
+    nombre      = models.CharField(max_length=200)
+    titulo      = models.CharField(max_length=20, choices=TITULO_CHOICES, default='Licenciatura')
+    cedula      = models.CharField(max_length=200, blank=True, default='Sin cédula registrada')
+    preparacion = models.TextField(blank=True)
+    formacion   = models.TextField(blank=True)
+    activo      = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name        = 'Perfil Catálogo'
+        verbose_name_plural = 'Perfiles Catálogo'
+        ordering            = ['nombre']
 
     def __str__(self):
         return self.nombre

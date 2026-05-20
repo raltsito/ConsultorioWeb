@@ -1,0 +1,64 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catálogo de Terapeutas — INTRA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'clinica/catalogo/styles.css' %}">
+<style>
+  .intra-back-btn {
+    position: fixed;
+    top: 14px;
+    left: 16px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.92);
+    border: 1.5px solid #e0e4ef;
+    border-radius: 999px;
+    padding: 6px 16px 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #1B53FF;
+    text-decoration: none;
+    box-shadow: 0 2px 12px rgba(27,83,255,0.10);
+    backdrop-filter: blur(6px);
+    transition: background 0.15s, box-shadow 0.15s;
+  }
+  .intra-back-btn:hover {
+    background: #fff;
+    box-shadow: 0 4px 18px rgba(27,83,255,0.16);
+    color: #1641D1;
+  }
+  .intra-back-btn svg {
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<a href="{% url 'home' %}" class="intra-back-btn">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/>
+  </svg>
+  Volver al inicio
+</a>
+
+<div id="root"
+  data-csrf="{{ csrf_token }}"
+  data-can-edit="{% if user.is_superuser or user.is_staff %}true{% else %}false{% endif %}">
+</div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="{% static 'clinica/catalogo/data.js' %}"></script>
+<script type="text/babel" src="{% static 'clinica/catalogo/app.jsx' %}"></script>
+</body>
+</html>

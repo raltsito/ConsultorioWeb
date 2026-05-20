@@ -1,4 +1,5 @@
 #Librerias estandar de Python
+import json
 import unicodedata
 import csv
 import io
@@ -50,6 +51,7 @@ from .models import (
 )
 from .models import CorteSemanal, LineaNomina, BonoExtra
 from .models import NotaRecepcion, ReaccionNota, ComentarioNota
+from .models import PerfilCatalogo
 from .forms import (
     AperturaExpedienteForm,
     AperturaExpedienteGrupalForm,
@@ -2735,10 +2737,12 @@ def estadisticas_ausentismo(request):
 # =============================================================================
 
 def _semana_actual():
-    """Devuelve (lunes, domingo) de la semana en curso."""
+    """Devuelve (viernes, jueves) del periodo de corte en curso (Vie→Jue)."""
     hoy = date.today()
-    lunes = hoy - timedelta(days=hoy.weekday())
-    return lunes, lunes + timedelta(days=6)
+    # (weekday - 4) % 7: días transcurridos desde el viernes más reciente
+    # Lun=0→3, Mar=1→4, Mié=2→5, Jue=3→6, Vie=4→0, Sáb=5→1, Dom=6→2
+    viernes = hoy - timedelta(days=(hoy.weekday() - 4) % 7)
+    return viernes, viernes + timedelta(days=6)
 
 
 def _parse_fechas_semana(request):
@@ -4533,3 +4537,123 @@ def agregar_comentario_nota(request, nota_id):
         if texto:
             ComentarioNota.objects.create(nota=nota, creado_por=request.user, texto=texto)
     return redirect('home')
+
+
+@login_required
+def catalogo_terapeutas(request):
+    return render(request, 'clinica/catalogo_terapeutas.html')
+
+
+# ── API Catálogo ──────────────────────────────────────────────────────────────
+
+@login_required
+def api_catalogo_list(request):
+    if request.method == 'GET':
+        perfiles = (PerfilCatalogo.objects
+                    .filter(activo=True)
+                    .select_related('terapeuta')
+                    .order_by('nombre'))
+        data = [
+            {
+                'id':               p.id,
+                'nombre':           p.nombre,
+                'titulo':           p.titulo,
+                'cedula':           p.cedula,
+                'preparacion':      p.preparacion,
+                'formacion':        p.formacion,
+                'terapeuta_id':     p.terapeuta_id,
+                'terapeuta_nombre': p.terapeuta.nombre if p.terapeuta else None,
+            }
+            for p in perfiles
+        ]
+        return JsonResponse(data, safe=False)
+
+    if request.method == 'POST':
+        if not (request.user.is_superuser or request.user.is_staff):
+            return JsonResponse({'error': 'No autorizado'}, status=403)
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+        nombre = body.get('nombre', '').strip()
+        if not nombre:
+            return JsonResponse({'error': 'El nombre es obligatorio'}, status=400)
+
+        terapeuta = None
+        tid = body.get('terapeuta_id')
+        if tid:
+            try:
+                terapeuta = Terapeuta.objects.get(id=int(tid))
+            except (Terapeuta.DoesNotExist, ValueError):
+                pass
+
+        perfil = PerfilCatalogo.objects.create(
+            nombre=nombre,
+            titulo=body.get('titulo', 'Licenciatura'),
+            cedula=body.get('cedula', '') or 'Sin cédula registrada',
+            preparacion=body.get('preparacion', ''),
+            formacion=body.get('formacion', ''),
+            terapeuta=terapeuta,
+        )
+        return JsonResponse({'id': perfil.id}, status=201)
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def api_catalogo_detail(request, perfil_id):
+    if not (request.user.is_superuser or request.user.is_staff):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    perfil = get_object_or_404(PerfilCatalogo, id=perfil_id)
+
+    if request.method == 'PUT':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+        perfil.nombre      = body.get('nombre', perfil.nombre).strip() or perfil.nombre
+        perfil.titulo      = body.get('titulo', perfil.titulo)
+        perfil.cedula      = body.get('cedula', perfil.cedula) or 'Sin cédula registrada'
+        perfil.preparacion = body.get('preparacion', perfil.preparacion)
+        perfil.formacion   = body.get('formacion', perfil.formacion)
+
+        tid = body.get('terapeuta_id')
+        if tid is None or tid == '' or tid == 0:
+            perfil.terapeuta = None
+        else:
+            try:
+                perfil.terapeuta = Terapeuta.objects.get(id=int(tid))
+            except (Terapeuta.DoesNotExist, ValueError):
+                pass
+
+        perfil.save()
+        return JsonResponse({'ok': True})
+
+    if request.method == 'DELETE':
+        perfil.activo = False
+        perfil.save()
+        return JsonResponse({'ok': True})
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def api_terapeutas_activos(request):
+    vinculados = set(
+        PerfilCatalogo.objects
+        .filter(terapeuta__isnull=False, activo=True)
+        .values_list('terapeuta_id', flat=True)
+    )
+    terapeutas = Terapeuta.objects.filter(activo=True).order_by('nombre')
+    data = [
+        {
+            'id':           t.id,
+            'nombre':       t.nombre,
+            'ya_vinculado': t.id in vinculados,
+        }
+        for t in terapeutas
+    ]
+    return JsonResponse(data, safe=False)

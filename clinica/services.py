@@ -128,7 +128,7 @@ def _calcular_bonos_automaticos(total_sesiones, regla):
 def calcular_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
     """
     Genera o recalcula el CorteSemanal (en estatus 'borrador') para un terapeuta
-    en el rango de fechas dado (lunes a domingo).
+    en el rango de fechas dado (viernes a jueves).
 
     - Si ya existe un CorteSemanal en borrador, lo recalcula borrando las líneas previas.
     - Si el corte existe pero ya fue aprobado o pagado, lanza ValueError (no se toca).
@@ -377,17 +377,17 @@ def registrar_pago_penalizacion_terapeuta(penalizacion):
     if monto_sesion <= Decimal("0.00"):
         return None
 
-    # Semana del cobro (lunes–domingo)
+    # Periodo del cobro (viernes–jueves)
     fecha_ref = cita_cobro.fecha
-    lunes = fecha_ref - timedelta(days=fecha_ref.weekday())
-    domingo = lunes + timedelta(days=6)
+    viernes = fecha_ref - timedelta(days=(fecha_ref.weekday() - 4) % 7)
+    domingo = viernes + timedelta(days=6)
 
     paciente_nombre = cita_origen.paciente.nombre if cita_origen.paciente else "paciente"
 
     with transaction.atomic():
         corte, _ = CorteSemanal.objects.get_or_create(
             terapeuta=terapeuta,
-            fecha_inicio=lunes,
+            fecha_inicio=viernes,
             defaults={"fecha_fin": domingo, "estatus": CorteSemanal.ESTATUS_BORRADOR},
         )
 

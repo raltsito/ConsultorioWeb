@@ -69,7 +69,12 @@
       "Bash(Select-Object -First 20)",
       "Bash(Format-Table FullName)",
       "Bash(findstr notificacion *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\clinica\\\\static\\\\clinica\\\\catalogo\")",
+      "Bash(cp \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\CatalogoTerapeutas\\\\styles.css\" \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\clinica\\\\static\\\\clinica\\\\catalogo\\\\styles.css\")",
+      "Bash(cp \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\CatalogoTerapeutas\\\\data.js\" \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\clinica\\\\static\\\\clinica\\\\catalogo\\\\data.js\")",
+      "Bash(cp \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\CatalogoTerapeutas\\\\app.jsx\" \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\clinica\\\\static\\\\clinica\\\\catalogo\\\\app.jsx\")",
+      "Bash(Get-ChildItem \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\clinica\\\\migrations\\\\\" | Sort-Object Name | Select-Object -Last 5 | Format-Table Name *)"
     ]
   }
 }

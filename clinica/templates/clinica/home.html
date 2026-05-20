@@ -506,6 +506,16 @@
                     </span>
                 </a>
 
+                <a href="{% url 'catalogo_terapeutas' %}" class="dock-tile" target="_blank">
+                    <span class="dock-chip" style="--c1:#0D9488;--c2:#065F46;">
+                        <i class="bi bi-people-fill"></i>
+                    </span>
+                    <span class="dock-text">
+                        <span class="dock-label">Catálogo</span>
+                        <span class="dock-sub">Directorio de terapeutas</span>
+                    </span>
+                </a>
+
                 {% if user.is_superuser %}
                 <a href="{% url 'bitacora_diaria' %}" class="dock-tile">
                     <span class="dock-chip" style="--c1:#607D8B;--c2:#263238;">
@@ -1606,6 +1616,34 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() { cambiarSRPeriodo('dia'); });
+})();
+</script>
+
+<script>
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('abrir_cita') !== '1') return;
+
+  history.replaceState({}, '', window.location.pathname);
+
+  function abrirModalConTerapeuta() {
+    const terapeutaId = params.get('terapeuta_id');
+    if (terapeutaId) {
+      const sel = document.getElementById('id_terapeuta');
+      if (sel) {
+        sel.value = terapeutaId;
+        sel.dispatchEvent(new Event('change'));
+      }
+    }
+    const modalEl = document.getElementById('modalCita');
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', abrirModalConTerapeuta);
+  } else {
+    abrirModalConTerapeuta();
+  }
 })();
 </script>
 
