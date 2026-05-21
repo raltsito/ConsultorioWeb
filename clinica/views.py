@@ -1490,57 +1490,75 @@ def crear_cita(request):
         if form.is_valid():
             cita = form.save(commit=False)
 
-            # Aplicar penalización pendiente del paciente si existe
-            pen = None
-            if cita.paciente_id:
-                pen = (
-                    PenalizacionPaciente.objects
-                    .filter(paciente_id=cita.paciente_id, pagada=False)
-                    .order_by('-fecha_creacion')
-                    .first()
-                )
-                if pen:
-                    cita.costo = (cita.costo or 0) + pen.monto
-
-            cita.save()
-
-            # Marcar penalización como cobrada.
-            # El pago al terapeuta se registra en nómina cuando la cita se marque como 'si_asistio'.
-            if pen:
-                pen.pagada = True
-                pen.cita_cobro = cita
-                pen.save(update_fields=['pagada', 'cita_cobro'])
-
-            # Para servicios grupales guardamos pacientes adicionales en la misma cita.
-            if es_servicio_grupal(cita.servicio):
-                pacientes_extra = form.cleaned_data.get('pacientes_extra')
-                if pacientes_extra:
-                    cita.pacientes_adicionales.set(
-                        pacientes_extra.exclude(pk=cita.paciente_id)
+            # Validar que el consultorio no esté ocupado a esa hora
+            if cita.consultorio_id and cita.fecha and cita.hora:
+                conflicto = Cita.objects.filter(
+                    fecha=cita.fecha,
+                    consultorio_id=cita.consultorio_id,
+                    hora=cita.hora,
+                    estatus__in=Cita.ESTATUS_ACTIVOS,
+                ).exists()
+                if conflicto:
+                    hora_sig = (datetime.combine(cita.fecha, cita.hora) + timedelta(hours=1)).time()
+                    messages.error(
+                        request,
+                        f'El consultorio ya tiene una cita agendada a las {cita.hora.strftime("%H:%M")}. '
+                        f'Puedes agendar desde las {hora_sig.strftime("%H:%M")}.',
                     )
-            else:
-                cita.pacientes_adicionales.clear()
-            _vincular_expediente_grupal(cita)
+                    form.add_error('consultorio', 'Consultorio ocupado a esa hora.')
 
-            # --- NUEVA MAGIA: Limpieza de la bandeja de entrada ---
-            solicitud_id = request.GET.get('solicitud')
-            if solicitud_id:
-                try:
-                    solicitud = SolicitudCita.objects.get(id=solicitud_id)
-                    solicitud.estado = 'aceptada'
-                    solicitud.save()
-                    if solicitud.terapeuta:
-                        NotificacionTerapeuta.objects.create(
-                            terapeuta=solicitud.terapeuta,
-                            tipo=NotificacionTerapeuta.TIPO_CITA_ACEPTADA,
-                            mensaje=f"Tu solicitud de cita para {solicitud.paciente_nombre} el {solicitud.fecha_deseada.strftime('%d/%m/%Y')} fue aceptada y agendada.",
+            if not form.errors:
+                # Aplicar penalización pendiente del paciente si existe
+                pen = None
+                if cita.paciente_id:
+                    pen = (
+                        PenalizacionPaciente.objects
+                        .filter(paciente_id=cita.paciente_id, pagada=False)
+                        .order_by('-fecha_creacion')
+                        .first()
+                    )
+                    if pen:
+                        cita.costo = (cita.costo or 0) + pen.monto
+
+                cita.save()
+
+                # Marcar penalización como cobrada.
+                # El pago al terapeuta se registra en nómina cuando la cita se marque como 'si_asistio'.
+                if pen:
+                    pen.pagada = True
+                    pen.cita_cobro = cita
+                    pen.save(update_fields=['pagada', 'cita_cobro'])
+
+                # Para servicios grupales guardamos pacientes adicionales en la misma cita.
+                if es_servicio_grupal(cita.servicio):
+                    pacientes_extra = form.cleaned_data.get('pacientes_extra')
+                    if pacientes_extra:
+                        cita.pacientes_adicionales.set(
+                            pacientes_extra.exclude(pk=cita.paciente_id)
                         )
-                except SolicitudCita.DoesNotExist:
-                    pass
-            # ------------------------------------------------------
+                else:
+                    cita.pacientes_adicionales.clear()
+                _vincular_expediente_grupal(cita)
 
-            messages.success(request, 'Cita agendada correctamente.')
-            return redirect('home')
+                # --- NUEVA MAGIA: Limpieza de la bandeja de entrada ---
+                solicitud_id = request.GET.get('solicitud')
+                if solicitud_id:
+                    try:
+                        solicitud = SolicitudCita.objects.get(id=solicitud_id)
+                        solicitud.estado = 'aceptada'
+                        solicitud.save()
+                        if solicitud.terapeuta:
+                            NotificacionTerapeuta.objects.create(
+                                terapeuta=solicitud.terapeuta,
+                                tipo=NotificacionTerapeuta.TIPO_CITA_ACEPTADA,
+                                mensaje=f"Tu solicitud de cita para {solicitud.paciente_nombre} el {solicitud.fecha_deseada.strftime('%d/%m/%Y')} fue aceptada y agendada.",
+                            )
+                    except SolicitudCita.DoesNotExist:
+                        pass
+                # ------------------------------------------------------
+
+                messages.success(request, 'Cita agendada correctamente.')
+                return redirect('home')
         else:
             # Tu logica de rastreo de errores intacta
             print("ERRORES DETECTADOS:", form.errors) 
@@ -1715,6 +1733,24 @@ def verificar_disponibilidad(request):
                         })
             except ConsultorioModel.DoesNotExist:
                 pass
+
+        # 4. Validar que el consultorio no esté ocupado a esa hora
+        if consultorio_id:
+            ocupado = Cita.objects.filter(
+                fecha=fecha_obj,
+                consultorio_id=consultorio_id,
+                hora=hora_obj,
+                estatus__in=Cita.ESTATUS_ACTIVOS,
+            ).exists()
+            if ocupado:
+                hora_siguiente = (datetime.combine(fecha_obj, hora_obj) + timedelta(hours=1)).time()
+                return JsonResponse({
+                    'available': False,
+                    'msg': (
+                        f'El consultorio ya tiene una cita agendada a las {hora_str}. '
+                        f'Puedes agendar desde las {hora_siguiente.strftime("%H:%M")}.'
+                    ),
+                })
 
         return JsonResponse({'available': True, 'msg': 'Disponible para agendar'})
 
@@ -3852,8 +3888,10 @@ def api_consultorios_por_horario(request):
     fecha_str    = request.GET.get('fecha')
     hora_str     = request.GET.get('hora')
 
+    activos = ConsultorioModel.objects.filter(activo=True)
+
     if not (terapeuta_id and fecha_str and hora_str):
-        todos = list(ConsultorioModel.objects.values('id', 'nombre'))
+        todos = list(activos.values('id', 'nombre').order_by('nombre'))
         return JsonResponse({'consultorios': todos, 'filtrado': False})
 
     try:
@@ -3869,16 +3907,15 @@ def api_consultorios_por_horario(request):
         )
 
         if horario_activo and horario_activo.sede:
-            qs = ConsultorioModel.objects.filter(sede=horario_activo.sede)
-            consultorios = list(qs.values('id', 'nombre'))
+            consultorios = list(activos.filter(sede=horario_activo.sede).values('id', 'nombre').order_by('nombre'))
             return JsonResponse({'consultorios': consultorios, 'filtrado': True, 'sede': horario_activo.sede})
 
-        todos = list(ConsultorioModel.objects.values('id', 'nombre'))
+        todos = list(activos.values('id', 'nombre').order_by('nombre'))
         return JsonResponse({'consultorios': todos, 'filtrado': False})
 
     except Exception as e:
         print(f'Error en api_consultorios_por_horario: {e}')
-        todos = list(ConsultorioModel.objects.values('id', 'nombre'))
+        todos = list(activos.values('id', 'nombre').order_by('nombre'))
         return JsonResponse({'consultorios': todos, 'filtrado': False})
 
 
