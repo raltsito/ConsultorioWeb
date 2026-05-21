@@ -442,6 +442,7 @@ def portal_host(request):
         }
         for sede in (
             Consultorio.objects
+            .filter(activo=True)
             .exclude(sede__in=sedes_excluidas)
             .exclude(sede__isnull=True)
             .exclude(sede='')
@@ -2249,7 +2250,7 @@ def solicitar_cita_paciente(request):
     # Si apenas va a abrir la pagina (GET), le mandamos la lista de terapeutas y consultorios
     terapeutas = Terapeuta.objects.filter(activo=True)
     from .models import Consultorio
-    consultorios = Consultorio.objects.all()
+    consultorios = Consultorio.objects.filter(activo=True)
     return render(request, 'clinica/solicitar_cita.html', {'terapeutas': terapeutas, 'consultorios': consultorios})
 
 @login_required
@@ -2316,7 +2317,7 @@ def solicitar_cita_terapeuta(request):
     # --- NUEVO: Traemos la lista de pacientes ordenados alfabeticamente ---
     pacientes = Paciente.objects.all().order_by('nombre')
     from .models import Consultorio, Servicio
-    consultorios = Consultorio.objects.all()
+    consultorios = Consultorio.objects.filter(activo=True)
     servicios = Servicio.objects.all().order_by('nombre')
 
     return render(request, 'clinica/solicitar_cita_terapeuta.html', {
@@ -2409,7 +2410,7 @@ def api_disponibilidad_terapeuta(request):
             .distinct()
         )
         consultorios_disponibles = list(
-            Consultorio.objects.filter(sede__in=sedes_del_dia)
+            Consultorio.objects.filter(sede__in=sedes_del_dia, activo=True)
             .values('id', 'nombre')
             .order_by('nombre')
         ) if sedes_del_dia else []

@@ -330,6 +330,7 @@ class Consultorio(models.Model):
 
     nombre = models.CharField(max_length=100)
     sede   = models.CharField(max_length=20, choices=SEDE_CHOICES, null=True, blank=True)
+    activo = models.BooleanField(default=False)
 
     def __str__(self):
         return self.nombre

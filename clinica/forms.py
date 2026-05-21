@@ -175,6 +175,7 @@ class CitaForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['pacientes_extra'].queryset = Paciente.objects.order_by('nombre')
+        self.fields['consultorio'].queryset = Consultorio.objects.filter(activo=True).order_by('nombre')
         if self.instance and self.instance.pk:
             self.fields['pacientes_extra'].initial = self.instance.pacientes_adicionales.all()
 
@@ -737,6 +738,7 @@ class CitaEmpresaForm(forms.ModelForm):
     def __init__(self, *args, empresa=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.empresa = empresa
+        self.fields['consultorio'].queryset = Consultorio.objects.filter(activo=True).order_by('nombre')
         if empresa is not None:
             self.fields['paciente'].queryset = empresa.pacientes.all().order_by('nombre')
             if empresa.division:
