@@ -587,6 +587,10 @@ class Cita(models.Model):
     
     folio_fiscal = models.CharField(max_length=100, blank=True, null=True)
     notas = models.TextField(blank=True, null=True)
+    sin_bono = models.BooleanField(
+        default=False,
+        help_text="Si True, la cita se paga al terapeuta pero no suma para el cálculo de bonos adicionales.",
+    )
     tiene_descuento = models.BooleanField(
         null=True, blank=True,
         help_text="Indica si el paciente tiene descuento / estudio socioeconómico activo al momento de la cita."

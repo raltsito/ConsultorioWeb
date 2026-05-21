@@ -4645,6 +4645,56 @@ def agregar_comentario_nota(request, nota_id):
 
 
 @login_required
+def citas_tardias(request):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return redirect('home')
+
+    hoy = date.today()
+    desde = hoy - timedelta(days=7)
+
+    ESTATUS_VALIDOS = {
+        Cita.ESTATUS_SI_ASISTIO:    'Si asistió',
+        Cita.ESTATUS_NO_ASISTIO:    'No asistió',
+        Cita.ESTATUS_CANCELO:       'Canceló',
+        Cita.ESTATUS_INCIDENCIA:    'Incidencia',
+    }
+
+    if request.method == 'POST':
+        cita_id   = request.POST.get('cita_id')
+        nuevo_est = request.POST.get('estatus')
+        if nuevo_est in ESTATUS_VALIDOS:
+            cita_obj = get_object_or_404(Cita, id=cita_id)
+            cita_obj.estatus  = nuevo_est
+            cita_obj.sin_bono = True
+            cita_obj.save(update_fields=['estatus', 'sin_bono'])
+            messages.success(
+                request,
+                f'Cita de {cita_obj.paciente} actualizada a "{ESTATUS_VALIDOS[nuevo_est]}" (sin bono).',
+            )
+        else:
+            messages.error(request, 'Estatus no válido.')
+        return redirect('citas_tardias')
+
+    citas_qs = (
+        Cita.objects
+        .filter(
+            fecha__gte=desde,
+            fecha__lt=hoy,
+            estatus__in=[Cita.ESTATUS_CONFIRMADA, Cita.ESTATUS_SIN_CONFIRMAR],
+        )
+        .select_related('paciente', 'terapeuta', 'consultorio')
+        .order_by('fecha', 'hora')
+    )
+
+    return render(request, 'clinica/citas_tardias.html', {
+        'citas': citas_qs,
+        'estatus_opciones': ESTATUS_VALIDOS,
+        'desde': desde,
+        'hoy': hoy,
+    })
+
+
+@login_required
 def catalogo_terapeutas(request):
     return render(request, 'clinica/catalogo_terapeutas.html')
 

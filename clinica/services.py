@@ -162,6 +162,8 @@ def calcular_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
     )
 
     total_sesiones = citas.count()
+    # Citas con sin_bono=True se pagan pero no cuentan para bonos adicionales
+    total_sesiones_para_bono = citas.filter(sin_bono=False).count()
 
     # 3. Calcular pago base por sesión → genera líneas tipo 'sesion'
     lineas_sesion = []
@@ -178,7 +180,7 @@ def calcular_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
         })
 
     # 4. Calcular bonos automáticos → genera líneas tipo 'bono_umbral' / 'bono_por_paciente'
-    lineas_bono = _calcular_bonos_automaticos(total_sesiones, regla)
+    lineas_bono = _calcular_bonos_automaticos(total_sesiones_para_bono, regla)
     total_bonos_automaticos = sum(b["monto"] for b in lineas_bono)
 
     # 5. Persistir en una transacción atómica
@@ -280,6 +282,7 @@ def preview_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
     )
 
     total_sesiones = citas.count()
+    total_sesiones_para_bono = citas.filter(sin_bono=False).count()
     lineas = []
     subtotal_sesiones = Decimal("0.00")
 
@@ -293,7 +296,7 @@ def preview_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
             "monto": monto,
         })
 
-    lineas_bono = _calcular_bonos_automaticos(total_sesiones, regla)
+    lineas_bono = _calcular_bonos_automaticos(total_sesiones_para_bono, regla)
     total_bonos = sum(b["monto"] for b in lineas_bono)
     lineas.extend(lineas_bono)
 
