@@ -1304,6 +1304,57 @@
     }
 </style>
 
+    {% if solicitudes_expositor_pendientes %}
+    <div class="row mt-4 mb-2">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 border-start border-5 rounded-3" style="border-color:#f59e0b !important;">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-mic-fill me-2 text-warning"></i> Horas Expositor Pendientes
+                        <span class="badge text-dark ms-2 rounded-pill" style="background:#fef3c7; border:1px solid #f59e0b;">{{ solicitudes_expositor_pendientes.count }}</span>
+                    </h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for sol in solicitudes_expositor_pendientes %}
+                    <div class="list-group-item p-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-3 mb-2 mb-md-0">
+                                <h5 class="fw-bold text-primary mb-1">{{ sol.terapeuta.nombre }}</h5>
+                                <small class="text-muted"><i class="bi bi-calendar me-1"></i>{{ sol.creado_en|date:"d M Y, H:i" }}</small>
+                            </div>
+                            <div class="col-md-6 mb-3 mb-md-0 border-start px-md-4">
+                                <p class="mb-1 fw-semibold text-dark">
+                                    <i class="bi bi-clock me-1 text-warning"></i> {{ sol.horas }} hora{{ sol.horas|pluralize }} — {{ sol.lugar }}
+                                </p>
+                                <div class="bg-light p-2 rounded border mt-1">
+                                    <small class="text-secondary fst-italic">"{{ sol.notas }}"</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-md-end text-center mt-3 mt-md-0">
+                                <form method="post" action="{% url 'responder_horas_expositor' sol.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="aceptar">
+                                    <button type="submit" class="btn btn-success fw-bold px-3 mb-2 w-100 shadow-sm">
+                                        <i class="bi bi-check-circle me-1"></i> Aceptar
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'responder_horas_expositor' sol.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="rechazar">
+                                    <button type="submit" class="btn btn-outline-danger fw-bold px-3 w-100">
+                                        <i class="bi bi-x-circle me-1"></i> Rechazar
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% if solicitudes_pendientes %}
     <div class="row mt-4 mb-4">
         <div class="col-12">

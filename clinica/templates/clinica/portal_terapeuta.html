@@ -387,31 +387,60 @@
 </div>
 {% endif %}
 
-{# ─────────────────────────── AVISO DISPONIBILIDAD ─────────────────────────── #}
-<div class="border-0 rounded-4 shadow-sm mb-4 d-flex align-items-start gap-3 p-4"
-     style="background:linear-gradient(135deg,#e0f2fe,#ede9fe); border-left: 5px solid #6366f1 !important;">
-    <span style="font-size:1.6rem; line-height:1; flex-shrink:0; margin-top:.1rem;">📣</span>
-    <div>
-        <p class="fw-bold mb-1" style="color:#3730a3;">¡Nueva función disponible: gestiona tus horarios!</p>
-        <p class="mb-1" style="color:#4338ca; font-size:.9rem;">
-            Ya puedes revisar, agregar y modificar tus franjas de disponibilidad directamente desde tu portal.
-            Por favor revisa que tus bloques estén correctos y <strong>asegúrate de que la sede esté bien configurada</strong> en cada franja.
-        </p>
-        <p class="mb-2" style="color:#4338ca; font-size:.9rem;">
-            <i class="bi bi-exclamation-triangle-fill me-1" style="color:#6366f1;"></i>
-            El sistema <strong>bloqueará automáticamente</strong> cualquier cita que esté fuera de tu disponibilidad o de tu sede registrada —
-            <strong>es importante que lo tengas actualizado lo antes posible.</strong>
-        </p>
-        <a href="{% url 'mi_disponibilidad_terapeuta' %}"
-           class="btn btn-sm fw-bold px-3"
-           style="background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border-radius:999px; border:0;">
-            <i class="bi bi-clock-history me-1"></i> Ver mi disponibilidad
-        </a>
+
+{# ─────────────────────────── HORAS EXPOSITOR ─────────────────────────── #}
+<div class="mb-4">
+    <button type="button" class="btn btn-outline-warning btn-sm fw-semibold"
+            data-bs-toggle="modal" data-bs-target="#modalHorasExpositor">
+        <i class="bi bi-mic-fill me-1"></i> Horas Expositor
+    </button>
+    <small class="text-muted ms-2">
+        ¿Diste un taller o exposición por parte de INTRA? Regístralo aquí para ingresarlo a nómina.
+    </small>
+</div>
+
+<div class="modal fade" id="modalHorasExpositor" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header text-white" style="background:linear-gradient(135deg,#f59e0b,#b45309);">
+                <h5 class="modal-title fw-bold"><i class="bi bi-mic-fill me-2"></i>Solicitar Horas Expositor</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'solicitar_horas_expositor' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">
+                        Si participaste en un taller, exposición o presentación organizada por INTRA,
+                        registra las horas aquí. Recepción revisará tu solicitud y, si es aprobada,
+                        se agregará a tu nómina como sesiones individuales <strong>(sin bono adicional)</strong>.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Número de horas <span class="text-danger">*</span></label>
+                        <input type="number" name="horas" min="1" max="24" class="form-control" placeholder="ej. 2" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Lugar / Evento <span class="text-danger">*</span></label>
+                        <input type="text" name="lugar" class="form-control" placeholder="ej. Auditorio UANL, Sala República" maxlength="200" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Descripción de la actividad <span class="text-danger">*</span></label>
+                        <textarea name="notas" class="form-control" rows="3"
+                                  placeholder="Describe brevemente qué hiciste: tema, público, objetivo…" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold text-white">
+                        <i class="bi bi-send me-1"></i>Enviar solicitud
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 {# ─────────────────────────── SOLICITUDES ENVIADAS ─────────────────────────── #}
-{% if mis_solicitudes or mis_reagendos %}
+{% if mis_solicitudes or mis_reagendos or mis_solicitudes_expositor %}
 <div class="card shadow-sm border-0 rounded-4 mb-4 border-start border-primary border-5">
     <div class="card-header bg-white border-bottom p-3" style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#peticionesCollapse" aria-expanded="false" aria-controls="peticionesCollapse">
         <div class="d-flex justify-content-between align-items-center">
@@ -478,6 +507,29 @@
                         <small class="text-secondary">"{{ sr.nota_recepcion }}"</small>
                     </div>
                     {% endif %}
+                </div>
+                {% endfor %}
+                {% endif %}
+
+                {% if mis_solicitudes_expositor %}
+                <div class="list-group-item bg-light px-3 py-2">
+                    <small class="fw-bold text-muted text-uppercase" style="letter-spacing:.06em;">Horas Expositor</small>
+                </div>
+                {% for sol in mis_solicitudes_expositor %}
+                <div class="list-group-item p-3">
+                    <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                        <div>
+                            <strong class="text-dark"><i class="bi bi-mic me-1 text-warning"></i>{{ sol.horas }} hora{{ sol.horas|pluralize }} — {{ sol.lugar }}</strong>
+                            <small class="text-muted d-block">{{ sol.creado_en|date:"d M Y" }} &mdash; {{ sol.notas|truncatechars:60 }}</small>
+                        </div>
+                        {% if sol.estado == 'pendiente' %}
+                            <span class="badge bg-warning text-dark border px-2 py-1">Esperando Confirmación</span>
+                        {% elif sol.estado == 'aceptada' %}
+                            <span class="badge bg-success border px-2 py-1">Aceptada — en nómina</span>
+                        {% elif sol.estado == 'rechazada' %}
+                            <span class="badge bg-danger border px-2 py-1">Rechazada</span>
+                        {% endif %}
+                    </div>
                 </div>
                 {% endfor %}
                 {% endif %}

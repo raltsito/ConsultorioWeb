@@ -906,12 +906,14 @@ class LineaNomina(models.Model):
     TIPO_BONO_UMBRAL = 'bono_umbral'
     TIPO_BONO_POR_PACIENTE = 'bono_por_paciente'
     TIPO_PENALIZACION = 'penalizacion'
+    TIPO_EXPOSITOR = 'expositor'
 
     TIPO_CHOICES = [
         (TIPO_SESION, 'Sesión'),
         (TIPO_BONO_UMBRAL, 'Bono por volumen'),
         (TIPO_BONO_POR_PACIENTE, 'Bono por paciente'),
         (TIPO_PENALIZACION, 'Penalización inasistencia'),
+        (TIPO_EXPOSITOR, 'Horas Expositor'),
     ]
 
     corte = models.ForeignKey(CorteSemanal, on_delete=models.CASCADE, related_name='lineas')
@@ -1335,20 +1337,24 @@ class ReporteIncidente(models.Model):
 
 
 class NotificacionTerapeuta(models.Model):
-    TIPO_CITA_ACEPTADA       = 'cita_aceptada'
-    TIPO_CITA_RECHAZADA      = 'cita_rechazada'
-    TIPO_CITA_MODIFICADA     = 'cita_modificada'
-    TIPO_REAGENDO_APROBADO   = 'reagendo_aprobado'
-    TIPO_REAGENDO_RECHAZADO  = 'reagendo_rechazado'
-    TIPO_RESPUESTA_INCIDENTE = 'respuesta_incidente'
+    TIPO_CITA_ACEPTADA        = 'cita_aceptada'
+    TIPO_CITA_RECHAZADA       = 'cita_rechazada'
+    TIPO_CITA_MODIFICADA      = 'cita_modificada'
+    TIPO_REAGENDO_APROBADO    = 'reagendo_aprobado'
+    TIPO_REAGENDO_RECHAZADO   = 'reagendo_rechazado'
+    TIPO_RESPUESTA_INCIDENTE  = 'respuesta_incidente'
+    TIPO_EXPOSITOR_ACEPTADO   = 'expositor_aceptado'
+    TIPO_EXPOSITOR_RECHAZADO  = 'expositor_rechazado'
 
     TIPO_CHOICES = [
-        (TIPO_CITA_ACEPTADA,       'Cita aceptada'),
-        (TIPO_CITA_RECHAZADA,      'Cita rechazada'),
-        (TIPO_CITA_MODIFICADA,     'Cita modificada'),
-        (TIPO_REAGENDO_APROBADO,   'Reagendo aprobado'),
-        (TIPO_REAGENDO_RECHAZADO,  'Reagendo rechazado'),
-        (TIPO_RESPUESTA_INCIDENTE, 'Respuesta a reporte'),
+        (TIPO_CITA_ACEPTADA,        'Cita aceptada'),
+        (TIPO_CITA_RECHAZADA,       'Cita rechazada'),
+        (TIPO_CITA_MODIFICADA,      'Cita modificada'),
+        (TIPO_REAGENDO_APROBADO,    'Reagendo aprobado'),
+        (TIPO_REAGENDO_RECHAZADO,   'Reagendo rechazado'),
+        (TIPO_RESPUESTA_INCIDENTE,  'Respuesta a reporte'),
+        (TIPO_EXPOSITOR_ACEPTADO,   'Horas expositor aceptadas'),
+        (TIPO_EXPOSITOR_RECHAZADO,  'Horas expositor rechazadas'),
     ]
 
     terapeuta  = models.ForeignKey('Terapeuta', on_delete=models.CASCADE, related_name='notificaciones')
@@ -1364,6 +1370,33 @@ class NotificacionTerapeuta(models.Model):
 
     def __str__(self):
         return f"[{self.get_tipo_display()}] {self.terapeuta} — {'leída' if self.leida else 'nueva'}"
+
+
+class SolicitudHorasExpositor(models.Model):
+    ESTADO_PENDIENTE  = 'pendiente'
+    ESTADO_ACEPTADA   = 'aceptada'
+    ESTADO_RECHAZADA  = 'rechazada'
+
+    ESTADO_CHOICES = [
+        ('pendiente',  'Pendiente'),
+        ('aceptada',   'Aceptada'),
+        ('rechazada',  'Rechazada'),
+    ]
+
+    terapeuta  = models.ForeignKey('Terapeuta', on_delete=models.CASCADE, related_name='solicitudes_expositor')
+    horas      = models.PositiveIntegerField(verbose_name='Número de horas')
+    lugar      = models.CharField(max_length=200, verbose_name='Lugar / Evento')
+    notas      = models.TextField(verbose_name='Descripción de la actividad')
+    estado     = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    creado_en  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Solicitud de Horas Expositor"
+        verbose_name_plural = "Solicitudes de Horas Expositor"
+        ordering = ['-creado_en']
+
+    def __str__(self):
+        return f'{self.terapeuta} — {self.horas}h ({self.get_estado_display()})'
 
 
 class NotaRecepcion(models.Model):

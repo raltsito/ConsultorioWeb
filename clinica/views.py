@@ -28,6 +28,7 @@ from .models import (
     AperturaExpedienteGrupal,
     BloqueoAgendaTerapeuta,
     Consultorio,
+    SolicitudHorasExpositor,
     Division,
     DocumentoPaciente,
     Empresa,
@@ -336,6 +337,7 @@ def home(request):
     mes_actual = timezone.now().month
 
     solicitudes_pendientes = SolicitudCita.objects.filter(estado='pendiente').order_by('fecha_creacion')
+    solicitudes_expositor_pendientes = SolicitudHorasExpositor.objects.filter(estado='pendiente').select_related('terapeuta').order_by('creado_en')
 
     # 1. ESTADÍSTICAS
     citas_hoy_count = Cita.objects.filter(fecha=hoy).count()
@@ -419,6 +421,7 @@ def home(request):
         'hoy': hoy,
         'form': CitaForm(),
         'solicitudes_pendientes': solicitudes_pendientes,
+        'solicitudes_expositor_pendientes': solicitudes_expositor_pendientes,
         'bloqueos_vigentes': bloqueos_vigentes,
         'reagendos_pendientes': reagendos_pendientes,
         'manual_portal': manual_portal,
@@ -2108,6 +2111,10 @@ def portal_terapeuta(request):
         .first()
     )
 
+    mis_solicitudes_expositor = SolicitudHorasExpositor.objects.filter(
+        terapeuta=mi_perfil
+    ).order_by('-creado_en')[:10]
+
     context = {
         'terapeuta': mi_perfil,
         'citas_hoy': citas_hoy,
@@ -2120,6 +2127,7 @@ def portal_terapeuta(request):
         'fecha_bonita': fecha_bonita,
         'mis_solicitudes': mis_solicitudes,
         'mis_reagendos': mis_reagendos,
+        'mis_solicitudes_expositor': mis_solicitudes_expositor,
         'bloqueos_agenda': bloqueos_futuros,
         'bloqueo_form': BloqueoAgendaTerapeutaForm(),
         'manual_portal': manual_portal,
@@ -4641,6 +4649,142 @@ def agregar_comentario_nota(request, nota_id):
         texto = request.POST.get('texto', '').strip()
         if texto:
             ComentarioNota.objects.create(nota=nota, creado_por=request.user, texto=texto)
+    return redirect('home')
+
+
+@login_required
+def solicitar_horas_expositor(request):
+    if request.method != 'POST':
+        return redirect('portal_terapeuta')
+    try:
+        mi_perfil = request.user.perfil_terapeuta
+    except Exception:
+        return redirect('home')
+
+    horas_raw = request.POST.get('horas', '').strip()
+    lugar     = request.POST.get('lugar', '').strip()
+    notas     = request.POST.get('notas', '').strip()
+
+    if not horas_raw or not lugar or not notas:
+        messages.error(request, 'Todos los campos son obligatorios.')
+        return redirect('portal_terapeuta')
+
+    try:
+        horas = int(horas_raw)
+        if horas < 1:
+            raise ValueError
+    except ValueError:
+        messages.error(request, 'Las horas deben ser un número entero mayor a 0.')
+        return redirect('portal_terapeuta')
+
+    SolicitudHorasExpositor.objects.create(
+        terapeuta=mi_perfil,
+        horas=horas,
+        lugar=lugar,
+        notas=notas,
+    )
+    messages.success(request, f'Solicitud de {horas} hora{"s" if horas > 1 else ""} expositor enviada a recepción.')
+    return redirect('portal_terapeuta')
+
+
+@login_required
+def responder_horas_expositor(request, solicitud_id):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return redirect('home')
+    if request.method != 'POST':
+        return redirect('home')
+
+    from .services import calcular_nomina_semanal
+    solicitud = get_object_or_404(SolicitudHorasExpositor, id=solicitud_id)
+    if solicitud.estado != SolicitudHorasExpositor.ESTADO_PENDIENTE:
+        messages.warning(request, 'Esta solicitud ya fue procesada.')
+        return redirect('home')
+
+    accion = request.POST.get('accion')
+
+    if accion == 'aceptar':
+        terapeuta = solicitud.terapeuta
+        monto_por_hora = Decimal('0.00')
+        try:
+            regla = terapeuta.regla_pago
+            if regla.pago_individual is not None:
+                monto_por_hora = regla.pago_individual
+            elif regla.pago_por_sesion is not None:
+                monto_por_hora = regla.pago_por_sesion
+            elif regla.tabulador_base and regla.tabulador_base.pago_base is not None:
+                monto_por_hora = regla.tabulador_base.pago_base
+        except Exception:
+            pass
+
+        monto_total = monto_por_hora * solicitud.horas
+
+        hoy_local  = date.today()
+        ini_semana = hoy_local - timedelta(days=hoy_local.weekday())
+        fin_semana = ini_semana + timedelta(days=6)
+
+        corte, _ = CorteSemanal.objects.get_or_create(
+            terapeuta=terapeuta,
+            fecha_inicio=ini_semana,
+            defaults={'fecha_fin': fin_semana, 'estatus': CorteSemanal.ESTATUS_BORRADOR},
+        )
+        if corte.estatus != CorteSemanal.ESTATUS_BORRADOR:
+            corte_alt = (
+                CorteSemanal.objects
+                .filter(terapeuta=terapeuta, estatus=CorteSemanal.ESTATUS_BORRADOR)
+                .order_by('-fecha_inicio')
+                .first()
+            )
+            if not corte_alt:
+                messages.error(
+                    request,
+                    f'No hay un corte en borrador para {terapeuta.nombre}. '
+                    'Crea uno primero en la sección de nómina.',
+                )
+                return redirect('home')
+            corte = corte_alt
+
+        LineaNomina.objects.create(
+            corte=corte,
+            cita=None,
+            tipo=LineaNomina.TIPO_EXPOSITOR,
+            concepto=f'Horas Expositor: {solicitud.horas}h en "{solicitud.lugar}"',
+            monto=monto_total,
+        )
+        try:
+            calcular_nomina_semanal(terapeuta, corte.fecha_inicio, corte.fecha_fin)
+        except ValueError:
+            pass
+
+        solicitud.estado = SolicitudHorasExpositor.ESTADO_ACEPTADA
+        solicitud.save()
+
+        NotificacionTerapeuta.objects.create(
+            terapeuta=terapeuta,
+            tipo=NotificacionTerapeuta.TIPO_EXPOSITOR_ACEPTADO,
+            mensaje=(
+                f'Tu solicitud de {solicitud.horas} hora{"s" if solicitud.horas > 1 else ""} expositor '
+                f'en "{solicitud.lugar}" fue aceptada. '
+                f'Se agregaron ${monto_total:,.2f} a tu nómina.'
+            ),
+        )
+        messages.success(
+            request,
+            f'Solicitud aceptada. Se agregaron ${monto_total:,.2f} a la nómina de {terapeuta.nombre}.',
+        )
+
+    elif accion == 'rechazar':
+        solicitud.estado = SolicitudHorasExpositor.ESTADO_RECHAZADA
+        solicitud.save()
+        NotificacionTerapeuta.objects.create(
+            terapeuta=solicitud.terapeuta,
+            tipo=NotificacionTerapeuta.TIPO_EXPOSITOR_RECHAZADO,
+            mensaje=(
+                f'Tu solicitud de {solicitud.horas} hora{"s" if solicitud.horas > 1 else ""} expositor '
+                f'en "{solicitud.lugar}" fue rechazada por recepción.'
+            ),
+        )
+        messages.success(request, f'Solicitud rechazada. Se notificó a {solicitud.terapeuta.nombre}.')
+
     return redirect('home')
 
 

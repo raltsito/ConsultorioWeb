@@ -199,9 +199,10 @@ def calcular_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
             )
 
         # Borrar líneas automáticas (sesión y bonos).
-        # Las líneas de penalización se conservan — son pagos ya registrados,
-        # no se recalculan y deben seguir sumándose al total_pago del corte.
-        corte.lineas.exclude(tipo=LineaNomina.TIPO_PENALIZACION).delete()
+        # Las líneas de penalización y expositor se conservan — son pagos ya
+        # registrados manualmente y no deben recalcularse.
+        PRESERVAR = [LineaNomina.TIPO_PENALIZACION, LineaNomina.TIPO_EXPOSITOR]
+        corte.lineas.exclude(tipo__in=PRESERVAR).delete()
 
         # Crear líneas de sesión
         LineaNomina.objects.bulk_create([
@@ -230,9 +231,13 @@ def calcular_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
         # Sumar BonoExtra manuales existentes en este corte
         bonos_extra = corte.bonos_extra.aggregate(total=Sum("monto"))["total"] or Decimal("0.00")
 
-        # Sumar líneas de penalización ya registradas (sobreviven al recalculo)
+        # Sumar líneas de penalización y expositor ya registradas (sobreviven al recalculo)
         total_penalizaciones = (
             corte.lineas.filter(tipo=LineaNomina.TIPO_PENALIZACION)
+            .aggregate(total=Sum("monto"))["total"] or Decimal("0.00")
+        )
+        total_expositor = (
+            corte.lineas.filter(tipo=LineaNomina.TIPO_EXPOSITOR)
             .aggregate(total=Sum("monto"))["total"] or Decimal("0.00")
         )
 
@@ -241,7 +246,7 @@ def calcular_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
         corte.total_sesiones = total_sesiones
         corte.subtotal_sesiones = subtotal_sesiones
         corte.total_bonos = total_bonos_automaticos + bonos_extra + total_penalizaciones
-        corte.total_pago = subtotal_sesiones + total_bonos_automaticos + bonos_extra + total_penalizaciones
+        corte.total_pago = subtotal_sesiones + total_bonos_automaticos + bonos_extra + total_penalizaciones + total_expositor
         corte.save()
 
     return corte
