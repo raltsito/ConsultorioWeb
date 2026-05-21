@@ -604,12 +604,16 @@ $(document).ready(function() {
         const terapeuta = $terapeuta.length ? $terapeuta.val() : '';
 
         if (fecha && hora && consultorio) {
-            $.get('/api/verificar-disponibilidad/', {
+            const params = {
                 'fecha': fecha,
                 'hora': hora,
                 'consultorio': consultorio,
-                'terapeuta': terapeuta
-            }, function(data) {
+                'terapeuta': terapeuta,
+            };
+            const citaIdActual = $('#cita-id-actual').val();
+            if (citaIdActual) params['cita_id'] = citaIdActual;
+
+            $.get('/api/verificar-disponibilidad/', params, function(data) {
                 if (data.available) {
                     $status.html('<span class="text-success">' + data.msg + '</span>');
                 } else {

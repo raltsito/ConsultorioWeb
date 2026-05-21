@@ -1490,16 +1490,29 @@ def crear_cita(request):
         if form.is_valid():
             cita = form.save(commit=False)
 
-            # Validar que el consultorio no esté ocupado a esa hora
-            if cita.consultorio_id and cita.fecha and cita.hora:
-                conflicto = Cita.objects.filter(
+            # Validar solapamiento de terapeuta y consultorio
+            if cita.fecha and cita.hora:
+                hora_sig = (datetime.combine(cita.fecha, cita.hora) + timedelta(hours=1)).time()
+
+                if cita.terapeuta_id and Cita.objects.filter(
+                    terapeuta_id=cita.terapeuta_id,
+                    fecha=cita.fecha,
+                    hora=cita.hora,
+                    estatus__in=Cita.ESTATUS_ACTIVOS,
+                ).exists():
+                    messages.error(
+                        request,
+                        f'El terapeuta ya tiene una cita agendada a las {cita.hora.strftime("%H:%M")}. '
+                        f'Puedes agendar desde las {hora_sig.strftime("%H:%M")}.',
+                    )
+                    form.add_error('terapeuta', 'Terapeuta ocupado a esa hora.')
+
+                if cita.consultorio_id and Cita.objects.filter(
                     fecha=cita.fecha,
                     consultorio_id=cita.consultorio_id,
                     hora=cita.hora,
                     estatus__in=Cita.ESTATUS_ACTIVOS,
-                ).exists()
-                if conflicto:
-                    hora_sig = (datetime.combine(cita.fecha, cita.hora) + timedelta(hours=1)).time()
+                ).exists():
                     messages.error(
                         request,
                         f'El consultorio ya tiene una cita agendada a las {cita.hora.strftime("%H:%M")}. '
@@ -1677,6 +1690,7 @@ def verificar_disponibilidad(request):
     hora_str = request.GET.get('hora')
     consultorio_id = request.GET.get('consultorio')
     terapeuta_id = request.GET.get('terapeuta')
+    cita_id = request.GET.get('cita_id')
 
     if not (fecha_str and hora_str and consultorio_id and terapeuta_id):
         return JsonResponse({'available': True, 'msg': ''})
@@ -1714,7 +1728,25 @@ def verificar_disponibilidad(request):
                 'msg': f'Las {hora_str} está fuera del horario del terapeuta los {_DIAS[dia_semana]}.',
             })
 
-        # 3. Validar que el consultorio pertenezca a ALGUNA de las sedes activas
+        # 3. Validar que el terapeuta no tenga ya una cita a esa hora
+        qs_excluir = Cita.objects.exclude(pk=cita_id) if cita_id else Cita.objects.all()
+        duplicado = qs_excluir.filter(
+            terapeuta_id=terapeuta_id,
+            fecha=fecha_obj,
+            hora=hora_obj,
+            estatus__in=Cita.ESTATUS_ACTIVOS,
+        ).exists()
+        if duplicado:
+            hora_siguiente = (datetime.combine(fecha_obj, hora_obj) + timedelta(hours=1)).time()
+            return JsonResponse({
+                'available': False,
+                'msg': (
+                    f'El terapeuta ya tiene una cita agendada a las {hora_str}. '
+                    f'Puedes agendar desde las {hora_siguiente.strftime("%H:%M")}.'
+                ),
+            })
+
+        # 4. Validar que el consultorio pertenezca a ALGUNA de las sedes activas
         if consultorio_id:
             from .models import Consultorio as ConsultorioModel
             _SEDES = dict(Horario.SEDE_CHOICES)
@@ -1734,9 +1766,9 @@ def verificar_disponibilidad(request):
             except ConsultorioModel.DoesNotExist:
                 pass
 
-        # 4. Validar que el consultorio no esté ocupado a esa hora
+        # 5. Validar que el consultorio no esté ocupado a esa hora
         if consultorio_id:
-            ocupado = Cita.objects.filter(
+            ocupado = qs_excluir.filter(
                 fecha=fecha_obj,
                 consultorio_id=consultorio_id,
                 hora=hora_obj,
@@ -1771,7 +1803,42 @@ def editar_cita(request, cita_id):
     if request.method == 'POST':
         form = CitaForm(request.POST, instance=cita)
         if form.is_valid():
-            cita = form.save()
+            nueva = form.save(commit=False)
+            if nueva.fecha and nueva.hora:
+                hora_sig = (datetime.combine(nueva.fecha, nueva.hora) + timedelta(hours=1)).time()
+                otras = Cita.objects.exclude(pk=cita_id)
+
+                if nueva.terapeuta_id and otras.filter(
+                    terapeuta_id=nueva.terapeuta_id,
+                    fecha=nueva.fecha,
+                    hora=nueva.hora,
+                    estatus__in=Cita.ESTATUS_ACTIVOS,
+                ).exists():
+                    messages.error(
+                        request,
+                        f'El terapeuta ya tiene una cita agendada a las {nueva.hora.strftime("%H:%M")}. '
+                        f'Puedes agendar desde las {hora_sig.strftime("%H:%M")}.',
+                    )
+                    form.add_error('terapeuta', 'Terapeuta ocupado a esa hora.')
+
+                if nueva.consultorio_id and otras.filter(
+                    fecha=nueva.fecha,
+                    consultorio_id=nueva.consultorio_id,
+                    hora=nueva.hora,
+                    estatus__in=Cita.ESTATUS_ACTIVOS,
+                ).exists():
+                    messages.error(
+                        request,
+                        f'El consultorio ya tiene una cita agendada a las {nueva.hora.strftime("%H:%M")}. '
+                        f'Puedes agendar desde las {hora_sig.strftime("%H:%M")}.',
+                    )
+                    form.add_error('consultorio', 'Consultorio ocupado a esa hora.')
+
+            if form.errors:
+                return render(request, 'clinica/editar_cita.html', {'form': form, 'cita': cita})
+
+            cita = nueva
+            cita.save()
             if es_servicio_grupal(cita.servicio):
                 pacientes_extra = form.cleaned_data.get('pacientes_extra')
                 cita.pacientes_adicionales.set(
