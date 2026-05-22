@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte de Mejoras — Sistema INTRA</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 13px;
+    color: #1e293b;
+    background: #fff;
+    padding: 40px 48px;
+    max-width: 820px;
+    margin: 0 auto;
+  }
+
+  /* ── Encabezado ── */
+  .header {
+    border-bottom: 3px solid #0d6efd;
+    padding-bottom: 18px;
+    margin-bottom: 28px;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0d47a1;
+    margin-bottom: 4px;
+  }
+  .header .meta {
+    font-size: 12px;
+    color: #64748b;
+  }
+  .header .meta span { margin-right: 18px; }
+
+  /* ── Introducción ── */
+  .intro {
+    background: #f0f7ff;
+    border-left: 4px solid #0d6efd;
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 30px;
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.6;
+  }
+
+  /* ── Tarjeta de cambio ── */
+  .cambio {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 22px;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+
+  .cambio-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .cambio-header .numero {
+    background: rgba(255,255,255,0.35);
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .c-blue   { background: #1d4ed8; color: #fff; }
+  .c-green  { background: #15803d; color: #fff; }
+  .c-orange { background: #c2410c; color: #fff; }
+  .c-purple { background: #6d28d9; color: #fff; }
+  .c-teal   { background: #0f766e; color: #fff; }
+  .c-gray   { background: #475569; color: #fff; }
+  .c-amber  { background: #b45309; color: #fff; }
+
+  .cambio-body {
+    padding: 14px 18px;
+    line-height: 1.7;
+    color: #334155;
+  }
+
+  .cambio-body p { margin-bottom: 8px; }
+  .cambio-body p:last-child { margin-bottom: 0; }
+
+  .cambio-body strong { color: #0f172a; }
+
+  .tag {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .tag-new    { background: #dcfce7; color: #166534; }
+  .tag-fix    { background: #dbeafe; color: #1e40af; }
+  .tag-remove { background: #fee2e2; color: #991b1b; }
+  .tag-test   { background: #fef3c7; color: #92400e; }
+
+  ul.puntos {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0 0;
+  }
+  ul.puntos li {
+    padding: 3px 0 3px 20px;
+    position: relative;
+  }
+  ul.puntos li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #22c55e;
+    font-weight: 700;
+  }
+
+  /* ── Alerta de pruebas ── */
+  .alerta-prueba {
+    background: #fffbeb;
+    border: 1.5px solid #f59e0b;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: #78350f;
+  }
+  .alerta-prueba strong { color: #92400e; }
+
+  /* ── Resumen final ── */
+  .resumen {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin-top: 30px;
+    page-break-inside: avoid;
+  }
+  .resumen h3 { font-size: 14px; color: #0d47a1; margin-bottom: 10px; }
+  .resumen table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .resumen table td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; }
+  .resumen table tr:last-child td { border-bottom: none; }
+  .resumen table td:first-child { font-weight: 600; color: #0f172a; width: 55%; }
+  .resumen table td:last-child { text-align: right; }
+
+  /* ── Pie de página ── */
+  .footer {
+    margin-top: 36px;
+    padding-top: 14px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 11px;
+    color: #94a3b8;
+    text-align: center;
+  }
+
+  @media print {
+    body { padding: 20px 28px; }
+    .cambio { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── ENCABEZADO ── -->
+<div class="header">
+  <h1>Reporte de Mejoras — Sistema INTRA</h1>
+  <div class="meta">
+    <span>📅 Fecha: 21 de mayo de 2026</span>
+    <span>🖥 Sistema: Consultorio Web (INTRA)</span>
+    <span>📋 Total de cambios: 7</span>
+  </div>
+</div>
+
+<!-- ── INTRODUCCIÓN ── -->
+<div class="intro">
+  Este documento resume las mejoras y correcciones realizadas en el sistema INTRA durante esta sesión de trabajo.
+  Todos los cambios ya están activos en el servidor local y listos para subirse a producción,
+  con excepción del último punto que requiere un período de pruebas.
+</div>
+
+
+<!-- ── CAMBIO 1 ── -->
+<div class="cambio">
+  <div class="cambio-header c-blue">
+    <span class="numero">1</span>
+    Actualización del catálogo de consultorios
+    <span class="tag tag-new">Nuevo</span>
+  </div>
+  <div class="cambio-body">
+    <p>
+      Se actualizó la lista de consultorios que aparecen disponibles cuando se agenda o solicita una cita.
+      Los consultorios anteriores <strong>no fueron eliminados</strong> — se conservan como historial
+      en todas las citas ya registradas — pero ya no aparecerán como opciones para nuevas citas.
+    </p>
+    <p><strong>Consultorios activos ahora:</strong></p>
+    <ul class="puntos">
+      <li>República 1 al 6 (Médico, Individual, Infantil, Pareja/Familiar/Grupal, Of. Lucía, Of. Javier Mtz)</li>
+      <li>Consultorio Externo</li>
+      <li>Morelos Consultorio 1, 2 y 3</li>
+      <li>Trabajo Social y Trabajo Social Poniente</li>
+      <li>Zoom / Online</li>
+      <li>Colinas Consultorio 1</li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ── CAMBIO 2 ── -->
+<div class="cambio">
+  <div class="cambio-header c-green">
+    <span class="numero">2</span>
+    El sistema ya no permite agendar un consultorio ocupado
+    <span class="tag tag-new">Nuevo</span>
+  </div>
+  <div class="cambio-body">
+    <p>
+      Antes era posible agendar dos citas distintas en el mismo consultorio a la misma hora.
+      Ahora el sistema <strong>detecta automáticamente si un consultorio ya está ocupado</strong>
+      y muestra una advertencia en tiempo real, indicando también a qué hora vuelve a estar disponible.
+    </p>
+    <p>
+      <strong>Ejemplo:</strong> si el consultorio República 3 tiene una cita a las 7:00 pm,
+      el sistema bloqueará esa hora y sugerirá la siguiente disponibilidad a las 8:00 pm.
+      La restricción aplica durante 59 minutos (una franja horaria completa).
+    </p>
+    <p>
+      La validación opera tanto al momento de elegir el horario en pantalla como al guardar definitivamente,
+      para evitar conflictos aunque dos personas estén usando el sistema al mismo tiempo.
+    </p>
+  </div>
+</div>
+
+
+<!-- ── CAMBIO 3 ── -->
+<div class="cambio">
+  <div class="cambio-header c-green">
+    <span class="numero">3</span>
+    El sistema ya no permite duplicar un terapeuta en el mismo horario
+    <span class="tag tag-new">Nuevo</span>
+  </div>
+  <div class="cambio-body">
+    <p>
+      Similar al cambio anterior pero aplicado a los terapeutas: si un terapeuta ya tiene una cita
+      agendada a una hora determinada, <strong>el sistema impedirá asignarle una segunda cita al mismo tiempo</strong>,
+      mostrando un aviso claro con el siguiente horario disponible.
+    </p>
+    <p>
+      Esta validación también protege el caso de edición: si recepción modifica una cita existente,
+      el sistema reconoce que es la misma cita y no la bloquea incorrectamente.
+    </p>
+  </div>
+</div>
+
+
+<!-- ── CAMBIO 4 ── -->
+<div class="cambio">
+  <div class="cambio-header c-teal">
+    <span class="numero">4</span>
+    Corrección: el formulario de nueva cita ya mostraba solo los consultorios vigentes
+    <span class="tag tag-fix">Corrección</span>
+  </div>
+  <div class="cambio-body">
+    <p>
+      Se detectó que en la pantalla de "Crear nueva cita" aún aparecían en el menú desplegable
+      los consultorios que ya habían sido reemplazados. Esto se corrigió:
+      <strong>ahora solo aparecen los 14 consultorios del catálogo actualizado</strong>,
+      tanto en la carga inicial de la página como al seleccionar un terapeuta y horario.
+    </p>
+  </div>
+</div>
+
+
+<!-- ── CAMBIO 5 ── -->
+<div class="cambio">
+  <div class="cambio-header c-orange">
+    <span class="numero">5</span>
+    Nueva sección: "Citas Tardías" para recepción
+    <span class="tag tag-new">Nuevo</span>
+  </div>
+  <div class="cambio-body">
+    <p>
+      Se agregó un nuevo botón <strong>"Citas Tardías"</strong> en los accesos rápidos de recepción.
+      Al entrar, muestra todas las citas que quedaron con estatus <em>Confirmada</em> o
+      <em>Sin confirmar</em> durante los últimos 7 días sin que se haya registrado su resultado
+      (si el paciente asistió, no asistió, canceló, etc.).
+    </p>
+    <p>
+      Desde esta pantalla, recepción puede actualizar el estatus de cada cita directamente.
+      <strong>Importante:</strong> las citas cerradas desde aquí se registran automáticamente
+      como <em>"sin bono"</em>, lo que significa que:
+    </p>
+    <ul class="puntos">
+      <li>El terapeuta sí recibe el pago de la sesión.</li>
+      <li>La sesión <strong>no</strong> suma para el cálculo de sus bonos adicionales por volumen.</li>
+    </ul>
+    <p>
+      Esto evita que citas olvidadas inflen artificialmente los bonos de productividad.
+    </p>
+  </div>
+</div>
+
+
+<!-- ── CAMBIO 6 ── -->
+<div class="cambio">
+  <div class="cambio-header c-gray">
+    <span class="numero">6</span>
+    Se retiró el aviso temporal del portal del terapeuta
+    <span class="tag tag-remove">Eliminado</span>
+  </div>
+  <div class="cambio-body">
+    <p>
+      Se eliminó el banner informativo que aparecía en el portal de cada terapeuta anunciando
+      la función de gestión de horarios. Dicho mensaje ya cumplió su propósito
+      y ocupaba espacio innecesario en la pantalla.
+    </p>
+  </div>
+</div>
+
+
+<!-- ── CAMBIO 7 ── -->
+<div class="cambio">
+  <div class="cambio-header c-amber">
+    <span class="numero">7</span>
+    Nueva función: "Horas Expositor" — registro de talleres y presentaciones
+    <span class="tag tag-new">Nuevo</span>
+    <span class="tag tag-test">En pruebas</span>
+  </div>
+  <div class="cambio-body">
+    <p>
+      Se creó una nueva opción en el portal de cada terapeuta para que puedan registrar
+      las horas que dedican a <strong>talleres, exposiciones o presentaciones realizadas en nombre de INTRA</strong>.
+    </p>
+    <p><strong>¿Cómo funciona?</strong></p>
+    <ul class="puntos">
+      <li>El terapeuta hace clic en el botón <em>"Horas Expositor"</em> de su portal.</li>
+      <li>Llena un formulario indicando: número de horas, lugar del evento y una breve descripción de la actividad.</li>
+      <li>La solicitud llega a recepción, que la puede <em>aceptar</em> o <em>rechazar</em>.</li>
+      <li>Si es aceptada, el monto equivalente (calculado como sesiones individuales) se agrega automáticamente
+          a la nómina del terapeuta esa semana.</li>
+      <li>Si es rechazada, el terapeuta recibe una notificación en su portal.</li>
+      <li>Estas horas se <strong>pagan</strong> pero <strong>no</strong> suman para los bonos adicionales por volumen de pacientes,
+          ya que no son sesiones clínicas.</li>
+    </ul>
+
+    <div class="alerta-prueba">
+      ⚠️ <strong>Esta función requiere una semana de pruebas</strong> antes de activarse en producción.<br>
+      Se recomienda realizar al menos 2 o 3 solicitudes de prueba (con datos reales o ficticios) para
+      verificar que el cálculo del monto, el flujo de aprobación y el reflejo en nómina funcionen
+      correctamente en el entorno real de la clínica antes de comunicárselo a los terapeutas.
+    </div>
+  </div>
+</div>
+
+
+<!-- ── RESUMEN ── -->
+<div class="resumen">
+  <h3>📊 Resumen ejecutivo</h3>
+  <table>
+    <tr>
+      <td>Funciones nuevas agregadas</td>
+      <td>4 <span style="color:#15803d;">(consultorios, citas tardías, validaciones, horas expositor)</span></td>
+    </tr>
+    <tr>
+      <td>Correcciones de errores</td>
+      <td>1 <span style="color:#1d4ed8;">(menú de consultorios en nueva cita)</span></td>
+    </tr>
+    <tr>
+      <td>Elementos eliminados / limpieza</td>
+      <td>1 <span style="color:#64748b;">(aviso temporal del portal)</span></td>
+    </tr>
+    <tr>
+      <td>Cambios listos para producción</td>
+      <td>6 de 7</td>
+    </tr>
+    <tr>
+      <td>Cambios en período de prueba</td>
+      <td>1 — <strong>Horas Expositor</strong> (1 semana recomendada)</td>
+    </tr>
+    <tr>
+      <td>Registros eliminados de la base de datos</td>
+      <td>Ninguno — todos los datos históricos se conservan</td>
+    </tr>
+  </table>
+</div>
+
+
+<!-- ── PIE ── -->
+<div class="footer">
+  Documento generado el 21 de mayo de 2026 &nbsp;·&nbsp; Sistema INTRA — Consultorio Web &nbsp;·&nbsp;
+  Para dudas técnicas contactar al desarrollador del sistema.
+</div>
+
+</body>
+</html>

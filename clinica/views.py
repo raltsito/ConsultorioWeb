@@ -2696,7 +2696,7 @@ def reporte_general(request):
     GET ?fecha_inicio=&fecha_fin=&terapeuta_id=&export=csv
     Acceso exclusivo a is_superuser.
     """
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_staff):
         return redirect('home')
 
     from datetime import date as date_type

@@ -75,7 +75,8 @@
       "Bash(cp \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\CatalogoTerapeutas\\\\data.js\" \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\clinica\\\\static\\\\clinica\\\\catalogo\\\\data.js\")",
       "Bash(cp \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\CatalogoTerapeutas\\\\app.jsx\" \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\clinica\\\\static\\\\clinica\\\\catalogo\\\\app.jsx\")",
       "Bash(Get-ChildItem \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\clinica\\\\migrations\\\\\" | Sort-Object Name | Select-Object -Last 5 | Format-Table Name *)",
-      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\" -Recurse -Directory | Select-Object -First 30 | ForEach-Object { $_.FullName })"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\" -Recurse -Directory | Select-Object -First 30 | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb -Depth 1 | Where-Object { $_.Name -ne 'venv' } | Select-Object Name, PSIsContainer)"
     ]
   }
 }

@@ -538,7 +538,9 @@
                         <span class="dock-sub">Registro del día</span>
                     </span>
                 </a>
+                {% endif %}
 
+                {% if user.is_superuser or user.is_staff %}
                 <a href="{% url 'reporte_general' %}" class="dock-tile">
                     <span class="dock-chip" style="--c1:#43A047;--c2:#1B5E20;">
                         <i class="bi bi-bar-chart-line"></i>
@@ -548,7 +550,9 @@
                         <span class="dock-sub">Estadísticas</span>
                     </span>
                 </a>
+                {% endif %}
 
+                {% if user.is_superuser %}
                 <a href="{% url 'estadisticas_ausentismo' %}" class="dock-tile">
                     <span class="dock-chip" style="--c1:#EF5350;--c2:#880E4F;">
                         <i class="bi bi-person-x"></i>
