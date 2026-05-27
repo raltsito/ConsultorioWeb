@@ -4868,8 +4868,6 @@ def api_catalogo_list(request):
         return JsonResponse(data, safe=False)
 
     if request.method == 'POST':
-        if not (request.user.is_superuser or request.user.is_staff):
-            return JsonResponse({'error': 'No autorizado'}, status=403)
         try:
             body = json.loads(request.body)
         except json.JSONDecodeError:
@@ -4902,9 +4900,6 @@ def api_catalogo_list(request):
 
 @login_required
 def api_catalogo_detail(request, perfil_id):
-    if not (request.user.is_superuser or request.user.is_staff):
-        return JsonResponse({'error': 'No autorizado'}, status=403)
-
     perfil = get_object_or_404(PerfilCatalogo, id=perfil_id)
 
     if request.method == 'PUT':

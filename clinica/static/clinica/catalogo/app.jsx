@@ -3,7 +3,8 @@ const { useState, useEffect, useMemo, useRef } = React;
 // ── API helpers ──────────────────────────────────────────────────────────────
 const ROOT_EL   = document.getElementById('root');
 const CSRF      = () => ROOT_EL.dataset.csrf || '';
-const CAN_EDIT  = ROOT_EL.dataset.canEdit === 'true';
+
+const ADMIN_PWD = "raltsito67???";
 
 async function apiFetch(url, opts = {}) {
   const headers = { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF(), ...(opts.headers || {}) };
@@ -279,19 +280,13 @@ function Drawer({ t, onClose, queryTokens, selectedAreas, onEdit, onDelete }) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M12 14v4M10 16h4"/></svg>
               Agendar cita
             </button>
-            {CAN_EDIT && (
-              <>
-                <button className="btn-secondary" onClick={() => onEdit(t)}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  Editar
-                </button>
-                <button className="btn-icon-danger" onClick={() => {
-                  if (confirm(`¿Eliminar a ${t.nombre} del catálogo?`)) { onDelete(t); onClose(); }
-                }} title="Eliminar">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                </button>
-              </>
-            )}
+            <button className="btn-secondary" onClick={() => onEdit(t)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Editar
+            </button>
+            <button className="btn-icon-danger" onClick={() => onDelete(t)} title="Eliminar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            </button>
           </div>
         </div>
       </aside>
@@ -604,6 +599,73 @@ function TherapistForm({ open, initial, onClose, onSave }) {
   );
 }
 
+// ============ Password Modal ============
+function PasswordModal({ open, label, onSuccess, onCancel }) {
+  const [value, setValue] = useState("");
+  const [error, setError] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (open) {
+      setValue("");
+      setError(false);
+      setTimeout(() => inputRef.current?.focus(), 80);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onCancel]);
+
+  if (!open) return null;
+
+  const submit = () => {
+    if (value === ADMIN_PWD) {
+      onSuccess();
+    } else {
+      setError(true);
+      setValue("");
+      inputRef.current?.focus();
+    }
+  };
+
+  return (
+    <>
+      <div className="drawer-backdrop open" onClick={onCancel}></div>
+      <div className="pwd-modal">
+        <div className="pwd-modal-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <h3 className="pwd-modal-title">Acceso de administrador</h3>
+        <p className="pwd-modal-sub">Ingresa la contraseña para {label}.</p>
+        <input
+          ref={inputRef}
+          type="password"
+          value={value}
+          onChange={e => { setValue(e.target.value); setError(false); }}
+          onKeyDown={e => { if (e.key === "Enter") submit(); }}
+          placeholder="Contraseña"
+          className={`pwd-modal-input${error ? " err" : ""}`}
+        />
+        {error && <span className="pwd-modal-err">Contraseña incorrecta. Inténtalo de nuevo.</span>}
+        <div className="pwd-modal-foot">
+          <button className="btn-secondary" onClick={onCancel}>Cancelar</button>
+          <button className="btn-primary" onClick={submit}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M5 12l5 5L20 7"/></svg>
+            Confirmar
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ============ Main App ============
 function App() {
   const [therapists, setTherapists] = useState([]);
@@ -628,6 +690,23 @@ function App() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingT, setEditingT] = useState(null);
   const inputRef = useRef(null);
+
+  const [unlocked, setUnlocked] = useState(false);
+  const [pwdModal, setPwdModal] = useState({ open: false, label: '', fn: null });
+
+  const requireAuth = (label, fn) => {
+    if (unlocked) { fn(); return; }
+    setPwdModal({ open: true, label, fn });
+  };
+
+  const onPwdSuccess = () => {
+    setUnlocked(true);
+    const fn = pwdModal.fn;
+    setPwdModal({ open: false, label: '', fn: null });
+    fn?.();
+  };
+
+  const onPwdCancel = () => setPwdModal({ open: false, label: '', fn: null });
 
   useEffect(() => {
     window.__toast = (msg) => {
@@ -660,8 +739,8 @@ function App() {
     setSelectedAreas(next);
   };
 
-  const openAdd = () => { setEditingT(null); setFormOpen(true); };
-  const openEdit = (t) => { setEditingT(t); setFormOpen(true); setOpenTherapist(null); };
+  const openAdd = () => requireAuth("agregar un terapeuta", () => { setEditingT(null); setFormOpen(true); });
+  const openEdit = (t) => requireAuth("editar este terapeuta", () => { setEditingT(t); setFormOpen(true); setOpenTherapist(null); });;
 
   const saveTherapist = async (data) => {
     try {
@@ -690,6 +769,11 @@ function App() {
       alert('Error al eliminar.');
     }
   };
+
+  const handleDelete = (t) => requireAuth(
+    `eliminar a ${t.nombre.split(" ")[0]}`,
+    () => { deleteTherapist(t); setOpenTherapist(null); }
+  );
 
   const results = useMemo(() => {
     let list = therapists.map(t => {
@@ -756,12 +840,10 @@ function App() {
             <h1>Catálogo de Terapeutas</h1>
             <p className="hero-sub">Encuentra al especialista adecuado para cada paciente — describe el motivo de consulta y te mostraremos coincidencias.</p>
             <div className="hero-actions">
-              {CAN_EDIT && (
-                <button className="hero-btn primary" onClick={openAdd}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                  Agregar terapeuta
-                </button>
-              )}
+              <button className="hero-btn primary" onClick={openAdd}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Agregar terapeuta
+              </button>
               <div className="hero-pill">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                 Actualizado · {new Date().toLocaleDateString("es-MX", { day:"2-digit", month:"long", year:"numeric" })}
@@ -884,11 +966,9 @@ function App() {
         ))}
       </div>
 
-      {CAN_EDIT && (
-        <button className="fab" onClick={openAdd} title="Agregar terapeuta">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        </button>
-      )}
+      <button className="fab" onClick={openAdd} title="Agregar terapeuta">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
 
       <Drawer
         t={openTherapist}
@@ -896,7 +976,7 @@ function App() {
         queryTokens={queryTokens}
         selectedAreas={selectedAreas}
         onEdit={openEdit}
-        onDelete={deleteTherapist}
+        onDelete={handleDelete}
       />
 
       <TherapistForm
@@ -904,6 +984,13 @@ function App() {
         initial={editingT}
         onClose={() => { setFormOpen(false); setEditingT(null); }}
         onSave={saveTherapist}
+      />
+
+      <PasswordModal
+        open={pwdModal.open}
+        label={pwdModal.label}
+        onSuccess={onPwdSuccess}
+        onCancel={onPwdCancel}
       />
 
       <div className={`toast ${toastMsg ? "show" : ""}`}>

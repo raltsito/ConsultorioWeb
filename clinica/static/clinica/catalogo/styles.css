@@ -369,6 +369,54 @@ body {
 }
 .btn-secondary:hover { border-color: var(--ink); }
 
+/* === Password modal === */
+.pwd-modal {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(400px, calc(100vw - 32px));
+  background: #fff;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 40px 80px -20px rgba(15,30,80,.4);
+  z-index: 80;
+  padding: 32px 28px 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  text-align: center;
+  animation: modalIn .3s cubic-bezier(.2,.7,.2,1);
+}
+.pwd-modal-icon {
+  width: 56px; height: 56px; border-radius: 18px;
+  background: linear-gradient(135deg, #1B53FF, #2E63FF);
+  display: grid; place-items: center;
+  margin-bottom: 4px;
+  box-shadow: 0 8px 20px -6px rgba(27,83,255,.45);
+}
+.pwd-modal-title {
+  font-size: 1.1rem; font-weight: 700; color: var(--ink);
+  margin: 0 0 4px;
+}
+.pwd-modal-sub {
+  font-size: 0.85rem; color: var(--muted); margin: 0 0 16px;
+  line-height: 1.5;
+}
+.pwd-modal-input {
+  width: 100%; padding: 11px 14px;
+  border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+  font-size: 15px; font-family: inherit; outline: none;
+  transition: border-color .15s;
+}
+.pwd-modal-input:focus { border-color: var(--blue-600); box-shadow: 0 0 0 3px rgba(27,83,255,.1); }
+.pwd-modal-input.err { border-color: #DC2626; background: #FFF8F8; }
+.pwd-modal-err {
+  font-size: 0.78rem; color: #DC2626; font-weight: 500;
+  margin-top: -4px; align-self: flex-start;
+}
+.pwd-modal-foot {
+  display: flex; gap: 10px; width: 100%; margin-top: 8px;
+}
+.pwd-modal-foot .btn-secondary { flex: 1; }
+.pwd-modal-foot .btn-primary   { flex: 2; }
+
 /* Confirm toast */
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
