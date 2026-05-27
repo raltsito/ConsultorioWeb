@@ -1811,7 +1811,15 @@ def editar_cita(request, cita_id):
                 hora_sig = (datetime.combine(nueva.fecha, nueva.hora) + timedelta(hours=1)).time()
                 otras = Cita.objects.exclude(pk=cita_id)
 
-                if nueva.terapeuta_id and otras.filter(
+                # Solo validar solapamiento si el terapeuta, la fecha o la hora cambiaron.
+                # Si únicamente cambió el estatus u otro campo, la cita ya ocupaba ese slot.
+                slot_modificado = (
+                    nueva.fecha != fecha_anterior
+                    or nueva.hora != hora_anterior
+                    or nueva.terapeuta_id != (terapeuta_anterior.id if terapeuta_anterior else None)
+                )
+
+                if slot_modificado and nueva.terapeuta_id and otras.filter(
                     terapeuta_id=nueva.terapeuta_id,
                     fecha=nueva.fecha,
                     hora=nueva.hora,
@@ -1824,7 +1832,7 @@ def editar_cita(request, cita_id):
                     )
                     form.add_error('terapeuta', 'Terapeuta ocupado a esa hora.')
 
-                if nueva.consultorio_id and otras.filter(
+                if slot_modificado and nueva.consultorio_id and otras.filter(
                     fecha=nueva.fecha,
                     consultorio_id=nueva.consultorio_id,
                     hora=nueva.hora,

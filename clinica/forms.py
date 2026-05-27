@@ -243,7 +243,18 @@ class CitaForm(forms.ModelForm):
         fecha = cleaned_data.get('fecha')
         hora = cleaned_data.get('hora')
 
-        if terapeuta and fecha:
+        es_nueva = not (self.instance and self.instance.pk)
+
+        # Al editar, solo re-validar bloqueos si el slot (terapeuta/fecha/hora) cambió.
+        # Si únicamente se modificó el estatus u otro campo, la cita ya ocupaba ese slot
+        # y el bloqueo no debería impedir el cambio.
+        slot_modificado = es_nueva or (
+            terapeuta != getattr(self.instance, 'terapeuta', None)
+            or fecha != getattr(self.instance, 'fecha', None)
+            or hora != getattr(self.instance, 'hora', None)
+        )
+
+        if slot_modificado and terapeuta and fecha:
             bloqueo = obtener_bloqueo_terapeuta_en_fecha(terapeuta.id, fecha, hora)
             if bloqueo:
                 mensaje = bloqueo.mensaje_bloqueo()
@@ -253,9 +264,9 @@ class CitaForm(forms.ModelForm):
                     self.add_error('hora', 'La hora seleccionada cae dentro de un bloqueo del terapeuta.')
                 raise ValidationError(mensaje)
 
+        if terapeuta and fecha:
             # Validar horario y consultorio solo al CREAR citas nuevas.
             # Si el terapeuta no tiene ningún horario configurado, se permite agendar sin restricción.
-            es_nueva = not (self.instance and self.instance.pk)
             tiene_horarios = Horario.objects.filter(terapeuta=terapeuta).exists()
             if hora and es_nueva and tiene_horarios:
                 _DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
