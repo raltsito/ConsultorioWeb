@@ -966,8 +966,35 @@
                         Selecciona el resultado de la sesión.
                     </div>
 
-                    {# ── SECCIÓN 2: Siguiente Cita (toggle) ── #}
-                    <div class="siguiente-toggle-wrapper mt-4">
+                    {# ── SECCIÓN 2: Método de pago ── #}
+                    <div class="checkout-section-label mt-4">
+                        <span class="checkout-step">2</span>¿Cómo pagó?
+                    </div>
+                    <input type="hidden" name="metodo_pago" id="inputMetodoPago" value="">
+                    <div class="pago-grid" id="pagoGrid">
+                        <button type="button" class="pago-card" data-value="Efectivo">
+                            <div class="pago-icon"><i class="bi bi-cash-stack"></i></div>
+                            <span class="pago-label">Efectivo</span>
+                        </button>
+                        <button type="button" class="pago-card" data-value="Terminal">
+                            <div class="pago-icon"><i class="bi bi-credit-card-2-front"></i></div>
+                            <span class="pago-label">Terminal</span>
+                        </button>
+                        <button type="button" class="pago-card" data-value="Transferencia">
+                            <div class="pago-icon"><i class="bi bi-phone"></i></div>
+                            <span class="pago-label">Transferencia</span>
+                        </button>
+                        <button type="button" class="pago-card" data-value="Pase">
+                            <div class="pago-icon"><i class="bi bi-ticket-perforated"></i></div>
+                            <span class="pago-label">Pase</span>
+                        </button>
+                    </div>
+
+                    {# ── SECCIÓN 3: Siguiente Cita (toggle) ── #}
+                    <div class="checkout-section-label mt-4">
+                        <span class="checkout-step">3</span>¿Agendar próxima cita?
+                    </div>
+                    <div class="siguiente-toggle-wrapper">
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <p class="fw-bold mb-0 text-dark">¿Solicitar próxima cita?</p>
@@ -988,7 +1015,10 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold text-secondary small">Hora propuesta</label>
-                                <input type="time" name="siguiente_hora" class="form-control">
+                                <input type="time" name="siguiente_hora" class="form-control" id="inputSiguienteHora">
+                            </div>
+                            <div class="col-12" id="wrapperDisponibilidad" style="display:none;">
+                                <div id="msgDisponibilidad" class="p-2 rounded small fw-semibold"></div>
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-semibold text-secondary small">Comentarios para Recepción</label>
@@ -1195,6 +1225,58 @@
 
     .estatus-label { line-height: 1.2; text-align: center; }
 
+    /* Tarjetas de método de pago */
+    .pago-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+    }
+    @media (max-width: 576px) {
+        .pago-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .pago-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.85rem 0.5rem;
+        border: 2px solid #E0E7EF;
+        border-radius: 1rem;
+        background: #F8FBFD;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: 'Poppins', sans-serif;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: #546E7A;
+    }
+    .pago-card:hover {
+        border-color: #B0BEC5;
+        background: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    }
+    .pago-card.selected {
+        border-color: #26C6DA;
+        background: #E0F7FA;
+        color: #006064;
+        box-shadow: 0 6px 20px rgba(38,198,218,0.18);
+        transform: translateY(-2px);
+    }
+    .pago-icon {
+        width: 42px; height: 42px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.25rem;
+        background: #E0F7FA;
+        color: #0097A7;
+    }
+    .pago-card.selected .pago-icon {
+        background: #26C6DA;
+        color: #fff;
+    }
+    .pago-label { line-height: 1.2; text-align: center; }
+
     /* Toggle de siguiente cita */
     .siguiente-toggle-wrapper {
         border: 1.5px solid #E0E7EF;
@@ -1278,14 +1360,16 @@
         agendaModal.show();
     }
 
-    const modalEl       = document.getElementById('modalCheckout');
-    const form          = document.getElementById('formCheckout');
-    const inputEstatus  = document.getElementById('inputEstatus');
-    const errorEstatus  = document.getElementById('errorEstatus');
-    const estatusCards  = document.querySelectorAll('.estatus-card');
-    const toggleSwitch  = document.getElementById('toggleSiguiente');
+    const modalEl        = document.getElementById('modalCheckout');
+    const form           = document.getElementById('formCheckout');
+    const inputEstatus   = document.getElementById('inputEstatus');
+    const errorEstatus   = document.getElementById('errorEstatus');
+    const estatusCards   = document.querySelectorAll('.estatus-card');
+    const inputMetodoPago = document.getElementById('inputMetodoPago');
+    const pagoCards      = document.querySelectorAll('.pago-card');
+    const toggleSwitch   = document.getElementById('toggleSiguiente');
     const panelSiguiente = document.getElementById('seccionSiguiente');
-    const btnSubmit     = document.getElementById('btnGuardarCheckout');
+    const btnSubmit      = document.getElementById('btnGuardarCheckout');
 
     // ── 1. Poblar modal al abrirse con los datos del botón clickeado ──
     modalEl.addEventListener('show.bs.modal', function (e) {
@@ -1310,8 +1394,11 @@
         inputEstatus.value = '';
         estatusCards.forEach(c => c.classList.remove('selected'));
         errorEstatus.style.display = 'none';
+        inputMetodoPago.value = '';
+        pagoCards.forEach(c => c.classList.remove('selected'));
         panelSiguiente.classList.remove('abierto');
         toggleSwitch.checked = false;
+        document.getElementById('wrapperDisponibilidad').style.display = 'none';
     });
 
     // ── 3. Selección de tarjeta de estatus ──
@@ -1324,14 +1411,70 @@
         });
     });
 
+    // ── 3b. Selección de tarjeta de método de pago ──
+    pagoCards.forEach(function (card) {
+        card.addEventListener('click', function () {
+            pagoCards.forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            inputMetodoPago.value = card.getAttribute('data-value');
+        });
+    });
+
     // ── 4. Toggle panel de siguiente cita ──
     toggleSwitch.addEventListener('change', function () {
         if (this.checked) {
             panelSiguiente.classList.add('abierto');
         } else {
             panelSiguiente.classList.remove('abierto');
+            document.getElementById('wrapperDisponibilidad').style.display = 'none';
         }
     });
+
+    // ── 4b. Validación de disponibilidad para siguiente cita ──
+    const TERAPEUTA_ID = '{{ terapeuta.id }}';
+    const inputSiguienteHora  = document.getElementById('inputSiguienteHora');
+    const wrapperDisp = document.getElementById('wrapperDisponibilidad');
+    const msgDisp     = document.getElementById('msgDisponibilidad');
+    let dispTimer = null;
+    let dispDisponible = true;
+
+    function checkDisponibilidad() {
+        const fecha = inputSiguienteFecha.value;
+        const hora  = inputSiguienteHora.value;
+        if (!fecha || !hora) {
+            wrapperDisp.style.display = 'none';
+            dispDisponible = true;
+            return;
+        }
+        dispDisponible = true;
+        clearTimeout(dispTimer);
+        dispTimer = setTimeout(function () {
+            msgDisp.textContent = 'Verificando…';
+            msgDisp.className   = 'p-2 rounded small fw-semibold text-secondary';
+            wrapperDisp.style.display = '';
+            fetch('/api/verificar-disponibilidad/?terapeuta=' + encodeURIComponent(TERAPEUTA_ID) +
+                  '&fecha=' + encodeURIComponent(fecha) +
+                  '&hora='  + encodeURIComponent(hora))
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    dispDisponible = data.available;
+                    if (data.available) {
+                        msgDisp.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>' + (data.msg || 'Horario disponible.');
+                        msgDisp.className = 'p-2 rounded small fw-semibold text-success bg-success bg-opacity-10 border border-success border-opacity-25';
+                    } else {
+                        msgDisp.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i>' + data.msg;
+                        msgDisp.className = 'p-2 rounded small fw-semibold text-danger bg-danger bg-opacity-10 border border-danger border-opacity-25';
+                    }
+                })
+                .catch(function () {
+                    dispDisponible = true;
+                    wrapperDisp.style.display = 'none';
+                });
+        }, 500);
+    }
+
+    inputSiguienteFecha.addEventListener('change', checkDisponibilidad);
+    inputSiguienteHora.addEventListener('change', checkDisponibilidad);
 
     // ── 5. Validación client-side antes de enviar ──
     form.addEventListener('submit', function (e) {
@@ -1339,6 +1482,12 @@
             e.preventDefault();
             errorEstatus.style.display = 'block';
             document.getElementById('estatusGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        if (toggleSwitch.checked && inputSiguienteFecha.value && inputSiguienteHora.value && !dispDisponible) {
+            e.preventDefault();
+            wrapperDisp.style.display = '';
+            msgDisp.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
         // Deshabilitar botón para evitar doble envío

@@ -1695,7 +1695,7 @@ def verificar_disponibilidad(request):
     terapeuta_id = request.GET.get('terapeuta')
     cita_id = request.GET.get('cita_id')
 
-    if not (fecha_str and hora_str and consultorio_id and terapeuta_id):
+    if not (fecha_str and hora_str and terapeuta_id):
         return JsonResponse({'available': True, 'msg': ''})
 
     _DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
