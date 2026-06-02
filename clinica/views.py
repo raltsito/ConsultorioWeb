@@ -2423,7 +2423,7 @@ def solicitar_cita_paciente(request):
         return redirect('portal_paciente')
         
     # Si apenas va a abrir la pagina (GET), le mandamos la lista de terapeutas y consultorios
-    terapeutas = Terapeuta.objects.filter(activo=True)
+    terapeutas = Terapeuta.objects.filter(activo=True, horario__isnull=False).distinct().order_by('nombre')
     from .models import Consultorio
     consultorios = Consultorio.objects.filter(activo=True)
     return render(request, 'clinica/solicitar_cita.html', {'terapeutas': terapeutas, 'consultorios': consultorios})
@@ -4143,7 +4143,7 @@ def agendar_cita_empresa(request):
         return redirect('home')
 
     mi_empresa = request.user.perfil_empresa
-    terapeutas = Terapeuta.objects.filter(activo=True)
+    terapeutas = Terapeuta.objects.filter(activo=True, horario__isnull=False).distinct().order_by('nombre')
 
     if request.method == 'POST':
         primera_vez = request.POST.get('primera_vez') == '1'
