@@ -3,6 +3,7 @@ from datetime import date
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 def quitar_tildes(texto):
     if not texto:
@@ -1432,3 +1433,113 @@ class ComentarioNota(models.Model):
 
     class Meta:
         ordering = ['creado_en']
+
+
+class RegistroActividad(models.Model):
+    ACCION_CITA_CREADA          = 'cita_creada'
+    ACCION_CITA_EDITADA         = 'cita_editada'
+    ACCION_CITA_ELIMINADA       = 'cita_eliminada'
+    ACCION_CITA_CHECKOUT        = 'cita_checkout'
+    ACCION_DISPONIB_AGREGADA    = 'disponib_agregada'
+    ACCION_DISPONIB_ELIMINADA   = 'disponib_eliminada'
+    ACCION_BLOQUEO_CREADO       = 'bloqueo_creado'
+    ACCION_BLOQUEO_ELIMINADO    = 'bloqueo_eliminado'
+    ACCION_SOLICITUD_ACEPTADA   = 'solicitud_aceptada'
+    ACCION_SOLICITUD_RECHAZADA  = 'solicitud_rechazada'
+    ACCION_REAGENDO_SOLICITADO  = 'reagendo_solicitado'
+    ACCION_REAGENDO_APROBADO    = 'reagendo_aprobado'
+    ACCION_REAGENDO_RECHAZADO   = 'reagendo_rechazado'
+    ACCION_PACIENTE_REGISTRADO  = 'paciente_registrado'
+    ACCION_PACIENTE_EDITADO     = 'paciente_editado'
+    ACCION_PACIENTE_ELIMINADO   = 'paciente_eliminado'
+    ACCION_NOMINA_APROBADA      = 'nomina_aprobada'
+    ACCION_EXPOSITOR_RESPONDIDO = 'expositor_respondido'
+    ACCION_INCIDENTE_REPORTADO  = 'incidente_reportado'
+    ACCION_INCIDENTE_RESPONDIDO = 'incidente_respondido'
+
+    ACCION_CHOICES = [
+        (ACCION_CITA_CREADA,          'Cita agendada'),
+        (ACCION_CITA_EDITADA,         'Cita editada'),
+        (ACCION_CITA_ELIMINADA,       'Cita eliminada'),
+        (ACCION_CITA_CHECKOUT,        'Sesión cerrada'),
+        (ACCION_DISPONIB_AGREGADA,    'Disponibilidad agregada'),
+        (ACCION_DISPONIB_ELIMINADA,   'Disponibilidad eliminada'),
+        (ACCION_BLOQUEO_CREADO,       'Bloqueo de agenda creado'),
+        (ACCION_BLOQUEO_ELIMINADO,    'Bloqueo de agenda eliminado'),
+        (ACCION_SOLICITUD_ACEPTADA,   'Solicitud aceptada'),
+        (ACCION_SOLICITUD_RECHAZADA,  'Solicitud rechazada'),
+        (ACCION_REAGENDO_SOLICITADO,  'Reagendo solicitado'),
+        (ACCION_REAGENDO_APROBADO,    'Reagendo aprobado'),
+        (ACCION_REAGENDO_RECHAZADO,   'Reagendo rechazado'),
+        (ACCION_PACIENTE_REGISTRADO,  'Paciente registrado'),
+        (ACCION_PACIENTE_EDITADO,     'Paciente editado'),
+        (ACCION_PACIENTE_ELIMINADO,   'Paciente eliminado'),
+        (ACCION_NOMINA_APROBADA,      'Nómina aprobada'),
+        (ACCION_EXPOSITOR_RESPONDIDO, 'Horas expositor respondidas'),
+        (ACCION_INCIDENTE_REPORTADO,  'Incidente reportado'),
+        (ACCION_INCIDENTE_RESPONDIDO, 'Incidente respondido'),
+    ]
+
+    CAT_CITA           = 'cita'
+    CAT_DISPONIBILIDAD = 'disponibilidad'
+    CAT_REAGENDO       = 'reagendo'
+    CAT_PACIENTE       = 'paciente'
+    CAT_NOMINA         = 'nomina'
+    CAT_SOLICITUD      = 'solicitud'
+    CAT_INCIDENTE      = 'incidente'
+
+    CAT_CHOICES = [
+        (CAT_CITA,           'Cita'),
+        (CAT_DISPONIBILIDAD, 'Disponibilidad'),
+        (CAT_REAGENDO,       'Reagendo'),
+        (CAT_PACIENTE,       'Paciente'),
+        (CAT_NOMINA,         'Nómina'),
+        (CAT_SOLICITUD,      'Solicitud'),
+        (CAT_INCIDENTE,      'Incidente'),
+    ]
+
+    _ICONO_MAP = {
+        'cita_creada':          'bi-calendar-plus-fill',
+        'cita_editada':         'bi-pencil-fill',
+        'cita_eliminada':       'bi-calendar-x-fill',
+        'cita_checkout':        'bi-clipboard-check-fill',
+        'disponib_agregada':    'bi-clock-fill',
+        'disponib_eliminada':   'bi-clock-history',
+        'bloqueo_creado':       'bi-slash-circle-fill',
+        'bloqueo_eliminado':    'bi-unlock-fill',
+        'solicitud_aceptada':   'bi-check-circle-fill',
+        'solicitud_rechazada':  'bi-x-circle-fill',
+        'reagendo_solicitado':  'bi-arrow-repeat',
+        'reagendo_aprobado':    'bi-check2-circle',
+        'reagendo_rechazado':   'bi-x-circle',
+        'paciente_registrado':  'bi-person-plus-fill',
+        'paciente_editado':     'bi-person-gear',
+        'paciente_eliminado':   'bi-person-x-fill',
+        'nomina_aprobada':      'bi-cash-coin',
+        'expositor_respondido': 'bi-mortarboard-fill',
+        'incidente_reportado':  'bi-exclamation-triangle-fill',
+        'incidente_respondido': 'bi-chat-right-dots-fill',
+    }
+
+    usuario            = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='registros_actividad')
+    accion             = models.CharField(max_length=40, choices=ACCION_CHOICES, db_index=True)
+    categoria          = models.CharField(max_length=20, choices=CAT_CHOICES, db_index=True)
+    descripcion        = models.TextField()
+    terapeuta_afectado = models.ForeignKey('Terapeuta', on_delete=models.SET_NULL, null=True, blank=True, related_name='registros_actividad')
+    paciente_afectado  = models.ForeignKey('Paciente', on_delete=models.SET_NULL, null=True, blank=True, related_name='registros_actividad')
+    ip_address         = models.GenericIPAddressField(null=True, blank=True)
+    timestamp          = models.DateTimeField(default=timezone.now, db_index=True)
+    es_retroactivo     = models.BooleanField(default=False)
+
+    @property
+    def icono(self):
+        return self._ICONO_MAP.get(self.accion, 'bi-activity')
+
+    def __str__(self):
+        u = self.usuario.username if self.usuario else 'Sistema'
+        return f"[{self.get_categoria_display()}] {u} — {self.get_accion_display()} ({self.timestamp:%d/%m/%Y %H:%M})"
+
+    class Meta:
+        verbose_name        = 'Registro de Actividad'
+        verbose_name_plural = 'Registro de Actividades'
+        ordering            = ['-timestamp']

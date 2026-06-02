@@ -114,6 +114,9 @@ urlpatterns = [
     path('api/notificaciones-terapeuta/', clinica_views.api_notificaciones_terapeuta, name='api_notificaciones_terapeuta'),
     path('api/notificaciones-terapeuta/leer/', clinica_views.marcar_notificaciones_leidas, name='marcar_notificaciones_leidas'),
 
+    # Trazabilidad
+    path('trazabilidad/', clinica_views.trazabilidad_admin, name='trazabilidad_admin'),
+
 ]
 
 if settings.DEBUG:

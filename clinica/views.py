@@ -49,6 +49,7 @@ from .models import (
     obtener_bloqueo_terapeuta_en_fecha,
     ReporteIncidente,
     RecursoPropio,
+    RegistroActividad,
 )
 from .models import CorteSemanal, LineaNomina, BonoExtra
 from .models import NotaRecepcion, ReaccionNota, ComentarioNota
@@ -69,6 +70,19 @@ from .forms import (
 )
 from .services import calcular_nomina_semanal, preview_nomina_semanal, aprobar_corte_semanal, registrar_pago_penalizacion_terapeuta
 #from .utils import sincronizar_google_sheet
+
+def _registrar_actividad(request, accion, categoria, descripcion, terapeuta=None, paciente=None):
+    ip = request.META.get('REMOTE_ADDR') or None
+    RegistroActividad.objects.create(
+        usuario=request.user if request.user.is_authenticated else None,
+        accion=accion,
+        categoria=categoria,
+        descripcion=descripcion,
+        terapeuta_afectado=terapeuta,
+        paciente_afectado=paciente,
+        ip_address=ip,
+    )
+
 
 def quitar_tildes(texto):
     if not texto:
@@ -732,7 +746,10 @@ def registrar_paciente(request):
     if request.method == 'POST':
         form = PacienteForm(request.POST)
         if form.is_valid():
-            form.save()
+            paciente = form.save()
+            _registrar_actividad(request, 'paciente_registrado', 'paciente',
+                f'Expediente de {paciente.nombre} registrado en el sistema.',
+                paciente=paciente)
             return redirect('lista_pacientes')
     else:
         form = PacienteForm()
@@ -1365,6 +1382,9 @@ def editar_paciente(request, paciente_id):
         form = PacienteForm(request.POST, request.FILES, instance=paciente)
         if form.is_valid():
             form.save()
+            _registrar_actividad(request, 'paciente_editado', 'paciente',
+                f'Expediente de {paciente.nombre} modificado.',
+                paciente=paciente)
             return redirect('detalle_paciente', paciente_id=paciente.id)
     else:
         form = PacienteForm(instance=paciente)
@@ -1407,6 +1427,11 @@ def agendar_cita(request, paciente_id):
                     cita.costo = costo_actual + penalizacion_pendiente.monto
 
                 cita.save()
+                _registrar_actividad(request, 'cita_creada', 'cita',
+                    f'Cita de {paciente.nombre} con '
+                    f'{cita.terapeuta.nombre if cita.terapeuta else "Sin terapeuta"} '
+                    f'el {cita.fecha.strftime("%d/%m/%Y")} a las {cita.hora.strftime("%H:%M")} agendada.',
+                    terapeuta=cita.terapeuta, paciente=paciente)
 
                 if penalizacion_pendiente:
                     penalizacion_pendiente.pagada = True
@@ -1537,6 +1562,11 @@ def crear_cita(request):
                         cita.costo = (cita.costo or 0) + pen.monto
 
                 cita.save()
+                _registrar_actividad(request, 'cita_creada', 'cita',
+                    f'Cita de {cita.paciente.nombre if cita.paciente else "?"} con '
+                    f'{cita.terapeuta.nombre if cita.terapeuta else "Sin terapeuta"} '
+                    f'el {cita.fecha.strftime("%d/%m/%Y")} a las {cita.hora.strftime("%H:%M")} agendada.',
+                    terapeuta=cita.terapeuta, paciente=cita.paciente)
 
                 # Marcar penalización como cobrada.
                 # El pago al terapeuta se registra en nómina cuando la cita se marque como 'si_asistio'.
@@ -1571,6 +1601,10 @@ def crear_cita(request):
                             )
                     except SolicitudCita.DoesNotExist:
                         pass
+                    else:
+                        _registrar_actividad(request, 'solicitud_aceptada', 'solicitud',
+                            f'Solicitud de cita de {solicitud.paciente_nombre} aceptada y agendada.',
+                            terapeuta=solicitud.terapeuta)
                 # ------------------------------------------------------
 
                 messages.success(request, 'Cita agendada correctamente.')
@@ -1850,6 +1884,11 @@ def editar_cita(request, cita_id):
 
             cita = nueva
             cita.save()
+            _registrar_actividad(request, 'cita_editada', 'cita',
+                f'Cita de {cita.paciente.nombre if cita.paciente else "?"} con '
+                f'{cita.terapeuta.nombre if cita.terapeuta else "Sin terapeuta"} '
+                f'el {cita.fecha.strftime("%d/%m/%Y")} editada.',
+                terapeuta=cita.terapeuta, paciente=cita.paciente)
             if es_servicio_grupal(cita.servicio):
                 pacientes_extra = form.cleaned_data.get('pacientes_extra')
                 cita.pacientes_adicionales.set(
@@ -1945,7 +1984,13 @@ def eliminar_cita(request, cita_id):
 
     cita = get_object_or_404(Cita, id=cita_id)
     paciente_id = cita.paciente_id
+    pac_nombre = cita.paciente.nombre if cita.paciente else '?'
+    ter_nombre = cita.terapeuta.nombre if cita.terapeuta else 'Sin terapeuta'
+    fecha_str  = cita.fecha.strftime('%d/%m/%Y') if cita.fecha else '?'
+    hora_str   = cita.hora.strftime('%H:%M') if cita.hora else '?'
     cita.delete()
+    _registrar_actividad(request, 'cita_eliminada', 'cita',
+        f'Cita de {pac_nombre} con {ter_nombre} el {fecha_str} a las {hora_str} eliminada.')
     messages.success(request, 'Cita eliminada correctamente.')
 
     origen = request.GET.get('next', 'home')
@@ -1962,6 +2007,8 @@ def eliminar_paciente(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)
     nombre = paciente.nombre
     paciente.delete()
+    _registrar_actividad(request, 'paciente_eliminado', 'paciente',
+        f'Expediente de {nombre} eliminado del sistema.')
     messages.success(request, f'Expediente de {nombre} eliminado correctamente.')
     return redirect('lista_pacientes')
 
@@ -2275,6 +2322,10 @@ def crear_bloqueo_terapeuta(request):
         bloqueo.terapeuta = mi_perfil
         bloqueo.creado_por = request.user
         bloqueo.save()
+        _registrar_actividad(request, 'bloqueo_creado', 'disponibilidad',
+            f'{mi_perfil.nombre} creó un bloqueo de agenda '
+            f'({bloqueo.get_tipo_bloqueo_display()}, desde {bloqueo.fecha_inicio.strftime("%d/%m/%Y")}).',
+            terapeuta=mi_perfil)
         messages.success(request, 'Bloqueo de agenda guardado correctamente.')
     else:
         for _, errors in form.errors.items():
@@ -2294,7 +2345,12 @@ def eliminar_bloqueo_terapeuta(request, bloqueo_id):
         id=bloqueo_id,
         terapeuta=request.user.perfil_terapeuta,
     )
+    ter_perfil = bloqueo.terapeuta
+    fecha_str  = bloqueo.fecha_inicio.strftime('%d/%m/%Y') if bloqueo.fecha_inicio else '?'
     bloqueo.delete()
+    _registrar_actividad(request, 'bloqueo_eliminado', 'disponibilidad',
+        f'{ter_perfil.nombre if ter_perfil else "?"} eliminó un bloqueo de agenda desde {fecha_str}.',
+        terapeuta=ter_perfil)
     messages.success(request, 'Bloqueo eliminado correctamente.')
     return redirect('portal_terapeuta')
 
@@ -2385,6 +2441,10 @@ def rechazar_solicitud(request, solicitud_id):
             solicitud.estado = 'rechazada'
             solicitud.motivo_rechazo = motivo
             solicitud.save()
+            _registrar_actividad(request, 'solicitud_rechazada', 'solicitud',
+                f'Solicitud de cita de {solicitud.paciente_nombre} para el '
+                f'{solicitud.fecha_deseada.strftime("%d/%m/%Y")} rechazada.',
+                terapeuta=solicitud.terapeuta)
             if solicitud.terapeuta:
                 motivo_texto = f" Motivo: {motivo}" if motivo else ""
                 NotificacionTerapeuta.objects.create(
@@ -2576,6 +2636,11 @@ def checkout_cita(request, cita_id):
         if costo is not None:
             cita.costo = costo
         cita.save()
+        estatus_display = dict(Cita.ESTATUS_CHOICES).get(cita.estatus, cita.estatus)
+        _registrar_actividad(request, 'cita_checkout', 'cita',
+            f'{mi_perfil.nombre} cerró la sesión de {cita.paciente.nombre if cita.paciente else "?"} '
+            f'el {cita.fecha.strftime("%d/%m/%Y")}: {estatus_display}.',
+            terapeuta=mi_perfil, paciente=cita.paciente)
 
         # Crear solicitud de seguimiento si fue solicitada
         if form.cleaned_data.get('solicitar_siguiente') and form.cleaned_data.get('siguiente_fecha'):
@@ -3552,6 +3617,10 @@ def nomina_aprobar(request, corte_id):
 
     try:
         aprobar_corte_semanal(corte, request.user)
+        _registrar_actividad(request, 'nomina_aprobada', 'nomina',
+            f'Nómina de {corte.terapeuta.nombre} del {corte.fecha_inicio.strftime("%d/%m/%Y")} '
+            f'al {corte.fecha_fin.strftime("%d/%m/%Y")} aprobada. Total: ${corte.total_pago:,.2f}.',
+            terapeuta=corte.terapeuta)
         messages.success(
             request,
             f'Nómina de {corte.terapeuta.nombre} aprobada y sellada. '
@@ -3949,6 +4018,10 @@ def agregar_disponibilidad(request):
         messages.error(request, 'La hora de fin debe ser mayor que la de inicio.')
         return redirect('disponibilidad_semanal')
     Horario.objects.create(terapeuta=terapeuta, dia=int(dia), hora_inicio=hora_inicio, hora_fin=hora_fin, sede=sede)
+    dia_display = dict(Horario.DIAS_SEMANA).get(int(dia), dia)
+    _registrar_actividad(request, 'disponib_agregada', 'disponibilidad',
+        f'Disponibilidad de {terapeuta.nombre} agregada: {dia_display} de {hora_inicio} a {hora_fin}.',
+        terapeuta=terapeuta)
     messages.success(request, f'Horario agregado para {terapeuta.nombre}.')
     return redirect('disponibilidad_semanal')
 
@@ -3958,8 +4031,13 @@ def eliminar_disponibilidad(request, horario_id):
     if request.method != 'POST':
         return redirect('disponibilidad_semanal')
     horario = get_object_or_404(Horario, id=horario_id)
-    nombre = horario.terapeuta.nombre
+    nombre      = horario.terapeuta.nombre
+    ter_obj     = horario.terapeuta
+    dia_display = dict(Horario.DIAS_SEMANA).get(horario.dia, str(horario.dia))
     horario.delete()
+    _registrar_actividad(request, 'disponib_eliminada', 'disponibilidad',
+        f'Disponibilidad de {nombre} eliminada: {dia_display}.',
+        terapeuta=ter_obj)
     messages.success(request, f'Horario eliminado para {nombre}.')
     return redirect('disponibilidad_semanal')
 
@@ -4246,6 +4324,11 @@ def solicitar_reagendo(request, cita_id):
     )
     cita.estatus = Cita.ESTATUS_REAGENDO
     cita.save(update_fields=['estatus'])
+    _registrar_actividad(request, 'reagendo_solicitado', 'reagendo',
+        f'{mi_perfil.nombre} solicitó reagendar la cita de '
+        f'{cita.paciente.nombre if cita.paciente else "?"} al '
+        f'{fecha.strftime("%d/%m/%Y")} a las {hora.strftime("%H:%M")}.',
+        terapeuta=mi_perfil, paciente=cita.paciente)
     messages.success(request, 'Solicitud de reagendo enviada a Recepción.')
     return redirect('portal_terapeuta')
 
@@ -4288,6 +4371,11 @@ def aprobar_reagendo(request, solicitud_id):
     solicitud.estado = 'aprobada'
     solicitud.nota_recepcion = request.POST.get('nota_recepcion', '').strip()
     solicitud.save(update_fields=['estado', 'nota_recepcion'])
+    _registrar_actividad(request, 'reagendo_aprobado', 'reagendo',
+        f'Reagendo de {solicitud.terapeuta.nombre} para '
+        f'{cita.paciente.nombre if cita.paciente else "?"} aprobado. '
+        f'Nueva fecha: {nueva_fecha.strftime("%d/%m/%Y")} a las {nueva_hora.strftime("%H:%M")}.',
+        terapeuta=solicitud.terapeuta, paciente=cita.paciente)
 
     NotificacionTerapeuta.objects.create(
         terapeuta=solicitud.terapeuta,
@@ -4312,6 +4400,10 @@ def rechazar_reagendo(request, solicitud_id):
     cita = solicitud.cita
     cita.estatus = Cita.ESTATUS_CONFIRMADA
     cita.save(update_fields=['estatus'])
+    _registrar_actividad(request, 'reagendo_rechazado', 'reagendo',
+        f'Reagendo de {solicitud.terapeuta.nombre} para '
+        f'{cita.paciente.nombre if cita.paciente else "?"} rechazado.',
+        terapeuta=solicitud.terapeuta, paciente=cita.paciente)
 
     nota_texto = f" Nota: {solicitud.nota_recepcion}" if solicitud.nota_recepcion else ""
     NotificacionTerapeuta.objects.create(
@@ -4379,6 +4471,10 @@ def reportar_incidente(request):
         titulo=titulo,
         descripcion=descripcion,
     )
+    tipo_display = {'queja': 'queja', 'sugerencia': 'sugerencia', 'incidente': 'incidente'}.get(tipo, tipo)
+    _registrar_actividad(request, 'incidente_reportado', 'incidente',
+        f'{request.user.perfil_terapeuta.nombre} reportó una {tipo_display}: "{titulo}".',
+        terapeuta=request.user.perfil_terapeuta)
     messages.success(request, 'Tu reporte fue enviado correctamente. El equipo lo revisará pronto.')
     return redirect('portal_terapeuta')
 
@@ -4430,6 +4526,9 @@ def responder_incidente(request):
     incidente.respuesta_fecha = timezone.now()
     incidente.estado = ReporteIncidente.ESTADO_REVISADO
     incidente.save(update_fields=['respuesta', 'respuesta_fecha', 'estado'])
+    _registrar_actividad(request, 'incidente_respondido', 'incidente',
+        f'Incidente "{incidente.titulo}" de {incidente.terapeuta.nombre} respondido.',
+        terapeuta=incidente.terapeuta)
 
     NotificacionTerapeuta.objects.create(
         terapeuta=incidente.terapeuta,
@@ -4765,6 +4864,9 @@ def responder_horas_expositor(request, solicitud_id):
 
         solicitud.estado = SolicitudHorasExpositor.ESTADO_ACEPTADA
         solicitud.save()
+        _registrar_actividad(request, 'expositor_respondido', 'nomina',
+            f'Solicitud de {solicitud.horas}h expositor de {terapeuta.nombre} en "{solicitud.lugar}" aceptada.',
+            terapeuta=terapeuta)
 
         NotificacionTerapeuta.objects.create(
             terapeuta=terapeuta,
@@ -4783,6 +4885,9 @@ def responder_horas_expositor(request, solicitud_id):
     elif accion == 'rechazar':
         solicitud.estado = SolicitudHorasExpositor.ESTADO_RECHAZADA
         solicitud.save()
+        _registrar_actividad(request, 'expositor_respondido', 'nomina',
+            f'Solicitud de {solicitud.horas}h expositor de {solicitud.terapeuta.nombre} en "{solicitud.lugar}" rechazada.',
+            terapeuta=solicitud.terapeuta)
         NotificacionTerapeuta.objects.create(
             terapeuta=solicitud.terapeuta,
             tipo=NotificacionTerapeuta.TIPO_EXPOSITOR_RECHAZADO,
@@ -4959,3 +5064,80 @@ def api_terapeutas_activos(request):
         for t in terapeutas
     ]
     return JsonResponse(data, safe=False)
+
+
+@login_required
+def trazabilidad_admin(request):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return redirect('home')
+
+    from django.contrib.auth.models import User as AuthUser
+    from django.core.paginator import Paginator
+    from datetime import datetime as _dt
+
+    qs = (
+        RegistroActividad.objects
+        .select_related('usuario', 'terapeuta_afectado', 'paciente_afectado')
+        .all()
+    )
+
+    fecha_desde = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta = request.GET.get('fecha_hasta', '').strip()
+    usuario_id  = request.GET.get('usuario', '').strip()
+    categoria   = request.GET.get('categoria', '').strip()
+    accion      = request.GET.get('accion', '').strip()
+    q           = request.GET.get('q', '').strip()
+
+    if fecha_desde:
+        try:
+            qs = qs.filter(timestamp__date__gte=_dt.strptime(fecha_desde, '%Y-%m-%d').date())
+        except ValueError:
+            fecha_desde = ''
+    if fecha_hasta:
+        try:
+            qs = qs.filter(timestamp__date__lte=_dt.strptime(fecha_hasta, '%Y-%m-%d').date())
+        except ValueError:
+            fecha_hasta = ''
+    if usuario_id:
+        qs = qs.filter(usuario_id=usuario_id)
+    if categoria:
+        qs = qs.filter(categoria=categoria)
+    if accion:
+        qs = qs.filter(accion=accion)
+    if q:
+        qs = qs.filter(descripcion__icontains=q)
+
+    total_registros  = qs.count()
+    hoy              = timezone.now().date()
+    registros_hoy    = qs.filter(timestamp__date=hoy).count()
+    usuarios_activos = (
+        RegistroActividad.objects.filter(timestamp__date=hoy, usuario__isnull=False)
+        .values('usuario').distinct().count()
+    )
+
+    paginator = Paginator(qs, 50)
+    page_obj  = paginator.get_page(request.GET.get('page', 1))
+
+    usuarios_con_actividad = (
+        AuthUser.objects
+        .filter(registros_actividad__isnull=False)
+        .distinct()
+        .order_by('username')
+    )
+
+    return render(request, 'clinica/trazabilidad_admin.html', {
+        'page_obj':               page_obj,
+        'total_registros':        total_registros,
+        'registros_hoy':          registros_hoy,
+        'usuarios_activos':       usuarios_activos,
+        'usuarios_con_actividad': usuarios_con_actividad,
+        'categoria_choices':      RegistroActividad.CAT_CHOICES,
+        'accion_choices':         RegistroActividad.ACCION_CHOICES,
+        'f_fecha_desde':          fecha_desde,
+        'f_fecha_hasta':          fecha_hasta,
+        'f_usuario':              usuario_id,
+        'f_categoria':            categoria,
+        'f_accion':               accion,
+        'f_q':                    q,
+        'hoy':                    hoy,
+    })

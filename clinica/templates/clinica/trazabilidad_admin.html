@@ -1,0 +1,495 @@
+{% extends 'clinica/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+    /* ── Header ──────────────────────────────────────────────────────── */
+    .traz-hero {
+        background: linear-gradient(135deg, #0d6efd 0%, #35c2d8 100%);
+        border-radius: 1.4rem;
+        padding: 2rem 2.25rem 1.75rem;
+        color: #fff;
+        margin-bottom: 1.75rem;
+        box-shadow: 0 18px 46px rgba(13, 110, 253, 0.22);
+        position: relative;
+        overflow: hidden;
+    }
+    .traz-hero::before {
+        content: '';
+        position: absolute;
+        top: -60px; right: -60px;
+        width: 220px; height: 220px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.07);
+        pointer-events: none;
+    }
+    .traz-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -80px; left: -40px;
+        width: 280px; height: 280px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.04);
+        pointer-events: none;
+    }
+    .traz-hero-eyebrow {
+        font-size: .7rem;
+        font-weight: 700;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        opacity: .75;
+        margin-bottom: .4rem;
+    }
+    .traz-hero-title {
+        font-family: 'Poppins', sans-serif;
+        font-size: 1.9rem;
+        font-weight: 800;
+        margin-bottom: .2rem;
+        line-height: 1.15;
+    }
+    .traz-hero-sub {
+        opacity: .75;
+        font-size: .9rem;
+        margin-bottom: 0;
+    }
+    .traz-stat-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: .55rem;
+        background: rgba(255,255,255,.15);
+        border: 1px solid rgba(255,255,255,.22);
+        border-radius: .9rem;
+        padding: .65rem 1rem;
+        backdrop-filter: blur(10px);
+    }
+    .traz-stat-chip .num {
+        font-family: 'Poppins', sans-serif;
+        font-size: 1.35rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+    .traz-stat-chip .lbl {
+        font-size: .72rem;
+        opacity: .82;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    /* ── Filter Panel ─────────────────────────────────────────────────── */
+    .traz-filter-card {
+        background: #fff;
+        border-radius: 1.2rem;
+        border: 1px solid #eef2f7;
+        box-shadow: 0 4px 20px rgba(0,0,0,.06);
+        padding: 1.4rem;
+        position: sticky;
+        top: 1rem;
+    }
+    .traz-filter-title {
+        font-family: 'Poppins', sans-serif;
+        font-size: .72rem;
+        font-weight: 700;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: #0d6efd;
+        margin-bottom: 1rem;
+    }
+    .traz-filter-card .form-label {
+        font-size: .78rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: .3rem;
+    }
+    .traz-filter-card .form-control,
+    .traz-filter-card .form-select {
+        border-radius: .75rem;
+        font-size: .82rem;
+        border-color: #e5e9ef;
+        padding: .5rem .75rem;
+    }
+    .traz-filter-card .form-control:focus,
+    .traz-filter-card .form-select:focus {
+        border-color: rgba(13,110,253,.35);
+        box-shadow: 0 0 0 3px rgba(13,110,253,.08);
+    }
+    .traz-btn-filter {
+        width: 100%;
+        border-radius: .8rem;
+        font-weight: 700;
+        font-size: .84rem;
+        padding: .65rem;
+        background: linear-gradient(135deg, #0d6efd, #35c2d8);
+        border: none;
+        color: #fff;
+        box-shadow: 0 6px 18px rgba(13,110,253,.28);
+        transition: transform .18s ease, box-shadow .18s ease;
+        margin-top: .75rem;
+    }
+    .traz-btn-filter:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(13,110,253,.34);
+        color: #fff;
+    }
+    .traz-btn-clear {
+        width: 100%;
+        border-radius: .8rem;
+        font-size: .8rem;
+        color: #6b7280;
+        border: 1px solid #e5e9ef;
+        background: #f9fafb;
+        padding: .5rem;
+        margin-top: .4rem;
+    }
+    .traz-btn-clear:hover { background: #f3f4f6; color: #374151; }
+
+    /* ── Activity List ────────────────────────────────────────────────── */
+    .traz-list-card {
+        background: #fff;
+        border-radius: 1.2rem;
+        border: 1px solid #eef2f7;
+        box-shadow: 0 4px 20px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+    .traz-list-header {
+        padding: 1.1rem 1.4rem .9rem;
+        border-bottom: 1px solid #f0f4f8;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .75rem;
+        flex-wrap: wrap;
+    }
+    .traz-list-header-title {
+        font-family: 'Poppins', sans-serif;
+        font-size: .95rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0;
+    }
+    .traz-count-badge {
+        background: #f0f4ff;
+        color: #0d6efd;
+        border-radius: .6rem;
+        padding: .3rem .7rem;
+        font-size: .78rem;
+        font-weight: 700;
+    }
+
+    /* Timeline item */
+    .traz-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem 1.4rem;
+        border-bottom: 1px solid #f5f7fb;
+        transition: background .15s ease;
+        animation: trazFadeUp .3s both;
+    }
+    .traz-item:last-child { border-bottom: none; }
+    .traz-item:hover { background: #fafbff; }
+
+    @keyframes trazFadeUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .traz-icon-wrap {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: .85rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.05rem;
+        flex-shrink: 0;
+        margin-top: .1rem;
+    }
+    /* Category icon colors */
+    .traz-icon--cita           { background: rgba(13,110,253,.1);  color: #0d6efd; }
+    .traz-icon--disponibilidad { background: rgba(16,185,129,.1);  color: #059669; }
+    .traz-icon--reagendo       { background: rgba(245,158,11,.1);  color: #b45309; }
+    .traz-icon--paciente       { background: rgba(124,58,237,.1);  color: #6d28d9; }
+    .traz-icon--nomina         { background: rgba(5,150,105,.1);   color: #047857; }
+    .traz-icon--solicitud      { background: rgba(99,102,241,.1);  color: #4f46e5; }
+    .traz-icon--incidente      { background: rgba(239,68,68,.1);   color: #dc2626; }
+
+    .traz-item-body { flex: 1; min-width: 0; }
+
+    .traz-item-desc {
+        font-size: .9rem;
+        font-weight: 500;
+        color: #1f2937;
+        line-height: 1.45;
+        margin-bottom: .35rem;
+    }
+    .traz-item-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem .75rem;
+        align-items: center;
+    }
+    .traz-meta-piece {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        font-size: .76rem;
+        color: #6b7280;
+    }
+    .traz-meta-piece i { font-size: .7rem; }
+
+    /* Category badge */
+    .traz-cat {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        border-radius: .55rem;
+        padding: .18rem .6rem;
+        font-size: .7rem;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+    .traz-cat--cita           { background: rgba(13,110,253,.1);  color: #0d6efd; }
+    .traz-cat--disponibilidad { background: rgba(16,185,129,.1);  color: #059669; }
+    .traz-cat--reagendo       { background: rgba(245,158,11,.1);  color: #b45309; }
+    .traz-cat--paciente       { background: rgba(124,58,237,.1);  color: #6d28d9; }
+    .traz-cat--nomina         { background: rgba(5,150,105,.1);   color: #047857; }
+    .traz-cat--solicitud      { background: rgba(99,102,241,.1);  color: #4f46e5; }
+    .traz-cat--incidente      { background: rgba(239,68,68,.1);   color: #dc2626; }
+
+    .traz-retro-badge {
+        background: rgba(107,114,128,.1);
+        color: #6b7280;
+        border-radius: .55rem;
+        padding: .18rem .55rem;
+        font-size: .65rem;
+        font-weight: 600;
+        letter-spacing: .04em;
+    }
+
+    /* Empty state */
+    .traz-empty {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #94a3b8;
+    }
+    .traz-empty i { font-size: 3rem; margin-bottom: 1rem; display: block; opacity: .5; }
+    .traz-empty p { font-weight: 600; margin: 0; }
+
+    /* Paginator */
+    .traz-pagination { padding: 1rem 1.4rem; border-top: 1px solid #f0f4f8; }
+    .traz-pagination .page-link {
+        border-radius: .65rem;
+        border-color: #e5e9ef;
+        color: #374151;
+        font-size: .82rem;
+        padding: .4rem .75rem;
+    }
+    .traz-pagination .page-item.active .page-link {
+        background: linear-gradient(135deg, #0d6efd, #35c2d8);
+        border-color: transparent;
+        color: #fff;
+    }
+    .traz-pagination .page-link:hover { background: #f0f4ff; color: #0d6efd; }
+</style>
+
+<!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+<div class="traz-hero">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+            <div class="traz-hero-eyebrow"><i class="bi bi-shield-check me-1"></i>Panel de Administración</div>
+            <h1 class="traz-hero-title">Trazabilidad</h1>
+            <p class="traz-hero-sub">Registro completo de todas las acciones realizadas en el sistema.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <div class="traz-stat-chip">
+                <i class="bi bi-list-check fs-5"></i>
+                <div>
+                    <div class="num">{{ total_registros|default:"0" }}</div>
+                    <div class="lbl">Total registros</div>
+                </div>
+            </div>
+            <div class="traz-stat-chip">
+                <i class="bi bi-calendar-day fs-5"></i>
+                <div>
+                    <div class="num">{{ registros_hoy|default:"0" }}</div>
+                    <div class="lbl">Hoy</div>
+                </div>
+            </div>
+            <div class="traz-stat-chip">
+                <i class="bi bi-people fs-5"></i>
+                <div>
+                    <div class="num">{{ usuarios_activos|default:"0" }}</div>
+                    <div class="lbl">Usuarios activos hoy</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Content ────────────────────────────────────────────────────────────── -->
+<div class="row g-4 align-items-start">
+
+    <!-- Filter Panel -->
+    <div class="col-lg-3">
+        <div class="traz-filter-card">
+            <div class="traz-filter-title"><i class="bi bi-funnel-fill me-1"></i>Filtros</div>
+            <form method="get" action="">
+                <div class="mb-3">
+                    <label class="form-label">Buscar</label>
+                    <input type="text" name="q" class="form-control" placeholder="Descripción..." value="{{ f_q }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Desde</label>
+                    <input type="date" name="fecha_desde" class="form-control" value="{{ f_fecha_desde }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Hasta</label>
+                    <input type="date" name="fecha_hasta" class="form-control" value="{{ f_fecha_hasta }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Usuario</label>
+                    <select name="usuario" class="form-select">
+                        <option value="">Todos</option>
+                        {% for u in usuarios_con_actividad %}
+                        <option value="{{ u.id }}" {% if f_usuario == u.id|stringformat:"s" %}selected{% endif %}>
+                            {{ u.get_full_name|default:u.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Categoría</label>
+                    <select name="categoria" class="form-select">
+                        <option value="">Todas</option>
+                        {% for val, label in categoria_choices %}
+                        <option value="{{ val }}" {% if f_categoria == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Acción</label>
+                    <select name="accion" class="form-select">
+                        <option value="">Todas</option>
+                        {% for val, label in accion_choices %}
+                        <option value="{{ val }}" {% if f_accion == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="traz-btn-filter">
+                    <i class="bi bi-search me-1"></i>Aplicar filtros
+                </button>
+                {% if f_q or f_fecha_desde or f_fecha_hasta or f_usuario or f_categoria or f_accion %}
+                <a href="{% url 'trazabilidad_admin' %}" class="btn traz-btn-clear">
+                    <i class="bi bi-x-circle me-1"></i>Limpiar filtros
+                </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Activity List -->
+    <div class="col-lg-9">
+        <div class="traz-list-card">
+            <div class="traz-list-header">
+                <h2 class="traz-list-header-title">
+                    <i class="bi bi-clock-history me-2 text-primary"></i>Actividad
+                </h2>
+                <span class="traz-count-badge">
+                    {{ page_obj.paginator.count }} registro{{ page_obj.paginator.count|pluralize }}
+                </span>
+            </div>
+
+            {% if page_obj.object_list %}
+                {% for reg in page_obj %}
+                <div class="traz-item" style="animation-delay: {{ forloop.counter0 }}0ms">
+                    <div class="traz-icon-wrap traz-icon--{{ reg.categoria }}">
+                        <i class="bi {{ reg.icono }}"></i>
+                    </div>
+                    <div class="traz-item-body">
+                        <div class="traz-item-desc">{{ reg.descripcion }}</div>
+                        <div class="traz-item-meta">
+                            <span class="traz-cat traz-cat--{{ reg.categoria }}">
+                                {{ reg.get_categoria_display }}
+                            </span>
+                            <span class="traz-meta-piece">
+                                <i class="bi bi-clock"></i>
+                                {{ reg.timestamp|date:"d/m/Y H:i" }}
+                            </span>
+                            {% if reg.usuario %}
+                            <span class="traz-meta-piece">
+                                <i class="bi bi-person-circle"></i>
+                                {{ reg.usuario.get_full_name|default:reg.usuario.username }}
+                            </span>
+                            {% else %}
+                            <span class="traz-meta-piece"><i class="bi bi-person-circle"></i>Sistema</span>
+                            {% endif %}
+                            {% if reg.terapeuta_afectado %}
+                            <span class="traz-meta-piece">
+                                <i class="bi bi-hospital"></i>
+                                {{ reg.terapeuta_afectado.nombre }}
+                            </span>
+                            {% endif %}
+                            {% if reg.paciente_afectado %}
+                            <span class="traz-meta-piece">
+                                <i class="bi bi-person-heart"></i>
+                                {{ reg.paciente_afectado.nombre }}
+                            </span>
+                            {% endif %}
+                            {% if reg.es_retroactivo %}
+                            <span class="traz-retro-badge">Reconstruido</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="traz-empty">
+                <i class="bi bi-shield-check"></i>
+                <p>No se encontraron registros con los filtros seleccionados.</p>
+            </div>
+            {% endif %}
+
+            {% if page_obj.has_other_pages %}
+            <div class="traz-pagination">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0 justify-content-center gap-1 flex-wrap">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if f_q %}q={{ f_q }}&{% endif %}{% if f_fecha_desde %}fecha_desde={{ f_fecha_desde }}&{% endif %}{% if f_fecha_hasta %}fecha_hasta={{ f_fecha_hasta }}&{% endif %}{% if f_usuario %}usuario={{ f_usuario }}&{% endif %}{% if f_categoria %}categoria={{ f_categoria }}&{% endif %}{% if f_accion %}accion={{ f_accion }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if f_q %}q={{ f_q }}&{% endif %}{% if f_fecha_desde %}fecha_desde={{ f_fecha_desde }}&{% endif %}{% if f_fecha_hasta %}fecha_hasta={{ f_fecha_hasta }}&{% endif %}{% if f_usuario %}usuario={{ f_usuario }}&{% endif %}{% if f_categoria %}categoria={{ f_categoria }}&{% endif %}{% if f_accion %}accion={{ f_accion }}&{% endif %}page={{ num }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if f_q %}q={{ f_q }}&{% endif %}{% if f_fecha_desde %}fecha_desde={{ f_fecha_desde }}&{% endif %}{% if f_fecha_hasta %}fecha_hasta={{ f_fecha_hasta }}&{% endif %}{% if f_usuario %}usuario={{ f_usuario }}&{% endif %}{% if f_categoria %}categoria={{ f_categoria }}&{% endif %}{% if f_accion %}accion={{ f_accion }}&{% endif %}page={{ page_obj.next_page_number }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                <div class="text-center mt-2 text-muted" style="font-size:.78rem;">
+                    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                    &nbsp;·&nbsp; {{ page_obj.paginator.count }} registro{{ page_obj.paginator.count|pluralize }} en total
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

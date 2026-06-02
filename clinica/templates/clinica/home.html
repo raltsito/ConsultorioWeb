@@ -607,6 +607,18 @@
                 {% endif %}
 
                 {% if user.is_superuser %}
+                <a href="{% url 'trazabilidad_admin' %}" class="dock-tile">
+                    <span class="dock-chip" style="--c1:#6366f1;--c2:#4338ca;">
+                        <i class="bi bi-shield-check"></i>
+                    </span>
+                    <span class="dock-text">
+                        <span class="dock-label">Trazabilidad</span>
+                        <span class="dock-sub">Historial de actividades</span>
+                    </span>
+                </a>
+                {% endif %}
+
+                {% if user.is_superuser %}
 
                 <a href="#" class="dock-tile" data-bs-toggle="modal" data-bs-target="#modalManualPortal">
                     <span class="dock-chip" style="--c1:#0EA5E9;--c2:#1D4ED8;">
