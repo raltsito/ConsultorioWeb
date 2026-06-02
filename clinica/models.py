@@ -532,11 +532,13 @@ class Cita(models.Model):
     TIPO_NUEVO = 'N'
     TIPO_REFERIDO = 'R'
     TIPO_SEGUIMIENTO = 'S'
+    TIPO_CRISIS = 'C'
 
     TIPO_PACIENTE_CHOICES = [
         (TIPO_NUEVO, 'Nuevo'),
         (TIPO_REFERIDO, 'Referido'),
         (TIPO_SEGUIMIENTO, 'Seguimiento'),
+        (TIPO_CRISIS, 'Crisis'),
     ]
 
     PAGO_CHOICES = [
