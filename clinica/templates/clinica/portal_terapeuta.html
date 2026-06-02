@@ -589,6 +589,8 @@
                                     <i class="bi bi-door-open me-1"></i>{{ cita.consultorio }}
                                     &nbsp;|&nbsp;
                                     <i class="bi bi-tag me-1"></i>{{ cita.servicio }}
+                                    &nbsp;|&nbsp;
+                                    <i class="bi bi-cash me-1"></i>{% if cita.costo %}${{ cita.costo|floatformat:2 }}{% else %}—{% endif %}
                                 </p>
 
                                 <div class="d-flex gap-2 flex-wrap">
@@ -608,7 +610,8 @@
                                             data-paciente="{{ cita.paciente.nombre }}"
                                             data-hora="{{ cita.hora|time:'H:i' }}"
                                             data-servicio="{{ cita.servicio }}"
-                                            data-consultorio="{{ cita.consultorio }}">
+                                            data-consultorio="{{ cita.consultorio }}"
+                                            data-costo="{% if cita.costo %}${{ cita.costo|floatformat:2 }}{% else %}—{% endif %}">
                                         <i class="bi bi-check2-circle me-1"></i>Finalizar Sesión
                                     </button>
                                     {% else %}
@@ -1379,13 +1382,14 @@
         const hora       = btn.getAttribute('data-hora');
         const servicio   = btn.getAttribute('data-servicio');
         const consultorio = btn.getAttribute('data-consultorio');
+        const costo      = btn.getAttribute('data-costo');
 
         // Actualizar form action con el ID de la cita
         form.action = `/citas/${citaId}/checkout/`;
 
         // Actualizar textos del header
         document.getElementById('modalPacienteNombre').textContent = paciente;
-        document.getElementById('modalSubtitulo').textContent = `${hora} · ${servicio} · ${consultorio}`;
+        document.getElementById('modalSubtitulo').textContent = `${hora} · ${servicio} · ${consultorio} · ${costo}`;
     });
 
     // ── 2. Resetear modal al cerrarse ──
