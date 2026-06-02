@@ -316,6 +316,14 @@ def _sin_reagendar_stats():
         ).values('paciente_id', 'estatus', 'fecha').order_by('paciente_id', '-fecha')
     )
 
+    citas_todo = list(
+        Cita.objects.filter(
+            fecha__lte=hoy,
+            estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
+            paciente__isnull=False,
+        ).values('paciente_id', 'estatus', 'fecha').order_by('paciente_id', '-fecha')
+    )
+
     def calc(subset):
         seen = {}
         for c in subset:
@@ -329,6 +337,7 @@ def _sin_reagendar_stats():
         'dia': calc([c for c in citas if c['fecha'] == ayer]),
         'semana': calc([c for c in citas if c['fecha'] >= inicio_semana]),
         'mes': calc([c for c in citas if c['fecha'] >= inicio_mes]),
+        'todo': calc(citas_todo),
     }
 
 
@@ -624,7 +633,7 @@ def checklist_host_config(request):
 @login_required
 def api_sin_reagendar(request):
     periodo = request.GET.get('periodo', 'mes')
-    if periodo not in ('dia', 'semana', 'mes'):
+    if periodo not in ('dia', 'semana', 'mes', 'todo'):
         periodo = 'mes'
 
     hoy = timezone.now().date()
@@ -633,6 +642,9 @@ def api_sin_reagendar(request):
         fecha_inicio = fecha_fin = hoy - timedelta(days=1)
     elif periodo == 'semana':
         fecha_inicio = hoy - timedelta(days=hoy.weekday())
+        fecha_fin = hoy
+    elif periodo == 'todo':
+        fecha_inicio = None
         fecha_fin = hoy
     else:
         fecha_inicio = hoy.replace(day=1)
@@ -651,11 +663,15 @@ def api_sin_reagendar(request):
         ).values_list('paciente_id', flat=True)
     )
 
-    citas = Cita.objects.filter(
-        fecha__range=(fecha_inicio, fecha_fin),
+    citas_qs = Cita.objects.filter(
         estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
         paciente__isnull=False,
-    ).select_related('paciente', 'terapeuta').order_by('paciente_id', '-fecha')
+    )
+    if fecha_inicio is not None:
+        citas_qs = citas_qs.filter(fecha__range=(fecha_inicio, fecha_fin))
+    else:
+        citas_qs = citas_qs.filter(fecha__lte=fecha_fin)
+    citas = citas_qs.select_related('paciente', 'terapeuta').order_by('paciente_id', '-fecha')
 
     seen = set()
     result = []

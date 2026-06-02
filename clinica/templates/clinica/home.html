@@ -77,6 +77,7 @@
                     <button class="sr-pill active" data-periodo="dia" onclick="cambiarSRPeriodo('dia')">Ayer</button>
                     <button class="sr-pill" data-periodo="semana" onclick="cambiarSRPeriodo('semana')">Semana</button>
                     <button class="sr-pill" data-periodo="mes" onclick="cambiarSRPeriodo('mes')">Mes</button>
+                    <button class="sr-pill" data-periodo="todo" onclick="cambiarSRPeriodo('todo')">Todo</button>
                 </div>
                 <span style="opacity:0.65;font-size:0.72rem;">Ver lista <i class="bi bi-arrow-right-short"></i></span>
             </div>
@@ -1492,6 +1493,10 @@
                     <i class="bi bi-calendar-month me-1"></i>Mes
                     <span id="srBadgeMes" class="badge ms-1" style="background:rgba(92,107,192,0.12);color:#3949AB;font-size:0.62rem;">—</span>
                 </button>
+                <button class="modal-sr-tab" data-periodo="todo" onclick="cargarModalSR('todo')">
+                    <i class="bi bi-infinity me-1"></i>Todo
+                    <span id="srBadgeTodo" class="badge ms-1" style="background:rgba(92,107,192,0.12);color:#3949AB;font-size:0.62rem;">—</span>
+                </button>
             </div>
 
             <div class="modal-body p-0" id="srModalBody">
@@ -1600,6 +1605,7 @@
         dia:    { total: {{ sin_reagendar.dia.total }},    si: {{ sin_reagendar.dia.si }},    no: {{ sin_reagendar.dia.no }} },
         semana: { total: {{ sin_reagendar.semana.total }}, si: {{ sin_reagendar.semana.si }}, no: {{ sin_reagendar.semana.no }} },
         mes:    { total: {{ sin_reagendar.mes.total }},    si: {{ sin_reagendar.mes.si }},    no: {{ sin_reagendar.mes.no }} },
+        todo:   { total: {{ sin_reagendar.todo.total }},   si: {{ sin_reagendar.todo.si }},   no: {{ sin_reagendar.todo.no }} },
     };
     let srPeriodo = 'dia';
 
@@ -1632,6 +1638,7 @@
         document.getElementById('srBadgeDia').textContent    = SR.dia.total;
         document.getElementById('srBadgeSemana').textContent = SR.semana.total;
         document.getElementById('srBadgeMes').textContent    = SR.mes.total;
+        document.getElementById('srBadgeTodo').textContent   = SR.todo.total;
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalSinReagendar')).show();
         cargarModalSR(srPeriodo);
     };
@@ -1639,7 +1646,7 @@
     window.cargarModalSR = function(periodo) {
         srPeriodo = periodo;
         document.querySelectorAll('.modal-sr-tab').forEach(t => t.classList.toggle('active', t.dataset.periodo === periodo));
-        const subs = { dia:'Pacientes de ayer sin reagendar', semana:'Pacientes de esta semana sin reagendar', mes:'Pacientes de este mes sin reagendar' };
+        const subs = { dia:'Pacientes de ayer sin reagendar', semana:'Pacientes de esta semana sin reagendar', mes:'Pacientes de este mes sin reagendar', todo:'Todos los pacientes sin reagendar (histórico)' };
         document.getElementById('srModalSubtitle').textContent = subs[periodo];
         const body = document.getElementById('srModalBody');
         body.innerHTML = '<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>Cargando...</div>';
