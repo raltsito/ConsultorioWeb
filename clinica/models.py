@@ -525,7 +525,6 @@ class Cita(models.Model):
     ESTATUS_ACTIVOS = (
         ESTATUS_CONFIRMADA,
         ESTATUS_SIN_CONFIRMAR,
-        ESTATUS_REAGENDO,
         ESTATUS_INCIDENCIA,
     )
 
