@@ -98,6 +98,22 @@ urlpatterns = [
     path('host/', clinica_views.portal_host, name='portal_host'),
     path('host/checklist/', clinica_views.checklist_host_config, name='checklist_host_config'),
 
+    # Portal Consultoria
+    path('consultoria/', clinica_views.portal_consultoria, name='portal_consultoria'),
+    path('consultoria/manual/', clinica_views.descargar_manual_portal_consultoria, name='descargar_manual_portal_consultoria'),
+    path('consultoria/mi-disponibilidad/', clinica_views.mi_disponibilidad_consultoria, name='mi_disponibilidad_consultoria'),
+    path('consultoria/expedientes/', clinica_views.expedientes_consultoria, name='expedientes_consultoria'),
+    path('consultoria/expedientes/nuevo/', clinica_views.registrar_paciente_consultoria, name='registrar_paciente_consultoria'),
+    path('consultoria/expedientes/<int:paciente_id>/', clinica_views.expediente_consultoria_detalle, name='expediente_consultoria_detalle'),
+    path('consultoria/solicitar-cita/', clinica_views.solicitar_cita_consultoria, name='solicitar_cita_consultoria'),
+    path('consultoria/bloqueos/nuevo/', clinica_views.crear_bloqueo_consultoria, name='crear_bloqueo_consultoria'),
+    path('consultoria/bloqueos/<int:bloqueo_id>/eliminar/', clinica_views.eliminar_bloqueo_consultoria, name='eliminar_bloqueo_consultoria'),
+    path('consultoria/confirmar-nomina/<int:corte_id>/', clinica_views.confirmar_nomina_consultoria, name='confirmar_nomina_consultoria'),
+    path('consultoria/recursos/', clinica_views.recursos_consultoria, name='recursos_consultoria'),
+    path('consultoria/recursos/<int:recurso_id>/descargar/', clinica_views.descargar_recurso_consultoria, name='descargar_recurso_consultoria'),
+    path('consultoria/expositor/solicitar/', clinica_views.solicitar_horas_expositor_consultoria, name='solicitar_horas_expositor_consultoria'),
+    path('consultoria/incidentes/reportar/', clinica_views.reportar_incidente_consultoria, name='reportar_incidente_consultoria'),
+
     # Catálogo de Terapeutas
     path('catalogo-terapeutas/', clinica_views.catalogo_terapeutas, name='catalogo_terapeutas'),
     path('api/catalogo/', clinica_views.api_catalogo_list, name='api_catalogo_list'),

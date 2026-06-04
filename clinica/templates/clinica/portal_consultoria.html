@@ -1,0 +1,375 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<style>
+    .consultoria-shell {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .consultoria-hero {
+        border: 0;
+        border-radius: 1rem;
+        background: linear-gradient(135deg, #0d6efd 0%, #35c2d8 100%);
+        color: #fff;
+        box-shadow: 0 18px 42px rgba(13, 110, 253, .2);
+        overflow: hidden;
+    }
+
+    .consultoria-hero-body {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.75rem;
+        flex-wrap: wrap;
+    }
+
+    .consultoria-actions {
+        display: flex;
+        gap: .65rem;
+        flex-wrap: wrap;
+    }
+
+    .consultoria-panel {
+        border: 0;
+        border-radius: 1rem;
+        box-shadow: 0 14px 34px rgba(15, 23, 42, .08);
+        overflow: hidden;
+    }
+
+    .consultoria-filters {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: .75rem;
+        align-items: end;
+    }
+
+    .filter-date,
+    .filter-division,
+    .filter-therapist,
+    .filter-status {
+        grid-column: span 3;
+    }
+
+    .filter-search {
+        grid-column: span 9;
+    }
+
+    .filter-actions {
+        grid-column: span 3;
+        display: flex;
+        gap: .5rem;
+    }
+
+    .consultoria-cita {
+        display: grid;
+        grid-template-columns: 120px minmax(0, 1fr);
+        gap: 1.25rem;
+        padding: 1.35rem 1.5rem;
+        border-bottom: 1px solid rgba(15, 23, 42, .08);
+    }
+
+    .consultoria-cita:last-child {
+        border-bottom: 0;
+    }
+
+    .cita-hour {
+        text-align: center;
+        border-right: 1px solid rgba(15, 23, 42, .08);
+        padding-right: 1.25rem;
+    }
+
+    .cita-hour strong {
+        display: block;
+        font-size: 1.85rem;
+        line-height: 1;
+        color: #0d6efd;
+        margin-bottom: .45rem;
+    }
+
+    .cita-title {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: #1f2937;
+        margin-bottom: .75rem;
+    }
+
+    .cita-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: .7rem;
+    }
+
+    .cita-meta {
+        min-height: 54px;
+        border: 1px solid rgba(15, 23, 42, .08);
+        border-radius: .75rem;
+        padding: .65rem .75rem;
+        background: #f8fbff;
+    }
+
+    .cita-meta span {
+        display: block;
+        color: #64748b;
+        font-size: .74rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: .15rem;
+    }
+
+    .cita-meta strong {
+        display: block;
+        color: #263238;
+        font-size: .95rem;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+
+    .cita-notes {
+        grid-column: 1 / -1;
+    }
+
+    @media (max-width: 992px) {
+        .filter-date,
+        .filter-division,
+        .filter-therapist,
+        .filter-status,
+        .filter-search,
+        .filter-actions {
+            grid-column: span 6;
+        }
+
+        .cita-meta-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 640px) {
+        .consultoria-hero-body,
+        .consultoria-cita {
+            display: block;
+        }
+
+        .consultoria-actions {
+            margin-top: 1rem;
+        }
+
+        .filter-date,
+        .filter-division,
+        .filter-therapist,
+        .filter-status,
+        .filter-search,
+        .filter-actions {
+            grid-column: 1 / -1;
+        }
+
+        .filter-actions {
+            flex-direction: column;
+        }
+
+        .cita-hour {
+            text-align: left;
+            border-right: 0;
+            border-bottom: 1px solid rgba(15, 23, 42, .08);
+            padding: 0 0 .9rem;
+            margin-bottom: 1rem;
+        }
+
+        .cita-meta-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="consultoria-shell">
+    <section class="consultoria-hero">
+        <div class="consultoria-hero-body">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <i class="bi bi-person-badge fs-1"></i>
+                    <div>
+                        <h2 class="fw-bold mb-0">Bienvenido, {{ consultoria.nombre }}</h2>
+                        <p class="mb-0 text-white-50">Vista de citas por divisiones enlazadas</p>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    {% for division in divisiones_consultoria %}
+                    <span class="badge bg-white text-primary rounded-pill px-3 py-2">{{ division.nombre }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="consultoria-actions">
+                <a href="{% url 'solicitar_cita_consultoria' %}" class="btn btn-light btn-lg text-primary fw-bold shadow-sm">
+                    <i class="bi bi-calendar-plus me-2"></i>Agendar cita
+                </a>
+                <a href="{% url 'recursos_consultoria' %}" class="btn btn-outline-light btn-lg fw-bold">
+                    <i class="bi bi-folder-fill me-2"></i>Recursos
+                </a>
+            </div>
+        </div>
+    </section>
+
+    {% if mis_solicitudes %}
+    <section class="card consultoria-panel">
+        <div class="card-header bg-white border-bottom p-3">
+            <h5 class="fw-bold text-dark mb-0">
+                <i class="bi bi-send-check me-2 text-primary"></i>Peticiones a Recepcion
+            </h5>
+        </div>
+        <div class="list-group list-group-flush">
+            {% for solicitud in mis_solicitudes %}
+            <div class="list-group-item p-3">
+                <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                    <strong>{{ solicitud.paciente_nombre }} - {{ solicitud.fecha_deseada|date:"d/m/Y" }}{% if solicitud.hora_deseada %} {{ solicitud.hora_deseada|time:"H:i" }}{% endif %}</strong>
+                    <span class="badge bg-warning text-dark border px-2 py-1">{{ solicitud.get_estado_display }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="card consultoria-panel">
+        <div class="card-header bg-white border-bottom p-4">
+            <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                <div>
+                    <h4 class="fw-bold text-dark mb-1">
+                        <i class="bi bi-calendar-day me-2 text-primary"></i>Citas de Consultoria
+                    </h4>
+                    <p class="text-muted mb-0">
+                        {{ total_citas_filtradas }} cita{{ total_citas_filtradas|pluralize }} encontrada{{ total_citas_filtradas|pluralize }}
+                        para el {{ filtros_consultoria.fecha|date:"d/m/Y" }}.
+                    </p>
+                </div>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2">
+                    <i class="bi bi-diagram-3 me-1"></i>{{ divisiones_consultoria|length }} division(es)
+                </span>
+            </div>
+
+            <form method="get" class="consultoria-filters">
+                <div class="filter-date">
+                    <label class="form-label small fw-semibold text-muted mb-1">Fecha</label>
+                    <input type="date" name="fecha" class="form-control" value="{{ filtros_consultoria.fecha|date:'Y-m-d' }}">
+                </div>
+
+                <div class="filter-division">
+                    <label class="form-label small fw-semibold text-muted mb-1">Division</label>
+                    <select name="division" class="form-select">
+                        <option value="">Todas</option>
+                        {% for division in divisiones_consultoria %}
+                        <option value="{{ division.id }}" {% if filtros_consultoria.division == division.id|stringformat:"s" %}selected{% endif %}>
+                            {{ division.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-therapist">
+                    <label class="form-label small fw-semibold text-muted mb-1">Terapeuta</label>
+                    <select name="terapeuta" class="form-select">
+                        <option value="">Todos</option>
+                        {% for terapeuta_opcion in terapeutas_filtro %}
+                        <option value="{{ terapeuta_opcion.id }}" {% if filtros_consultoria.terapeuta == terapeuta_opcion.id|stringformat:"s" %}selected{% endif %}>
+                            {{ terapeuta_opcion.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-status">
+                    <label class="form-label small fw-semibold text-muted mb-1">Estatus</label>
+                    <select name="estatus" class="form-select">
+                        <option value="">Todos</option>
+                        {% for valor, etiqueta in estatus_choices %}
+                        <option value="{{ valor }}" {% if filtros_consultoria.estatus == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-search">
+                    <label class="form-label small fw-semibold text-muted mb-1">Paciente o nota</label>
+                    <input type="search" name="q" class="form-control" placeholder="Buscar por nombre de paciente o nota..." value="{{ filtros_consultoria.q }}">
+                </div>
+
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary fw-semibold flex-fill">
+                        <i class="bi bi-funnel me-1"></i>Filtrar
+                    </button>
+                    <a href="{% url 'portal_consultoria' %}" class="btn btn-outline-secondary fw-semibold">Limpiar</a>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-body p-0">
+            {% if citas_hoy %}
+            {% for cita in citas_hoy %}
+            <article class="consultoria-cita">
+                <div class="cita-hour">
+                    <strong>{{ cita.hora|time:"H:i" }}</strong>
+                    {% if cita.estatus == 'si_asistio' %}
+                    <span class="badge rounded-pill bg-success px-2 py-1">Asistio</span>
+                    {% elif cita.estatus == 'no_asistio' %}
+                    <span class="badge rounded-pill bg-danger px-2 py-1">No asistio</span>
+                    {% elif cita.estatus == 'cancelo' %}
+                    <span class="badge rounded-pill bg-secondary px-2 py-1">Cancelo</span>
+                    {% elif cita.estatus == 'incidencia' %}
+                    <span class="badge rounded-pill bg-warning text-dark px-2 py-1">Incidencia</span>
+                    {% elif cita.estatus == 'confirmada' %}
+                    <span class="badge rounded-pill bg-primary px-2 py-1">Confirmada</span>
+                    {% else %}
+                    <span class="badge rounded-pill bg-light text-secondary border px-2 py-1">Pendiente</span>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <h3 class="cita-title">{{ cita.titulo_cita }}</h3>
+                    <div class="cita-meta-grid">
+                        <div class="cita-meta">
+                            <span>Division</span>
+                            <strong>{% if cita.division %}{{ cita.division.nombre }}{% elif cita.paciente.division %}{{ cita.paciente.division.nombre }}{% else %}Sin division{% endif %}</strong>
+                        </div>
+                        <div class="cita-meta">
+                            <span>Terapeuta</span>
+                            <strong>{% if cita.terapeuta %}{{ cita.terapeuta.nombre }}{% else %}Sin terapeuta{% endif %}</strong>
+                        </div>
+                        <div class="cita-meta">
+                            <span>Consultorio</span>
+                            <strong>{{ cita.consultorio|default:"Sin consultorio" }}</strong>
+                        </div>
+                        <div class="cita-meta">
+                            <span>Servicio</span>
+                            <strong>{{ cita.servicio|default:"Sin servicio" }}</strong>
+                        </div>
+                        <div class="cita-meta">
+                            <span>Costo</span>
+                            <strong>{% if cita.costo %}${{ cita.costo|floatformat:2 }}{% else %}Sin costo{% endif %}</strong>
+                        </div>
+                        <div class="cita-meta">
+                            <span>Pago</span>
+                            <strong>{{ cita.metodo_pago|default:"Sin metodo" }}</strong>
+                        </div>
+                        {% if cita.notas %}
+                        <div class="cita-meta cita-notes">
+                            <span>Notas</span>
+                            <strong>{{ cita.notas|truncatechars:160 }}</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+            {% else %}
+            <div class="p-5 text-center">
+                <div class="text-muted mb-3">
+                    <i class="bi bi-calendar-check" style="font-size: 4rem;"></i>
+                </div>
+                <h4 class="text-muted">No hay citas para los filtros seleccionados.</h4>
+                <p class="text-secondary fs-5">Ajusta la fecha, division, terapeuta o estatus.</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+{% endblock %}

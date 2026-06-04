@@ -82,6 +82,28 @@ class Host(models.Model):
         verbose_name_plural = "Hosts"
 
 
+class Consultoria(models.Model):
+    usuario = models.OneToOneField(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='perfil_consultoria'
+    )
+    nombre = models.CharField(max_length=100)
+    divisiones = models.ManyToManyField(
+        'Division',
+        blank=True,
+        related_name='consultorias',
+        help_text='Divisiones a las que esta consultoria tiene acceso.',
+    )
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
+
+    class Meta:
+        verbose_name = "Consultoria"
+        verbose_name_plural = "Consultorias"
+
+
 class HostChecklistTask(models.Model):
     titulo = models.CharField(max_length=140)
     subtitulo = models.CharField(max_length=180, blank=True)

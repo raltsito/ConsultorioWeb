@@ -27,6 +27,7 @@ from .models import (
     AperturaExpediente,
     AperturaExpedienteGrupal,
     BloqueoAgendaTerapeuta,
+    Consultoria,
     Consultorio,
     SolicitudHorasExpositor,
     Division,
@@ -45,6 +46,7 @@ from .models import (
     Horario,
     SolicitudCita,
     SolicitudReagendo,
+    Servicio,
     NotificacionTerapeuta,
     obtener_bloqueo_terapeuta_en_fecha,
     ReporteIncidente,
@@ -355,6 +357,9 @@ def home(request):
 
     if hasattr(request.user, 'perfil_host'):
         return redirect('portal_host')
+
+    if hasattr(request.user, 'perfil_consultoria'):
+        return redirect('portal_consultoria')
 
     hoy = timezone.now().date()
     mes_actual = timezone.now().month
@@ -2369,6 +2374,421 @@ def eliminar_bloqueo_terapeuta(request, bloqueo_id):
         terapeuta=ter_perfil)
     messages.success(request, 'Bloqueo eliminado correctamente.')
     return redirect('portal_terapeuta')
+
+
+@login_required
+def portal_consultoria(request):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+
+    mi_perfil = request.user.perfil_consultoria
+    hoy = date.today()
+    meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+    fecha_bonita = f"{hoy.day} de {meses[hoy.month - 1]} del {hoy.year}"
+
+    divisiones_consultoria = mi_perfil.divisiones.all().order_by('nombre')
+    division_ids = list(divisiones_consultoria.values_list('id', flat=True))
+
+    try:
+        fecha_filtro = datetime.strptime(
+            request.GET.get('fecha') or hoy.isoformat(), '%Y-%m-%d'
+        ).date()
+    except (TypeError, ValueError):
+        fecha_filtro = hoy
+
+    division_filtro = request.GET.get('division') or ''
+    estatus_filtro = request.GET.get('estatus') or ''
+    terapeuta_filtro = request.GET.get('terapeuta') or ''
+    q_filtro = (request.GET.get('q') or '').strip()
+
+    citas_base = (
+        Cita.objects.filter(
+            Q(division_id__in=division_ids) |
+            Q(paciente__division_id__in=division_ids) |
+            Q(pacientes_adicionales__division_id__in=division_ids)
+        )
+        .select_related('paciente', 'paciente__division', 'division', 'terapeuta', 'consultorio', 'servicio')
+        .prefetch_related('pacientes_adicionales', 'pacientes_adicionales__division')
+        .distinct()
+    )
+
+    terapeutas_filtro = (
+        Terapeuta.objects
+        .filter(cita__in=citas_base)
+        .distinct()
+        .order_by('nombre')
+    )
+
+    citas_filtradas = citas_base.filter(fecha=fecha_filtro)
+    if division_filtro:
+        citas_filtradas = citas_filtradas.filter(
+            Q(division_id=division_filtro) |
+            Q(paciente__division_id=division_filtro) |
+            Q(pacientes_adicionales__division_id=division_filtro)
+        ).distinct()
+    if estatus_filtro:
+        citas_filtradas = citas_filtradas.filter(estatus=estatus_filtro)
+    if terapeuta_filtro:
+        citas_filtradas = citas_filtradas.filter(terapeuta_id=terapeuta_filtro)
+    if q_filtro:
+        citas_filtradas = citas_filtradas.filter(
+            Q(paciente__nombre__icontains=q_filtro) |
+            Q(pacientes_adicionales__nombre__icontains=q_filtro) |
+            Q(notas__icontains=q_filtro)
+        ).distinct()
+
+    citas_hoy = citas_filtradas.order_by('hora', 'paciente__nombre')
+    citas_proximas = citas_base.filter(fecha__gt=fecha_filtro).order_by('fecha', 'hora')[:10]
+
+    try:
+        semana_offset = int(request.GET.get('semana_offset', 0))
+    except (TypeError, ValueError):
+        semana_offset = 0
+
+    inicio_semana = fecha_filtro - timedelta(days=fecha_filtro.weekday()) + timedelta(weeks=semana_offset)
+    fin_semana = inicio_semana + timedelta(days=6)
+    citas_semana = list(
+        citas_base.filter(fecha__gte=inicio_semana, fecha__lte=fin_semana)
+        .order_by('fecha', 'hora')
+    )
+    citas_por_fecha = defaultdict(list)
+    for cita in citas_semana:
+        citas_por_fecha[cita.fecha].append(cita)
+
+    dias_semana_cortos = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom']
+    meses_cortos = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+    agenda_semanal = []
+    for offset in range(7):
+        fecha_item = inicio_semana + timedelta(days=offset)
+        agenda_semanal.append({
+            'fecha': fecha_item,
+            'nombre_corto': dias_semana_cortos[fecha_item.weekday()],
+            'mes_corto': meses_cortos[fecha_item.month - 1],
+            'es_hoy': fecha_item == hoy,
+            'citas': citas_por_fecha.get(fecha_item, []),
+        })
+
+    manual_portal = AccesoDirectoPortal.objects.filter(
+        clave=AccesoDirectoPortal.CLAVE_MANUAL_PORTAL_MEDICO,
+        activo=True,
+    ).first()
+
+    context = {
+        'consultoria': mi_perfil,
+        'terapeuta': mi_perfil,
+        'citas_hoy': citas_hoy,
+        'citas_proximas': citas_proximas,
+        'divisiones_consultoria': divisiones_consultoria,
+        'terapeutas_filtro': terapeutas_filtro,
+        'estatus_choices': Cita.ESTATUS_CHOICES,
+        'filtros_consultoria': {
+            'fecha': fecha_filtro,
+            'division': division_filtro,
+            'estatus': estatus_filtro,
+            'terapeuta': terapeuta_filtro,
+            'q': q_filtro,
+        },
+        'total_citas_filtradas': citas_hoy.count(),
+        'agenda_semanal': agenda_semanal,
+        'agenda_inicio_semana': inicio_semana,
+        'agenda_fin_semana': fin_semana,
+        'agenda_semana_offset': semana_offset,
+        'mostrar_agenda_semanal': request.GET.get('ver_agenda') == '1',
+        'fecha_bonita': fecha_bonita,
+        'mis_solicitudes': SolicitudCita.objects.none(),
+        'mis_reagendos': SolicitudReagendo.objects.none(),
+        'mis_solicitudes_expositor': SolicitudHorasExpositor.objects.none(),
+        'bloqueos_agenda': [],
+        'bloqueo_form': BloqueoAgendaTerapeutaForm(),
+        'manual_portal': manual_portal,
+        'corte_pendiente_confirmacion': None,
+    }
+    return render(request, 'clinica/portal_consultoria.html', context)
+
+
+@login_required
+def mi_disponibilidad_consultoria(request):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+
+    if request.method == 'POST':
+        messages.info(request, 'La disponibilidad de Consultoria ya tiene vista propia; falta conectar su almacenamiento independiente.')
+        return redirect('mi_disponibilidad_consultoria')
+
+    dias_data = [
+        {'num': dia_num, 'nombre': dia_nombre, 'slots': []}
+        for dia_num, dia_nombre in Horario.DIAS_SEMANA
+    ]
+    return render(request, 'clinica/mi_disponibilidad_consultoria.html', {
+        'consultoria': request.user.perfil_consultoria,
+        'terapeuta': request.user.perfil_consultoria,
+        'dias_data': dias_data,
+        'sede_choices': Horario.SEDE_CHOICES,
+        'total': 0,
+    })
+
+
+@login_required
+def descargar_manual_portal_consultoria(request):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+
+    manual = AccesoDirectoPortal.objects.filter(
+        clave=AccesoDirectoPortal.CLAVE_MANUAL_PORTAL_MEDICO,
+        activo=True,
+    ).first()
+    if not manual or not manual.tiene_archivo:
+        messages.error(request, 'El manual del sistema no esta disponible por el momento.')
+        return redirect('portal_consultoria')
+
+    response = HttpResponse(
+        bytes(manual.contenido),
+        content_type=manual.tipo_mime or 'application/octet-stream',
+    )
+    response['Content-Disposition'] = f'attachment; filename="{manual.nombre_archivo or "manual_sistema"}"'
+    return response
+
+
+@login_required
+def recursos_consultoria(request):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+
+        if accion == 'subir':
+            nombre = request.POST.get('nombre', '').strip()
+            descripcion = request.POST.get('descripcion', '').strip()
+            archivo = request.FILES.get('archivo')
+            if not nombre or not archivo:
+                messages.error(request, 'El nombre y el archivo son obligatorios.')
+            else:
+                RecursoPropio.objects.create(
+                    nombre=nombre,
+                    descripcion=descripcion,
+                    nombre_archivo=archivo.name,
+                    tipo_mime=archivo.content_type or 'application/octet-stream',
+                    contenido=archivo.read(),
+                    subido_por=request.user,
+                )
+                messages.success(request, f'"{nombre}" agregado correctamente.')
+            return redirect('recursos_consultoria')
+
+        if accion == 'eliminar':
+            recurso_id = request.POST.get('recurso_id')
+            RecursoPropio.objects.filter(pk=recurso_id, subido_por=request.user).delete()
+            messages.success(request, 'Recurso eliminado.')
+            return redirect('recursos_consultoria')
+
+    recursos = RecursoPropio.objects.filter(subido_por=request.user)
+    return render(request, 'clinica/recursos_consultoria.html', {'recursos': recursos})
+
+
+@login_required
+def descargar_recurso_consultoria(request, recurso_id):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+    recurso = get_object_or_404(RecursoPropio, pk=recurso_id, subido_por=request.user)
+    response = HttpResponse(bytes(recurso.contenido), content_type=recurso.tipo_mime or 'application/octet-stream')
+    response['Content-Disposition'] = f'attachment; filename="{recurso.nombre_archivo}"'
+    return response
+
+
+@login_required
+def crear_bloqueo_consultoria(request):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+    messages.info(request, 'La gestion de bloqueos de Consultoria ya esta separada; falta conectar su modelo propio.')
+    return redirect('portal_consultoria')
+
+
+@login_required
+def eliminar_bloqueo_consultoria(request, bloqueo_id):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+    messages.info(request, 'La gestion de bloqueos de Consultoria ya esta separada; falta conectar su modelo propio.')
+    return redirect('portal_consultoria')
+
+
+@login_required
+def confirmar_nomina_consultoria(request, corte_id):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+    messages.info(request, 'La nomina de Consultoria usara un flujo propio.')
+    return redirect('portal_consultoria')
+
+
+@login_required
+def solicitar_horas_expositor_consultoria(request):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+    messages.info(request, 'La solicitud de horas expositor de Consultoria ya tiene endpoint propio; falta conectar su almacenamiento.')
+    return redirect('portal_consultoria')
+
+
+@login_required
+def reportar_incidente_consultoria(request):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+    messages.info(request, 'El reporte de incidencias de Consultoria ya tiene endpoint propio; falta conectar su almacenamiento.')
+    return redirect('portal_consultoria')
+
+
+@login_required
+def expedientes_consultoria(request):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+    messages.info(request, 'Los expedientes de Consultoria usaran una vista propia.')
+    return redirect('portal_consultoria')
+
+
+@login_required
+def registrar_paciente_consultoria(request):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+    messages.info(request, 'El alta de pacientes de Consultoria usara una vista propia.')
+    return redirect('portal_consultoria')
+
+
+@login_required
+def solicitar_cita_consultoria(request):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+
+    mi_perfil = request.user.perfil_consultoria
+    divisiones = mi_perfil.divisiones.all().order_by('nombre')
+    division_ids = list(divisiones.values_list('id', flat=True))
+    pacientes = (
+        Paciente.objects
+        .filter(
+            Q(division_id__in=division_ids) |
+            Q(empresa__division_id__in=division_ids) |
+            Q(citas__division_id__in=division_ids) |
+            Q(citas_como_adicional__division_id__in=division_ids)
+        )
+        .select_related('division', 'empresa', 'empresa__division')
+        .distinct()
+        .order_by('nombre')
+    )
+    aconsejados = []
+    for paciente in pacientes:
+        division_base = paciente.division or (paciente.empresa.division if paciente.empresa_id and paciente.empresa else None)
+        if not division_base or division_base.id not in division_ids:
+            division_base = (
+                Division.objects
+                .filter(Q(cita__paciente=paciente) | Q(cita__pacientes_adicionales=paciente), id__in=division_ids)
+                .distinct()
+                .order_by('nombre')
+                .first()
+            )
+        aconsejados.append({
+            'paciente': paciente,
+            'division_id': division_base.id if division_base else '',
+            'division_nombre': division_base.nombre if division_base else 'Sin division',
+        })
+    terapeutas = Terapeuta.objects.filter(
+        activo=True, horario__isnull=False
+    ).distinct().order_by('nombre')
+    consultorios = Consultorio.objects.filter(activo=True).order_by('nombre')
+    servicios = Servicio.objects.all().order_by('nombre')
+
+    if request.method == 'POST':
+        paciente_id = request.POST.get('paciente')
+        division_id = request.POST.get('division')
+        terapeuta_id = request.POST.get('terapeuta') or None
+        consultorio_id = request.POST.get('consultorio') or None
+        servicio_id = request.POST.get('servicio') or None
+        fecha_str = request.POST.get('fecha_deseada', '').strip()
+        hora_str = request.POST.get('hora_deseada', '').strip()
+        notas = request.POST.get('notas_consultoria', '').strip()
+        errores = []
+        paciente = None
+        division = None
+        fecha_obj = None
+        hora_obj = None
+
+        try:
+            paciente = pacientes.get(pk=paciente_id)
+        except Exception:
+            errores.append('Selecciona un aconsejado valido.')
+
+        if division_id:
+            try:
+                division = divisiones.get(pk=division_id)
+            except Exception:
+                errores.append('Selecciona una division valida.')
+        elif paciente:
+            division = paciente.division or (paciente.empresa.division if paciente.empresa_id and paciente.empresa else None)
+            if not division or division.id not in division_ids:
+                errores.append('El aconsejado no tiene una division disponible para Consultoria.')
+        else:
+            errores.append('Selecciona una division.')
+
+        if paciente and division:
+            pertenece_a_division = (
+                paciente.division_id == division.id or
+                (paciente.empresa_id and paciente.empresa and paciente.empresa.division_id == division.id) or
+                Cita.objects.filter(
+                    Q(paciente=paciente) | Q(pacientes_adicionales=paciente),
+                    division=division,
+                ).exists()
+            )
+            if not pertenece_a_division:
+                errores.append('El aconsejado seleccionado no pertenece a esa division.')
+
+        if not fecha_str:
+            errores.append('La fecha es requerida.')
+        else:
+            try:
+                fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+            except ValueError:
+                errores.append('Fecha invalida.')
+
+        if hora_str:
+            try:
+                hora_obj = datetime.strptime(hora_str, '%H:%M').time()
+            except ValueError:
+                errores.append('Hora invalida.')
+
+        if errores:
+            for error in errores:
+                messages.error(request, error)
+        else:
+            SolicitudCita.objects.create(
+                paciente_nombre=paciente.nombre,
+                telefono=paciente.telefono or '',
+                fecha_deseada=fecha_obj,
+                hora_deseada=hora_obj,
+                terapeuta_id=terapeuta_id,
+                consultorio_id=consultorio_id,
+                servicio_id=servicio_id,
+                paciente=paciente,
+                empresa=paciente.empresa,
+                division=division,
+                notas_paciente=f'SOLICITADO POR CONSULTORIA ({mi_perfil.nombre}): {notas}' if notas else f'SOLICITADO POR CONSULTORIA ({mi_perfil.nombre})',
+                estado='pendiente',
+            )
+            messages.success(request, f'Solicitud enviada para {paciente.nombre}. Recepcion la confirmara pronto.')
+            return redirect('portal_consultoria')
+
+    return render(request, 'clinica/solicitar_cita_consultoria.html', {
+        'consultoria': mi_perfil,
+        'divisiones': divisiones,
+        'pacientes': pacientes,
+        'aconsejados': aconsejados,
+        'terapeutas': terapeutas,
+        'consultorios': consultorios,
+        'servicios': servicios,
+    })
+
+
+@login_required
+def expediente_consultoria_detalle(request, paciente_id):
+    if not hasattr(request.user, 'perfil_consultoria'):
+        return redirect('home')
+    messages.info(request, 'El detalle de expediente de Consultoria usara una vista propia.')
+    return redirect('portal_consultoria')
 
 @login_required
 def portal_paciente(request):
