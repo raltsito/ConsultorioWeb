@@ -2389,12 +2389,18 @@ def portal_consultoria(request):
     divisiones_consultoria = mi_perfil.divisiones.all().order_by('nombre')
     division_ids = list(divisiones_consultoria.values_list('id', flat=True))
 
+    fecha_inicio_str = request.GET.get('fecha_inicio') or request.GET.get('fecha') or hoy.isoformat()
+    fecha_fin_str = request.GET.get('fecha_fin') or request.GET.get('fecha') or fecha_inicio_str
     try:
-        fecha_filtro = datetime.strptime(
-            request.GET.get('fecha') or hoy.isoformat(), '%Y-%m-%d'
-        ).date()
+        fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
     except (TypeError, ValueError):
-        fecha_filtro = hoy
+        fecha_inicio = hoy
+    try:
+        fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        fecha_fin = fecha_inicio
+    if fecha_fin < fecha_inicio:
+        fecha_inicio, fecha_fin = fecha_fin, fecha_inicio
 
     division_filtro = request.GET.get('division') or ''
     estatus_filtro = request.GET.get('estatus') or ''
@@ -2419,7 +2425,7 @@ def portal_consultoria(request):
         .order_by('nombre')
     )
 
-    citas_filtradas = citas_base.filter(fecha=fecha_filtro)
+    citas_filtradas = citas_base.filter(fecha__gte=fecha_inicio, fecha__lte=fecha_fin)
     if division_filtro:
         citas_filtradas = citas_filtradas.filter(
             Q(division_id=division_filtro) |
@@ -2437,15 +2443,15 @@ def portal_consultoria(request):
             Q(notas__icontains=q_filtro)
         ).distinct()
 
-    citas_hoy = citas_filtradas.order_by('hora', 'paciente__nombre')
-    citas_proximas = citas_base.filter(fecha__gt=fecha_filtro).order_by('fecha', 'hora')[:10]
+    citas_hoy = citas_filtradas.order_by('fecha', 'hora', 'paciente__nombre')
+    citas_proximas = citas_base.filter(fecha__gt=fecha_fin).order_by('fecha', 'hora')[:10]
 
     try:
         semana_offset = int(request.GET.get('semana_offset', 0))
     except (TypeError, ValueError):
         semana_offset = 0
 
-    inicio_semana = fecha_filtro - timedelta(days=fecha_filtro.weekday()) + timedelta(weeks=semana_offset)
+    inicio_semana = fecha_inicio - timedelta(days=fecha_inicio.weekday()) + timedelta(weeks=semana_offset)
     fin_semana = inicio_semana + timedelta(days=6)
     citas_semana = list(
         citas_base.filter(fecha__gte=inicio_semana, fecha__lte=fin_semana)
@@ -2482,7 +2488,8 @@ def portal_consultoria(request):
         'terapeutas_filtro': terapeutas_filtro,
         'estatus_choices': Cita.ESTATUS_CHOICES,
         'filtros_consultoria': {
-            'fecha': fecha_filtro,
+            'fecha_inicio': fecha_inicio,
+            'fecha_fin': fecha_fin,
             'division': division_filtro,
             'estatus': estatus_filtro,
             'terapeuta': terapeuta_filtro,

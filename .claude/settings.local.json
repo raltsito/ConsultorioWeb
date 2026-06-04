@@ -79,7 +79,8 @@
       "PowerShell(Get-ChildItem C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb -Depth 1 | Where-Object { $_.Name -ne 'venv' } | Select-Object Name, PSIsContainer)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\" -Recurse -Directory -Depth 2)",
       "Bash(Select-Object FullName)",
-      "Bash(Format-Table -AutoSize)"
+      "Bash(Format-Table -AutoSize)",
+      "Bash(del *)"
     ]
   }
 }

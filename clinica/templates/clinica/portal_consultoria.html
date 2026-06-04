@@ -45,19 +45,20 @@
         align-items: end;
     }
 
-    .filter-date,
+    .filter-date-start,
+    .filter-date-end,
     .filter-division,
     .filter-therapist,
     .filter-status {
-        grid-column: span 3;
+        grid-column: span 2;
     }
 
     .filter-search {
-        grid-column: span 9;
+        grid-column: span 8;
     }
 
     .filter-actions {
-        grid-column: span 3;
+        grid-column: span 4;
         display: flex;
         gap: .5rem;
     }
@@ -131,7 +132,8 @@
     }
 
     @media (max-width: 992px) {
-        .filter-date,
+        .filter-date-start,
+        .filter-date-end,
         .filter-division,
         .filter-therapist,
         .filter-status,
@@ -155,7 +157,8 @@
             margin-top: 1rem;
         }
 
-        .filter-date,
+        .filter-date-start,
+        .filter-date-end,
         .filter-division,
         .filter-therapist,
         .filter-status,
@@ -240,7 +243,7 @@
                     </h4>
                     <p class="text-muted mb-0">
                         {{ total_citas_filtradas }} cita{{ total_citas_filtradas|pluralize }} encontrada{{ total_citas_filtradas|pluralize }}
-                        para el {{ filtros_consultoria.fecha|date:"d/m/Y" }}.
+                        del {{ filtros_consultoria.fecha_inicio|date:"d/m/Y" }} al {{ filtros_consultoria.fecha_fin|date:"d/m/Y" }}.
                     </p>
                 </div>
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2">
@@ -249,9 +252,14 @@
             </div>
 
             <form method="get" class="consultoria-filters">
-                <div class="filter-date">
-                    <label class="form-label small fw-semibold text-muted mb-1">Fecha</label>
-                    <input type="date" name="fecha" class="form-control" value="{{ filtros_consultoria.fecha|date:'Y-m-d' }}">
+                <div class="filter-date-start">
+                    <label class="form-label small fw-semibold text-muted mb-1">Desde</label>
+                    <input type="date" name="fecha_inicio" class="form-control" value="{{ filtros_consultoria.fecha_inicio|date:'Y-m-d' }}">
+                </div>
+
+                <div class="filter-date-end">
+                    <label class="form-label small fw-semibold text-muted mb-1">Hasta</label>
+                    <input type="date" name="fecha_fin" class="form-control" value="{{ filtros_consultoria.fecha_fin|date:'Y-m-d' }}">
                 </div>
 
                 <div class="filter-division">
@@ -308,6 +316,7 @@
             <article class="consultoria-cita">
                 <div class="cita-hour">
                     <strong>{{ cita.hora|time:"H:i" }}</strong>
+                    <div class="text-muted small fw-semibold mb-2">{{ cita.fecha|date:"d/m/Y" }}</div>
                     {% if cita.estatus == 'si_asistio' %}
                     <span class="badge rounded-pill bg-success px-2 py-1">Asistio</span>
                     {% elif cita.estatus == 'no_asistio' %}
