@@ -145,7 +145,7 @@ guardados y visibles en el expediente / portal del terapeuta.
 ## Fase 5 — Diseño visual y animaciones ✨ (foco principal)
 - [ ] Definir un lenguaje visual propio para "Instrumentos" (paleta acorde a INTRA: turquesa `#26C6DA` / coral `#EF5350`, tarjetas `rounded-4`, sombras suaves)
 - [ ] Pantalla del paciente: experiencia tipo "wizard" — barra de progreso animada, transiciones suaves entre preguntas, microinteracciones en botones/opciones al seleccionar
-- [ ] Animaciones de entrada (fade/slide) consistentes con `base.html` (extender `@keyframes` existentes, sin meter librerías externas pesadas)
+- [ ] Animaciones de entrada (fade/slide) consistentes con `base.html` (extender `@keyframes` existentes, sin meter librerías externas pesadas) nON
 - [ ] Pantalla de agradecimiento con animación de cierre (ej. check animado, confeti sutil, ilustración)
 - [ ] Tarjetas de "Instrumentos" en el portal del terapeuta con hover/elevación, iconografía Bootstrap Icons coherente con el resto (`bi-clipboard2-pulse`, `bi-graph-up`, etc.)
 - [ ] Revisión responsive: el paciente probablemente conteste desde el celular en sala de espera — mobile-first de verdad

@@ -959,6 +959,8 @@
 
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         document.body.addEventListener('click', function(e) {
@@ -1477,7 +1479,13 @@
                     </h5>
                     <p class="mb-0 mt-1" style="font-size:0.78rem;opacity:0.8;" id="srModalSubtitle">—</p>
                 </div>
-                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <button type="button" onclick="exportarSRPDF()" class="btn btn-sm" id="btnExportSR"
+                        style="background:rgba(255,255,255,0.18);color:white;border:1.5px solid rgba(255,255,255,0.35);border-radius:20px;font-size:0.72rem;padding:4px 12px;font-weight:500;transition:all 0.18s;">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+                    </button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
             </div>
 
             <div class="px-3 pt-3 d-flex gap-2 border-bottom pb-3">
@@ -1658,10 +1666,51 @@
             });
     };
 
+    let srLastData = null;
+
+    window.exportarSRPDF = function() {
+        if (!srLastData || srLastData.total === 0) return;
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const periodoLabels = { dia:'Ayer', semana:'Esta semana', mes:'Este mes', todo:'Histórico' };
+        const titulo = 'Pacientes sin reagendar — ' + (periodoLabels[srPeriodo] || srPeriodo);
+        const hoy = new Date().toLocaleDateString('es-MX', { day:'2-digit', month:'long', year:'numeric' });
+
+        doc.setFontSize(16);
+        doc.setTextColor(57, 73, 171);
+        doc.text('Pacientes sin reagendar', 14, 18);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(periodoLabels[srPeriodo] || srPeriodo, 14, 25);
+        doc.text('Generado: ' + hoy, 14, 31);
+
+        doc.setFontSize(9);
+        doc.setTextColor(60);
+        doc.text('Total: ' + srLastData.total + '   Asistieron: ' + srLastData.si + '   No asistieron: ' + srLastData.no, 14, 38);
+
+        const rows = srLastData.pacientes.map(function(p) {
+            return [p.nombre, p.fecha, p.terapeuta !== '—' ? p.terapeuta : '', p.estatus === 'si_asistio' ? 'Asistió' : 'No asistió'];
+        });
+
+        doc.autoTable({
+            startY: 44,
+            head: [['Paciente', 'Fecha', 'Terapeuta', 'Estatus']],
+            body: rows,
+            headStyles: { fillColor: [57, 73, 171], textColor: 255, fontSize: 9, fontStyle: 'bold' },
+            bodyStyles: { fontSize: 8.5 },
+            alternateRowStyles: { fillColor: [245, 247, 255] },
+            columnStyles: { 3: { halign: 'center' } },
+            margin: { left: 14, right: 14 },
+        });
+
+        doc.save('sin-reagendar-' + srPeriodo + '.pdf');
+    };
+
     const HUES = [210,175,140,35,265,328,55,190];
     function avatarColor(id) { return 'hsl(' + HUES[id % HUES.length] + ',55%,50%)'; }
 
     function renderSRList(data) {
+        srLastData = data;
         const body = document.getElementById('srModalBody');
         if (data.total === 0) {
             body.innerHTML = '<div class="text-center py-5"><div class="mb-3" style="font-size:3rem;">✅</div><p class="fw-semibold text-secondary mb-1">¡Todo al día!</p><p class="text-muted small">Todos los pacientes tienen seguimiento agendado.</p></div>';
