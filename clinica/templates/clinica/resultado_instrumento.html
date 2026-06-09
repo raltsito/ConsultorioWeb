@@ -134,6 +134,104 @@
   font-size:.7rem; color:var(--ri-muted); font-weight:600;
 }
 
+/* Raven — series */
+.ri-serie-hd {
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.5rem;
+  padding:.65rem 1.4rem; background:#F0F4F8;
+  border-bottom:1px solid var(--ri-border);
+  border-top:1px solid var(--ri-border);
+}
+.ri-serie-hd:first-of-type { border-top:none; }
+.ri-serie-label {
+  font-family:'Poppins',sans-serif; font-size:.82rem; font-weight:700;
+  color:var(--ri-navy); letter-spacing:.04em;
+}
+.ri-serie-score {
+  font-size:.78rem; font-weight:700; color:var(--ri-teal-dk);
+  background:#E0F7FA; border-radius:999px; padding:.2rem .8rem;
+}
+.ri-serie-disc {
+  display:flex; align-items:center; gap:.4rem; font-size:.74rem;
+}
+.ri-disc-esp { color:var(--ri-muted); }
+.ri-disc-badge {
+  border-radius:999px; padding:.15rem .65rem; font-weight:700; font-size:.72rem;
+}
+.ri-disc-normal   { background:#E8F5E9; color:#2E7D32; }
+.ri-disc-notable  { background:#FFF8E1; color:#F57F17; }
+.ri-disc-sig      { background:#FFEBEE; color:#C62828; }
+.ri-disc-sin_dato { background:#ECEFF1; color:#78909C; }
+
+/* Banner de patrón de respuesta */
+.ri-patron {
+  margin:.75rem 1.4rem; border-radius:12px; padding:.7rem 1rem;
+  display:flex; align-items:center; gap:.6rem; font-size:.82rem; font-weight:600;
+}
+.ri-patron.consistente  { background:#E8F5E9; color:#1B5E20; border:1px solid #A5D6A7; }
+.ri-patron.inconsistente{ background:#FFEBEE; color:#B71C1C; border:1px solid #EF9A9A; }
+.ri-raven-grid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(155px,1fr));
+  gap:.55rem; padding:.9rem 1.4rem;
+}
+.ri-raven-item {
+  display:flex; align-items:center; gap:.55rem;
+  background:#F7FBFC; border:1px solid var(--ri-border);
+  border-radius:10px; padding:.45rem .75rem;
+  font-size:.82rem; transition:transform .12s;
+}
+.ri-raven-item:hover { transform:translateY(-1px); }
+.ri-raven-item.ri-correct { border-color:#A5D6A7; background:#F1FBF2; }
+.ri-raven-item.ri-wrong  { border-color:#FFCDD2; background:#FFF5F5; }
+.ri-raven-item .ri-item-num {
+  font-size:.68rem; font-weight:700; color:var(--ri-muted);
+  min-width:18px;
+}
+.ri-raven-item .ri-item-preg {
+  flex:1; font-size:.76rem; color:var(--ri-navy); font-weight:500;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.ri-raven-item .ri-item-resp {
+  font-size:.8rem; font-weight:700; color:var(--ri-navy);
+  background:#fff; border:1px solid var(--ri-border);
+  border-radius:6px; padding:.1rem .45rem; min-width:28px; text-align:center;
+}
+.ri-raven-item.ri-correct .ri-item-ind { color:#43A047; }
+.ri-raven-item.ri-wrong  .ri-item-ind { color:#E53935; }
+.ri-raven-item .ri-item-ind { font-size:.95rem; flex-shrink:0; }
+
+/* Allport — secciones */
+.ri-allport-sec-hd {
+  padding:.65rem 1.4rem; background:#F0F4F8;
+  border-bottom:1px solid var(--ri-border);
+  font-family:'Poppins',sans-serif; font-size:.82rem; font-weight:700;
+  color:var(--ri-navy); letter-spacing:.03em;
+  display:flex; align-items:center; gap:.5rem;
+}
+.ri-allport-sec-hd .badge-sec {
+  background:var(--ri-blue); color:#fff; border-radius:999px;
+  padding:.15rem .7rem; font-size:.7rem;
+}
+.ri-allport-grupo-hd {
+  padding:.4rem 1.4rem; font-size:.7rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:.07em; color:var(--ri-muted);
+  border-bottom:1px solid var(--ri-border); background:#FAFCFE;
+}
+.ri-allport-sub {
+  display:flex; flex-wrap:wrap; gap:.4rem 1.2rem; align-items:center;
+  padding:.55rem 1.4rem .55rem 2.2rem; border-bottom:1px solid var(--ri-border);
+  font-size:.82rem;
+}
+.ri-allport-sub:last-child { border-bottom:none; }
+.ri-allport-sub .sub-lbl {
+  font-size:.68rem; font-weight:700; color:var(--ri-muted); min-width:18px;
+}
+.ri-allport-sub .sub-preg { flex:1; min-width:200px; color:var(--ri-navy); font-weight:500; }
+.ri-allport-sub .sub-resp {
+  font-weight:700; color:var(--ri-teal-dk); background:#E0F7FA;
+  border-radius:999px; padding:.2rem .75rem; font-size:.8rem;
+}
+.ri-allport-sub .sub-num { font-size:.7rem; color:var(--ri-muted); }
+
 /* Evolución */
 .ri-evo-track {
   position:relative; display:flex; gap:1.1rem; overflow-x:auto;
@@ -165,6 +263,56 @@
 
 .ri-empty { padding:2.25rem; text-align:center; color:var(--ri-muted); font-size:.85rem; }
 .ri-empty i { font-size:1.8rem; opacity:.35; display:block; margin-bottom:.5rem; }
+
+/* ── SCL-90 ── */
+.scl-table { width:100%; border-collapse:collapse; font-size:.8rem; }
+.scl-table th {
+  background:#F0F4F8; color:var(--ri-muted); font-size:.65rem; text-transform:uppercase;
+  letter-spacing:.07em; font-weight:700; padding:.55rem .85rem; text-align:center;
+  border-bottom:2px solid var(--ri-border);
+}
+.scl-table th:first-child { text-align:left; }
+.scl-table td {
+  padding:.5rem .85rem; border-bottom:1px solid var(--ri-border);
+  text-align:center; color:var(--ri-navy); vertical-align:middle;
+}
+.scl-table td:first-child { text-align:left; font-weight:600; }
+.scl-table tr:last-child td { border-bottom:none; }
+.scl-table tr:hover td { background:#F7FBFC; }
+.scl-nivel {
+  border-radius:999px; padding:.15rem .65rem; font-size:.68rem; font-weight:700;
+  white-space:nowrap;
+}
+.scl-normal   { background:#E8F5E9; color:#2E7D32; }
+.scl-leve     { background:#FFF8E1; color:#F57F17; }
+.scl-elevado  { background:#FFEBEE; color:#C62828; }
+
+.scl-chart-wrap { padding:1.4rem; }
+.scl-chart-canvas { width:100% !important; max-height:320px; }
+
+.scl-summary-grid {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:0;
+  border-top:1px solid var(--ri-border);
+}
+.scl-sum-col { padding:1rem 1.4rem; border-right:1px solid var(--ri-border); }
+.scl-sum-col:last-child { border-right:none; }
+.scl-sum-col h3 {
+  font-size:.65rem; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--ri-muted); font-weight:700; margin:0 0 .75rem;
+}
+.scl-sum-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:.28rem 0; border-bottom:1px solid #F0F4F8; font-size:.8rem;
+}
+.scl-sum-row:last-child { border-bottom:none; }
+.scl-sum-lbl { color:var(--ri-muted); }
+.scl-sum-val { font-weight:700; color:var(--ri-navy); }
+.scl-sum-val.pac { color:var(--ri-blue); }
+
+@media(max-width:640px){
+  .scl-summary-grid { grid-template-columns:1fr; }
+  .scl-sum-col { border-right:none; border-bottom:1px solid var(--ri-border); }
+}
 </style>
 
 <!-- ══ HERO ══ -->
@@ -241,7 +389,315 @@
 </div>
 {% endif %}
 
-<!-- ══ RESPUESTAS CRUDAS ══ -->
+<!-- ══ SCL-90: TABLA + GRÁFICA + RESUMEN ══ -->
+{% if scl90_data %}
+<div class="ri-card" style="animation: riSlideUp .4s .05s both;">
+  <div class="ri-card-hd">
+    <div class="ico"><i class="bi bi-bar-chart-fill"></i></div>
+    <h2>Perfil SCL-90 — Escalas clínicas</h2>
+  </div>
+
+  <!-- Tabla de subescalas -->
+  <div style="overflow-x:auto; padding:0 0 .5rem;">
+    <table class="scl-table">
+      <thead>
+        <tr>
+          <th>Escala</th>
+          <th title="Síntomas positivos en la escala">SP</th>
+          <th>Suma</th>
+          <th>Media pac.</th>
+          <th>Media normal</th>
+          <th>DT normal</th>
+          <th>Corte</th>
+          <th>Nivel</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in scl90_data.subescalas %}
+        <tr>
+          <td>{{ s.nombre }}</td>
+          <td>{{ s.sp }}</td>
+          <td>{{ s.suma }}</td>
+          <td><strong>{{ s.media|floatformat:3 }}</strong></td>
+          <td>{{ s.media_norm }}</td>
+          <td>{{ s.ds_norm }}</td>
+          <td>{{ s.corte }}</td>
+          <td>
+            <span class="scl-nivel scl-{{ s.nivel|lower }}">{{ s.nivel }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Gráfica de barras -->
+  <div class="scl-chart-wrap">
+    <canvas id="sclChart" class="scl-chart-canvas"></canvas>
+  </div>
+
+  <!-- Resumen comparativo ISG / SP / MRSP -->
+  <div class="scl-summary-grid">
+    <div class="scl-sum-col">
+      <h3><i class="bi bi-activity me-1"></i>Índice Severidad Global (ISG)</h3>
+      <div class="scl-sum-row">
+        <span class="scl-sum-lbl">Paciente</span>
+        <span class="scl-sum-val pac">{{ scl90_data.summary.isg|floatformat:3 }}
+          <span class="scl-nivel scl-{{ scl90_data.summary.isg_nivel|lower }}" style="margin-left:.3rem">{{ scl90_data.summary.isg_nivel }}</span>
+        </span>
+      </div>
+      <div class="scl-sum-row">
+        <span class="scl-sum-lbl">Pob. Normal</span>
+        <span class="scl-sum-val">0.31 (DS 0.32)</span>
+      </div>
+      <div class="scl-sum-row">
+        <span class="scl-sum-lbl">Pac. Externos</span>
+        <span class="scl-sum-val">1.30 (DS 0.68)</span>
+      </div>
+      <div class="scl-sum-row">
+        <span class="scl-sum-lbl">Pac. Internos</span>
+        <span class="scl-sum-val">1.26 (DS 0.82)</span>
+      </div>
+    </div>
+    <div class="scl-sum-col">
+      <h3><i class="bi bi-list-ol me-1"></i>Total Síntomas Positivos (SP)</h3>
+      <div class="scl-sum-row">
+        <span class="scl-sum-lbl">Paciente</span>
+        <span class="scl-sum-val pac">{{ scl90_data.summary.sp_total }}</span>
+      </div>
+      <div class="scl-sum-row">
+        <span class="scl-sum-lbl">Pob. Normal</span>
+        <span class="scl-sum-val">19.29</span>
+      </div>
+      <div class="scl-sum-row">
+        <span class="scl-sum-lbl">Pac. Externos</span>
+        <span class="scl-sum-val">50.17 (DS 18.98)</span>
+      </div>
+      <div class="scl-sum-row">
+        <span class="scl-sum-lbl">Pac. Internos</span>
+        <span class="scl-sum-val">50.03 (DS 22.40)</span>
+      </div>
+    </div>
+    <div class="scl-sum-col">
+      <h3><i class="bi bi-clipboard2-pulse me-1"></i>Malestar Sint. Positivos (MRSP)</h3>
+      <div class="scl-sum-row">
+        <span class="scl-sum-lbl">Paciente</span>
+        <span class="scl-sum-val pac">{{ scl90_data.summary.mrsp|floatformat:2 }}</span>
+      </div>
+      <div class="scl-sum-row">
+        <span class="scl-sum-lbl">Pob. Normal</span>
+        <span class="scl-sum-val">1.32 (DS 0.42)</span>
+      </div>
+      <div class="scl-sum-row">
+        <span class="scl-sum-lbl">Pac. Externos</span>
+        <span class="scl-sum-val">2.15 (DS 0.73)</span>
+      </div>
+      <div class="scl-sum-row">
+        <span class="scl-sum-lbl">Pac. Internos</span>
+        <span class="scl-sum-val">2.14 (DS 0.58)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  var raw = {{ scl90_data.chart_json|safe }};
+  var ctx = document.getElementById('sclChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: raw.labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Paciente',
+          data: raw.paciente,
+          backgroundColor: 'rgba(13,110,253,0.72)',
+          borderColor: '#0d6efd',
+          borderWidth: 1,
+          borderRadius: 5,
+          order: 4,
+        },
+        {
+          type: 'line',
+          label: 'Corte clínico (M+1DS)',
+          data: raw.corte,
+          borderColor: '#E53935',
+          borderWidth: 2,
+          borderDash: [6,4],
+          pointStyle: 'circle',
+          pointRadius: 4,
+          pointBackgroundColor: '#E53935',
+          fill: false,
+          tension: 0.3,
+          order: 1,
+        },
+        {
+          type: 'line',
+          label: 'Población Normal',
+          data: raw.normal,
+          borderColor: '#78909C',
+          borderWidth: 1.5,
+          borderDash: [3,3],
+          pointStyle: 'circle',
+          pointRadius: 3,
+          pointBackgroundColor: '#78909C',
+          fill: false,
+          tension: 0.3,
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: 'Pac. Externos',
+          data: raw.externos,
+          borderColor: '#FB8C00',
+          borderWidth: 1.5,
+          borderDash: [4,4],
+          pointStyle: 'triangle',
+          pointRadius: 4,
+          pointBackgroundColor: '#FB8C00',
+          fill: false,
+          tension: 0.3,
+          order: 3,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.8,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { font: { size: 11 }, padding: 14 }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(ctx){ return ctx.dataset.label+': '+ctx.parsed.y.toFixed(3); }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          ticks: { font: { size: 11 } }
+        },
+        y: {
+          beginAtZero: true,
+          max: 2.0,
+          ticks: {
+            stepSize: 0.25,
+            font: { size: 10 },
+            callback: function(v){ return v.toFixed(2); }
+          },
+          title: { display: true, text: 'Media de síntomas', font: { size: 11 } },
+          grid: { color: 'rgba(0,0,0,0.06)' }
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+
+<!-- ══ RESPUESTAS — RAVEN ══ -->
+{% if raven_series %}
+<div class="ri-card">
+  <div class="ri-card-hd">
+    <div class="ico"><i class="bi bi-grid-3x3"></i></div>
+    <h2>Respuestas por serie ({{ respuestas|length }} ítems)</h2>
+  </div>
+
+  {% if raven_patron %}
+  <div class="ri-patron {% if 'Inconsistente' in raven_patron %}inconsistente{% else %}consistente{% endif %}">
+    <i class="bi {% if 'Inconsistente' in raven_patron %}bi-exclamation-triangle-fill{% elif 'Sin datos' in raven_patron %}bi-info-circle-fill{% else %}bi-check-circle-fill{% endif %}"></i>
+    <span>Patrón de respuesta: {{ raven_patron }}</span>
+  </div>
+  {% endif %}
+
+  {% for serie in raven_series %}
+  <div class="ri-serie-hd">
+    <span class="ri-serie-label"><i class="bi bi-collection me-1"></i>Serie {{ serie.nombre }}</span>
+    <div class="ri-serie-disc">
+      <span class="ri-disc-esp">Esperado: {{ serie.esperado|default:"—" }}/12</span>
+      <span class="ri-serie-score">Real: {{ serie.correctas }}/12</span>
+      {% if serie.diff is not None %}
+        {% if serie.diff > 0 %}
+          <span class="ri-disc-badge ri-disc-{{ serie.disc_nivel }}">+{{ serie.diff }}</span>
+        {% elif serie.diff < 0 %}
+          <span class="ri-disc-badge ri-disc-{{ serie.disc_nivel }}">{{ serie.diff }}</span>
+        {% else %}
+          <span class="ri-disc-badge ri-disc-normal">0</span>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+  <div class="ri-raven-grid">
+    {% for item in serie.items %}
+    <div class="ri-raven-item {% if item.correcta %}ri-correct{% else %}ri-wrong{% endif %}"
+         style="animation: riSlideUp .3s {% widthratio forloop.counter0 1 30 %}ms both">
+      <span class="ri-item-num">{{ item.resp.pregunta.orden }}</span>
+      <span class="ri-item-preg" title="{{ item.resp.pregunta.texto }}">{{ item.resp.pregunta.texto }}</span>
+      <span class="ri-item-resp">{{ item.resp.valor|default:"—" }}</span>
+      <span class="ri-item-ind">
+        {% if item.correcta %}<i class="bi bi-check-circle-fill"></i>
+        {% else %}<i class="bi bi-x-circle-fill"></i>{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ══ RESPUESTAS — ALLPORT ══ -->
+{% elif allport_sec1 %}
+<div class="ri-card">
+  <div class="ri-card-hd">
+    <div class="ico"><i class="bi bi-list-check"></i></div>
+    <h2>Respuestas del paciente ({{ respuestas|length }} ítems)</h2>
+  </div>
+
+  <!-- Sección 1: comparaciones directas (ítems 1–30) -->
+  <div class="ri-allport-sec-hd">
+    <span class="badge-sec">Sección 1</span>
+    Comparaciones directas — ítems 1–30
+  </div>
+  {% for r in allport_sec1 %}
+  <div class="ri-resp-row" style="animation-delay:{% widthratio forloop.counter0 1 50 %}ms">
+    <span class="preg">{{ r.pregunta.orden }}. {{ r.pregunta.texto }}</span>
+    <span class="resp">{{ r.valor|default:"—" }}</span>
+    {% if r.valor_numerico is not None %}
+      <span class="num-chip">valor: {{ r.valor_numerico|floatformat:"-2" }}</span>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <!-- Sección 2: ordenación de cuatro opciones (16 grupos) -->
+  {% if allport_sec2 %}
+  <div class="ri-allport-sec-hd" style="margin-top:.25rem">
+    <span class="badge-sec">Sección 2</span>
+    Ordenación de valores — 16 grupos de 4 opciones
+  </div>
+  {% for grupo in allport_sec2 %}
+  <div class="ri-allport-grupo-hd">Grupo {{ grupo.num }}</div>
+  {% for r in grupo.items %}
+  <div class="ri-allport-sub">
+    <span class="sub-lbl">{{ r.pregunta.texto|slice:":2"|upper }}</span>
+    <span class="sub-preg">{{ r.pregunta.texto }}</span>
+    <span class="sub-resp">{{ r.valor|default:"—" }}</span>
+    {% if r.valor_numerico is not None %}
+      <span class="sub-num">val: {{ r.valor_numerico|floatformat:"-2" }}</span>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endfor %}
+  {% endif %}
+</div>
+
+<!-- ══ RESPUESTAS CRUDAS (genérico) ══ -->
+{% else %}
 <div class="ri-card">
   <div class="ri-card-hd">
     <div class="ico"><i class="bi bi-list-check"></i></div>
@@ -261,6 +717,7 @@
     <div class="ri-empty"><i class="bi bi-inbox"></i>No se registraron respuestas.</div>
   {% endif %}
 </div>
+{% endif %}
 
 <!-- ══ EVOLUCIÓN ══ -->
 {% if evolucion|length > 1 %}

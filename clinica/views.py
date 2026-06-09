@@ -73,7 +73,9 @@ from .forms import (
     ReporteSesionForm,
 )
 from .services import calcular_nomina_semanal, preview_nomina_semanal, aprobar_corte_semanal, registrar_pago_penalizacion_terapeuta
-from .services_instrumentos import calcular_resultado_instrumento, calcular_raven
+from .services_instrumentos import (calcular_resultado_instrumento, calcular_raven,
+                                     _RAVEN_SERIES, _RAVEN_ESPERADOS,
+                                     _SCL90_REF, _SCL90_REF_SUMMARY)
 #from .utils import sincronizar_google_sheet
 
 def _registrar_actividad(request, accion, categoria, descripcion, terapeuta=None, paciente=None):
@@ -1458,17 +1460,105 @@ def resultado_envio_instrumento(request, paciente_id, envio_id):
         messages.info(request, 'Este instrumento todavía no ha sido respondido por el paciente.')
         return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
 
-    respuestas = envio.respuestas.select_related('pregunta').order_by('pregunta__orden', 'pregunta__id')
+    respuestas = list(envio.respuestas.select_related('pregunta').order_by('pregunta__orden', 'pregunta__id'))
 
     detalle_items = []
     if isinstance(envio.resultado_detalle, dict):
-        detalle_items = list(envio.resultado_detalle.items())
+        # Para Raven, las claves de discrepancia se muestran en los headers de serie;
+        # se excluyen de la grid genérica para evitar duplicación.
+        _excluir_raven = {'Patrón de respuesta'} if envio.instrumento.clave == 'raven' else set()
+        detalle_items = [
+            (k, v) for k, v in envio.resultado_detalle.items()
+            if not k.startswith('Disc. Serie') and k not in _excluir_raven
+        ]
 
     evolucion = list(EnvioInstrumento.objects.filter(
         paciente=paciente,
         instrumento=envio.instrumento,
         estado=EnvioInstrumento.ESTADO_RESPONDIDO,
     ).order_by('respondido_en'))
+
+    # Agrupamiento por instrumento para display enriquecido
+    clave = envio.instrumento.clave
+    raven_series = None
+    allport_sec1 = None
+    allport_sec2 = None
+    scl90_data = None
+
+    if clave == 'raven':
+        resp_by_orden = {r.pregunta.orden: r for r in respuestas}
+        raven_series = []
+        for nombre, start, end in _RAVEN_SERIES:
+            items = []
+            for orden in range(start, end + 1):
+                r = resp_by_orden.get(orden)
+                if r:
+                    es_correcta = bool(r.pregunta.opciones) and any(
+                        opt.get('valor') == r.valor and opt.get('correcta')
+                        for opt in r.pregunta.opciones
+                    )
+                    items.append({'resp': r, 'correcta': es_correcta})
+            raven_series.append({
+                'nombre': nombre,
+                'items': items,
+                'correctas': sum(1 for x in items if x['correcta']),
+            })
+
+        # Análisis de discrepancia: expected vs actual por serie
+        total_correctas = sum(s['correctas'] for s in raven_series)
+        esperados_tuple = _RAVEN_ESPERADOS.get(total_correctas)
+        for i, serie in enumerate(raven_series):
+            esp = esperados_tuple[i] if esperados_tuple else None
+            diff = (serie['correctas'] - esp) if esp is not None else None
+            serie['esperado'] = esp
+            serie['diff'] = diff
+            if diff is None:
+                serie['disc_nivel'] = 'sin_dato'
+            elif abs(diff) >= 3:
+                serie['disc_nivel'] = 'significativa'
+            elif abs(diff) == 2:
+                serie['disc_nivel'] = 'notable'
+            else:
+                serie['disc_nivel'] = 'normal'
+
+    elif clave == 'scl90':
+        det = envio.resultado_detalle or {}
+        subescalas = det.get('_scl90_subescalas')
+        summary    = det.get('_scl90_summary')
+        if subescalas and summary:
+            import json
+            scl90_data = {
+                'subescalas': subescalas,
+                'summary': summary,
+                'ref': _SCL90_REF,
+                'ref_summary': _SCL90_REF_SUMMARY,
+                # Series JSON para Chart.js
+                'chart_json': json.dumps({
+                    'labels': [s['abrev'] for s in subescalas],
+                    'paciente':  [s['media'] for s in subescalas],
+                    'normal':    _SCL90_REF['normal'],
+                    'corte':     [round(s['media_norm'] + s['ds_norm'], 2) for s in subescalas],
+                    'externos':  _SCL90_REF['externos'],
+                }),
+            }
+
+    elif clave == 'allport':
+        allport_sec1 = [r for r in respuestas if r.pregunta.orden <= 30]
+        sec2_items = [r for r in respuestas if r.pregunta.orden >= 31]
+        # Agrupar sección 2 en grupos de 4 sub-ítems (a, b, c, d) por pregunta
+        allport_sec2 = []
+        for i in range(0, len(sec2_items), 4):
+            grupo = sec2_items[i:i + 4]
+            if grupo:
+                allport_sec2.append({'num': i // 4 + 1, 'items': grupo})
+
+    raven_patron = None
+    if clave == 'raven' and isinstance(envio.resultado_detalle, dict):
+        raven_patron = envio.resultado_detalle.get('Patrón de respuesta')
+
+    # Para SCL-90: excluir claves privadas (_) del grid genérico
+    if clave == 'scl90':
+        detalle_items = [(k, v) for k, v in detalle_items if not k.startswith('_')]
 
     return render(request, 'clinica/resultado_instrumento.html', {
         'terapeuta': terapeuta,
@@ -1477,6 +1567,11 @@ def resultado_envio_instrumento(request, paciente_id, envio_id):
         'respuestas': respuestas,
         'detalle_items': detalle_items,
         'evolucion': evolucion,
+        'raven_series': raven_series,
+        'raven_patron': raven_patron,
+        'allport_sec1': allport_sec1,
+        'allport_sec2': allport_sec2,
+        'scl90_data':   scl90_data,
     })
 
 

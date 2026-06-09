@@ -883,3 +883,9 @@ Watching for file changes with StatReloader
 [09/Jun/2026 14:57:05] "GET /api/sin-reagendar/?periodo=semana HTTP/1.1" 200 47
 [09/Jun/2026 14:57:06] "GET /api/sin-reagendar/?periodo=dia HTTP/1.1" 200 47
 [09/Jun/2026 14:57:07] "GET /api/sin-reagendar/?periodo=semana HTTP/1.1" 200 47
+[09/Jun/2026 14:59:52] "GET /api/sin-reagendar/?periodo=todo HTTP/1.1" 200 2932
+[09/Jun/2026 14:59:54] "GET / HTTP/1.1" 200 229246
+[09/Jun/2026 14:59:55] "GET /api/sin-reagendar/?periodo=dia HTTP/1.1" 200 47
+[09/Jun/2026 14:59:58] "GET /api/sin-reagendar/?periodo=semana HTTP/1.1" 200 47
+[09/Jun/2026 15:00:00] "GET /api/sin-reagendar/?periodo=mes HTTP/1.1" 200 47
+[09/Jun/2026 15:00:02] "GET /api/sin-reagendar/?periodo=todo HTTP/1.1" 200 2932
