@@ -1,0 +1,257 @@
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\models.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 12:46:07
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\models.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 12:59:53
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\models.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:00
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\models.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:04
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\models.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:08
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[08/Jun/2026 13:00:16] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:14
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\core\urls.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:39
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:49
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[08/Jun/2026 13:01:01] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:58
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:01:04
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\core\urls.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:18:44
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:18:51
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\core\urls.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:28:55
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\services_instrumentos.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:29:00
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\services_instrumentos.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 15:50:41
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\services_instrumentos.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 16:24:35
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[09/Jun/2026 10:38:35] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 10:38:18
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 10:38:39
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\core\urls.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 10:38:54
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[09/Jun/2026 10:39:21] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:40:06] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:40:51] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:41:37] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:42:22] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:42:25] "GET /portal-medico/instrumentos/ HTTP/1.1" 200 33245
+[09/Jun/2026 10:42:25] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:42:36] "GET /portal-medico/expedientes/ HTTP/1.1" 200 37078
+[09/Jun/2026 10:42:36] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:42:45] "GET /portal-medico/expedientes/3/ HTTP/1.1" 200 91985
+[09/Jun/2026 10:42:45] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:42:54] "GET /portal-medico/expedientes/3/instrumentos/raven/ HTTP/1.1" 200 32123
+[09/Jun/2026 10:42:54] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:43:38] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:44:24] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:45:09] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:45:55] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:46:40] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:47:26] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:48:11] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:48:56] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:49:42] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:50:27] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:51:13] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:51:58] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34

@@ -80,7 +80,15 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\" -Recurse -Directory -Depth 2)",
       "Bash(Select-Object FullName)",
       "Bash(Format-Table -AutoSize)",
-      "Bash(del *)"
+      "Bash(del *)",
+      "Bash(curl -s -o nul -w \"HTTP %{http_code}\\\\n\" http://127.0.0.1:8000/instrumentos/95a6f378-e31d-4b0a-8454-3e93df28c495/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://127.0.0.1:8000/instrumentos/95a6f378-e31d-4b0a-8454-3e93df28c495/)",
+      "Bash(curl *)",
+      "Bash(git log *)",
+      "Bash(ls clinica/management)",
+      "Bash(ls clinica/management/commands)",
+      "Bash(where railway *)",
+      "Bash(railway whoami *)"
     ]
   }
 }

@@ -38,12 +38,16 @@ urlpatterns = [
     path('portal-medico/expedientes/', clinica_views.expedientes_terapeuta, name='expedientes_terapeuta'),
     path('portal-medico/expedientes/nuevo/', clinica_views.registrar_paciente_terapeuta, name='registrar_paciente_terapeuta'),
     path('portal-medico/expedientes/<int:paciente_id>/', clinica_views.expediente_terapeuta_detalle, name='expediente_terapeuta_detalle'),
+    path('portal-medico/expedientes/<int:paciente_id>/instrumentos/generar/', clinica_views.generar_envio_instrumento, name='generar_envio_instrumento'),
+    path('portal-medico/expedientes/<int:paciente_id>/instrumentos/raven/', clinica_views.registrar_resultado_raven, name='registrar_resultado_raven'),
+    path('portal-medico/expedientes/<int:paciente_id>/instrumentos/<int:envio_id>/resultado/', clinica_views.resultado_envio_instrumento, name='resultado_envio_instrumento'),
     path('portal-medico/expedientes-grupales/', clinica_views.expedientes_grupales_lista, name='expedientes_grupales_lista'),
     path('portal-medico/expedientes-grupales/<int:expediente_id>/', clinica_views.expediente_grupal_detalle, name='expediente_grupal_detalle'),
     path('portal-medico/documentos/<int:doc_id>/', clinica_views.descargar_documento, name='descargar_documento'),
     path('portal-medico/bloqueos/nuevo/', clinica_views.crear_bloqueo_terapeuta, name='crear_bloqueo_terapeuta'),
     path('portal-medico/bloqueos/<int:bloqueo_id>/eliminar/', clinica_views.eliminar_bloqueo_terapeuta, name='eliminar_bloqueo_terapeuta'),
     path('portal-medico/confirmar-nomina/<int:corte_id>/', clinica_views.confirmar_nomina_terapeuta, name='confirmar_nomina_terapeuta'),
+    path('portal-medico/instrumentos/', clinica_views.catalogo_instrumentos, name='catalogo_instrumentos'),
     path('portal-medico/recursos/', clinica_views.recursos_propios, name='recursos_propios'),
     path('portal-medico/recursos/<int:recurso_id>/descargar/', clinica_views.descargar_recurso_propio, name='descargar_recurso_propio'),
     path('mi-portal/', clinica_views.portal_paciente, name='portal_paciente'),
@@ -93,6 +97,9 @@ urlpatterns = [
     path('empresa/agendar-cita/', clinica_views.agendar_cita_empresa, name='agendar_cita_empresa'),
     path('empresa/citas-en-proceso/', clinica_views.citas_en_proceso_empresa, name='citas_en_proceso_empresa'),
     path('empresa/terapeutas-paciente/', clinica_views.terapeutas_paciente_empresa, name='terapeutas_paciente_empresa'),
+
+    # Instrumentos — link público para que el paciente conteste (sin login)
+    path('instrumentos/<uuid:token>/', clinica_views.responder_instrumento, name='responder_instrumento'),
 
     # Portal Host
     path('host/', clinica_views.portal_host, name='portal_host'),

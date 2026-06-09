@@ -1,0 +1,289 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<style>
+:root {
+  --ri-teal:    #26C6DA;
+  --ri-teal-dk: #00ACC1;
+  --ri-blue:    #0d6efd;
+  --ri-navy:    #37474F;
+  --ri-muted:   #78909C;
+  --ri-border:  #DDE5EB;
+  --ri-bg:      #F0F4F8;
+}
+
+@keyframes riSlideUp {
+  from { opacity:0; transform:translateY(18px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes riFadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes riPop {
+  from { opacity:0; transform:scale(.85); }
+  to   { opacity:1; transform:scale(1); }
+}
+@keyframes riGrowLine {
+  from { transform:scaleX(0); }
+  to   { transform:scaleX(1); }
+}
+
+.ri-hero {
+  background: linear-gradient(135deg, var(--ri-blue) 0%, #35c2d8 100%);
+  border-radius: 22px;
+  padding: 1.75rem 2rem;
+  margin-bottom: 1.75rem;
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  animation: riFadeIn .45s both;
+}
+.ri-hero::before {
+  content:''; position:absolute; top:-60px; right:-40px;
+  width:200px; height:200px; border-radius:50%;
+  background:rgba(255,255,255,.10); pointer-events:none;
+}
+.ri-hero h1 {
+  font-family:'Poppins',sans-serif; font-weight:700;
+  font-size:1.5rem; margin:0 0 .2rem;
+  position:relative;
+}
+.ri-hero p { margin:0; opacity:.9; font-size:.88rem; position:relative; }
+.ri-hero .ri-meta {
+  display:flex; flex-wrap:wrap; gap:.6rem; margin-top:1rem; position:relative;
+}
+.ri-pill {
+  background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.28);
+  border-radius:999px; padding:.4rem 1rem; font-size:.78rem; font-weight:600;
+}
+.ri-back {
+  border:1.5px solid rgba(255,255,255,.4); color:#fff; background:transparent;
+  border-radius:999px; padding:.45rem 1.05rem; font-size:.8rem;
+  text-decoration:none; transition:all .2s; display:inline-flex; align-items:center; gap:.35rem;
+  position:relative;
+}
+.ri-back:hover { border-color:#fff; background:rgba(255,255,255,.14); color:#fff; }
+
+.ri-card {
+  background:#fff; border:1px solid var(--ri-border); border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.05); margin-bottom:1.5rem; overflow:hidden;
+}
+.ri-card:nth-of-type(1) { animation: riSlideUp .4s .05s both; }
+.ri-card:nth-of-type(2) { animation: riSlideUp .4s .12s both; }
+.ri-card:nth-of-type(3) { animation: riSlideUp .4s .19s both; }
+.ri-card:nth-of-type(4) { animation: riSlideUp .4s .26s both; }
+.ri-card-hd {
+  padding:1.05rem 1.4rem; border-bottom:1px solid var(--ri-border);
+  display:flex; align-items:center; gap:.6rem;
+}
+.ri-card-hd .ico {
+  width:32px; height:32px; border-radius:9px;
+  background:#E0F7FA; color:var(--ri-teal-dk);
+  display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;
+}
+.ri-card-hd h2 {
+  font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
+  color:var(--ri-navy); margin:0;
+}
+
+/* Puntaje */
+.ri-score-wrap { padding:1.6rem; display:flex; flex-wrap:wrap; gap:1.75rem; align-items:center; }
+.ri-score-circle {
+  width:108px; height:108px; border-radius:50%; flex-shrink:0;
+  background:linear-gradient(135deg, var(--ri-blue), #35c2d8);
+  display:flex; align-items:center; justify-content:center; flex-direction:column;
+  color:#fff; box-shadow:0 12px 28px rgba(13,110,253,.32);
+  animation: riPop .5s .15s cubic-bezier(.34,1.56,.64,1) both;
+}
+.ri-score-circle .num { font-family:'Poppins',sans-serif; font-size:1.7rem; font-weight:800; line-height:1; }
+.ri-score-circle .lbl { font-size:.6rem; text-transform:uppercase; letter-spacing:.08em; opacity:.85; margin-top:.15rem; }
+.ri-interpretacion { flex:1; min-width:220px; }
+.ri-interpretacion .titulo {
+  font-size:.65rem; text-transform:uppercase; letter-spacing:.09em; font-weight:700;
+  color:var(--ri-teal-dk); margin-bottom:.35rem;
+}
+.ri-interpretacion p { font-size:.92rem; color:var(--ri-navy); margin:0; line-height:1.55; }
+.ri-sin-baremo {
+  background:#FFF8EC; border:1px solid #FDDEA0; color:#C47A00;
+  border-radius:12px; padding:.85rem 1.1rem; font-size:.82rem; display:flex; gap:.6rem; align-items:flex-start;
+}
+.ri-sin-baremo i { font-size:1.1rem; flex-shrink:0; margin-top:.1rem; }
+
+/* Detalle key-value */
+.ri-detalle-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:.85rem; padding:1.4rem; }
+.ri-detalle-item {
+  background:#F7FBFC; border:1px solid var(--ri-border); border-radius:12px;
+  padding:.75rem .95rem; transition:transform .15s, box-shadow .15s;
+}
+.ri-detalle-item:hover { transform:translateY(-2px); box-shadow:0 8px 18px rgba(0,0,0,.05); }
+.ri-detalle-item .k { font-size:.62rem; text-transform:uppercase; letter-spacing:.08em; color:var(--ri-muted); margin-bottom:.2rem; }
+.ri-detalle-item .v { font-size:.88rem; font-weight:700; color:var(--ri-navy); word-break:break-word; }
+
+/* Respuestas */
+.ri-resp-row {
+  display:flex; flex-wrap:wrap; gap:.5rem 1rem; align-items:baseline;
+  padding:.85rem 1.4rem; border-bottom:1px solid var(--ri-border);
+  opacity:0; transform:translateY(8px);
+  animation: riSlideUp .35s ease forwards;
+}
+.ri-resp-row:last-child { border-bottom:none; }
+.ri-resp-row .preg { font-size:.84rem; color:var(--ri-navy); font-weight:600; flex:1; min-width:240px; }
+.ri-resp-row .resp {
+  font-size:.82rem; color:var(--ri-teal-dk); font-weight:700;
+  background:#E0F7FA; border-radius:999px; padding:.25rem .85rem;
+}
+.ri-resp-row .num-chip {
+  font-size:.7rem; color:var(--ri-muted); font-weight:600;
+}
+
+/* Evolución */
+.ri-evo-track {
+  position:relative; display:flex; gap:1.1rem; overflow-x:auto;
+  padding:1.6rem 1.4rem 1.2rem;
+}
+.ri-evo-track::before {
+  content:''; position:absolute; left:2.4rem; right:2.4rem; top:2.55rem; height:2px;
+  background:var(--ri-border); transform-origin:left center;
+  animation: riGrowLine .7s .2s ease both;
+}
+.ri-evo-pt {
+  position:relative; flex:0 0 auto; width:148px; text-align:center;
+  opacity:0; animation: riSlideUp .4s ease forwards;
+}
+.ri-evo-dot {
+  width:14px; height:14px; border-radius:50%; margin:0 auto .6rem;
+  background:var(--ri-teal); border:3px solid #fff; box-shadow:0 0 0 2px var(--ri-teal);
+  position:relative; z-index:1;
+}
+.ri-evo-pt.is-actual .ri-evo-dot { background:var(--ri-blue); box-shadow:0 0 0 2px var(--ri-blue); }
+.ri-evo-pt .fecha { font-size:.68rem; color:var(--ri-muted); margin-bottom:.2rem; }
+.ri-evo-pt .puntaje { font-family:'Poppins',sans-serif; font-size:1.15rem; font-weight:800; color:var(--ri-navy); }
+.ri-evo-pt.is-actual .puntaje { color:var(--ri-blue); }
+.ri-evo-pt .tag {
+  font-size:.62rem; text-transform:uppercase; letter-spacing:.06em; font-weight:700;
+  color:var(--ri-teal-dk); margin-top:.15rem;
+}
+.ri-evo-pt.is-actual .tag { color:var(--ri-blue); }
+
+.ri-empty { padding:2.25rem; text-align:center; color:var(--ri-muted); font-size:.85rem; }
+.ri-empty i { font-size:1.8rem; opacity:.35; display:block; margin-bottom:.5rem; }
+</style>
+
+<!-- ══ HERO ══ -->
+<div class="ri-hero">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+      <h1><i class="bi bi-clipboard2-pulse-fill me-2"></i>{{ envio.instrumento.nombre }}</h1>
+      <p>Resultado de aplicación — {{ paciente.nombre }}</p>
+    </div>
+    <a href="{% url 'expediente_terapeuta_detalle' paciente.id %}" class="ri-back">
+      <i class="bi bi-arrow-left"></i>Volver al expediente
+    </a>
+  </div>
+  <div class="ri-meta">
+    <span class="ri-pill"><i class="bi bi-calendar-check me-1"></i>Aplicado {{ envio.creado_en|date:"d M Y, H:i" }}</span>
+    <span class="ri-pill"><i class="bi bi-check2-circle me-1"></i>Respondido {{ envio.respondido_en|date:"d M Y, H:i" }}</span>
+    <span class="ri-pill"><i class="bi bi-person-check me-1"></i>Generado por {{ envio.generado_por.get_full_name|default:envio.generado_por.username|default:"—" }}</span>
+  </div>
+</div>
+
+<!-- ══ PUNTAJE / INTERPRETACIÓN ══ -->
+<div class="ri-card">
+  <div class="ri-card-hd">
+    <div class="ico"><i class="bi bi-graph-up-arrow"></i></div>
+    <h2>Puntaje e interpretación automática</h2>
+  </div>
+  {% if envio.puntaje_total is not None or envio.interpretacion %}
+    <div class="ri-score-wrap">
+      {% if envio.puntaje_total is not None %}
+      <div class="ri-score-circle">
+        <span class="num">{{ envio.puntaje_total|floatformat:"-2" }}</span>
+        <span class="lbl">Puntaje total</span>
+      </div>
+      {% endif %}
+      <div class="ri-interpretacion">
+        <div class="titulo">Interpretación</div>
+        {% if envio.interpretacion %}
+          <p>{{ envio.interpretacion|linebreaks }}</p>
+        {% else %}
+          <p style="color:var(--ri-muted);">Aún no hay un texto de interpretación automática para este puntaje — revisa las respuestas crudas para tu análisis clínico.</p>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <div class="p-4">
+      <div class="ri-sin-baremo">
+        <i class="bi bi-info-circle-fill"></i>
+        <div>
+          Este instrumento todavía no tiene una <strong>fórmula de puntuación (baremo)</strong> registrada en el sistema,
+          así que no se calculó un puntaje automático. Las respuestas completas del paciente están disponibles abajo
+          para que las interpretes manualmente — en cuanto se capture el baremo, los resultados futuros (y este, al
+          recalcularse) mostrarán también el puntaje e interpretación automática.
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- ══ DETALLE / DESGLOSE ══ -->
+{% if detalle_items %}
+<div class="ri-card">
+  <div class="ri-card-hd">
+    <div class="ico"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+    <h2>Desglose del resultado</h2>
+  </div>
+  <div class="ri-detalle-grid">
+    {% for clave, valor in detalle_items %}
+    <div class="ri-detalle-item">
+      <div class="k">{{ clave|cut:"_"|title }}</div>
+      <div class="v">{{ valor }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ RESPUESTAS CRUDAS ══ -->
+<div class="ri-card">
+  <div class="ri-card-hd">
+    <div class="ico"><i class="bi bi-list-check"></i></div>
+    <h2>Respuestas del paciente ({{ respuestas|length }})</h2>
+  </div>
+  {% if respuestas %}
+    {% for r in respuestas %}
+    <div class="ri-resp-row" style="animation-delay: {% widthratio forloop.counter0 1 60 %}ms">
+      <span class="preg">{{ forloop.counter }}. {{ r.pregunta.texto }}</span>
+      <span class="resp">{{ r.valor|default:"—" }}</span>
+      {% if r.valor_numerico is not None %}
+        <span class="num-chip">valor: {{ r.valor_numerico|floatformat:"-2" }}</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="ri-empty"><i class="bi bi-inbox"></i>No se registraron respuestas.</div>
+  {% endif %}
+</div>
+
+<!-- ══ EVOLUCIÓN ══ -->
+{% if evolucion|length > 1 %}
+<div class="ri-card">
+  <div class="ri-card-hd">
+    <div class="ico"><i class="bi bi-activity"></i></div>
+    <h2>Evolución — aplicaciones de "{{ envio.instrumento.nombre }}" a {{ paciente.nombre }}</h2>
+  </div>
+  <div class="ri-evo-track">
+    {% for ev in evolucion %}
+    <div class="ri-evo-pt {% if ev.id == envio.id %}is-actual{% endif %}"
+         style="animation-delay: {% widthratio forloop.counter0 1 90 %}ms">
+      <div class="ri-evo-dot"></div>
+      <div class="fecha">{{ ev.respondido_en|date:"d/m/Y" }}</div>
+      <div class="puntaje">{% if ev.puntaje_total is not None %}{{ ev.puntaje_total|floatformat:"-2" }}{% else %}—{% endif %}</div>
+      {% if ev.id == envio.id %}<div class="tag">Esta aplicación</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <div class="px-4 pb-3">
+    <small class="text-muted">Compara cómo ha cambiado el puntaje de {{ paciente.nombre }} en cada aplicación de este instrumento a lo largo del tiempo.</small>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
