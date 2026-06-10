@@ -1,4 +1,5 @@
 import unicodedata
+import uuid
 from datetime import date
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -1479,6 +1480,7 @@ class RegistroActividad(models.Model):
     ACCION_EXPOSITOR_RESPONDIDO = 'expositor_respondido'
     ACCION_INCIDENTE_REPORTADO  = 'incidente_reportado'
     ACCION_INCIDENTE_RESPONDIDO = 'incidente_respondido'
+    ACCION_INSTRUMENTO_ENVIADO  = 'instrumento_enviado'
 
     ACCION_CHOICES = [
         (ACCION_CITA_CREADA,          'Cita agendada'),
@@ -1501,6 +1503,7 @@ class RegistroActividad(models.Model):
         (ACCION_EXPOSITOR_RESPONDIDO, 'Horas expositor respondidas'),
         (ACCION_INCIDENTE_REPORTADO,  'Incidente reportado'),
         (ACCION_INCIDENTE_RESPONDIDO, 'Incidente respondido'),
+        (ACCION_INSTRUMENTO_ENVIADO,  'Instrumento enviado a paciente'),
     ]
 
     CAT_CITA           = 'cita'
@@ -1510,6 +1513,7 @@ class RegistroActividad(models.Model):
     CAT_NOMINA         = 'nomina'
     CAT_SOLICITUD      = 'solicitud'
     CAT_INCIDENTE      = 'incidente'
+    CAT_INSTRUMENTO    = 'instrumento'
 
     CAT_CHOICES = [
         (CAT_CITA,           'Cita'),
@@ -1519,6 +1523,7 @@ class RegistroActividad(models.Model):
         (CAT_NOMINA,         'Nómina'),
         (CAT_SOLICITUD,      'Solicitud'),
         (CAT_INCIDENTE,      'Incidente'),
+        (CAT_INSTRUMENTO,    'Instrumento'),
     ]
 
     _ICONO_MAP = {
@@ -1542,6 +1547,7 @@ class RegistroActividad(models.Model):
         'expositor_respondido': 'bi-mortarboard-fill',
         'incidente_reportado':  'bi-exclamation-triangle-fill',
         'incidente_respondido': 'bi-chat-right-dots-fill',
+        'instrumento_enviado':  'bi-clipboard2-pulse-fill',
     }
 
     usuario            = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='registros_actividad')
@@ -1566,3 +1572,148 @@ class RegistroActividad(models.Model):
         verbose_name        = 'Registro de Actividad'
         verbose_name_plural = 'Registro de Actividades'
         ordering            = ['-timestamp']
+
+
+# ───────────────────────── MÓDULO INSTRUMENTOS ─────────────────────────
+# Encuestas/evaluaciones clínicas que el terapeuta aplica al paciente.
+# Cada instrumento define su propio cuestionario y su propio baremo de
+# puntuación (la fórmula de cálculo vive en clinica/services_instrumentos.py,
+# identificada por el campo `clave` de cada Instrumento).
+
+class Instrumento(models.Model):
+    nombre = models.CharField(max_length=150, verbose_name="Nombre del instrumento")
+    clave = models.SlugField(
+        max_length=50, unique=True,
+        help_text="Identificador interno usado por el motor de puntuación (ej. 'preconsulta', 'scid_ii')."
+    )
+    descripcion = models.TextField(blank=True, verbose_name="Descripción / para qué sirve")
+    instrucciones = models.TextField(
+        blank=True,
+        verbose_name="Instrucciones para el paciente",
+        help_text="Texto que ve el paciente antes de empezar a responder."
+    )
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Instrumento"
+        verbose_name_plural = "Instrumentos"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+
+class PreguntaInstrumento(models.Model):
+    TIPO_OPCION_UNICA    = 'opcion_unica'
+    TIPO_OPCION_MULTIPLE = 'opcion_multiple'
+    TIPO_ESCALA          = 'escala'
+    TIPO_SI_NO           = 'si_no'
+    TIPO_TEXTO_LIBRE     = 'texto_libre'
+    TIPO_IMAGEN_UNICA    = 'imagen_unica'
+
+    TIPO_CHOICES = [
+        (TIPO_OPCION_UNICA,    'Opción única'),
+        (TIPO_OPCION_MULTIPLE, 'Opción múltiple'),
+        (TIPO_ESCALA,          'Escala numérica / Likert'),
+        (TIPO_SI_NO,           'Sí / No'),
+        (TIPO_TEXTO_LIBRE,     'Texto libre'),
+        (TIPO_IMAGEN_UNICA,    'Imagen + opción única'),
+    ]
+
+    instrumento = models.ForeignKey(Instrumento, on_delete=models.CASCADE, related_name='preguntas')
+    orden = models.PositiveIntegerField(default=0)
+    texto = models.TextField(verbose_name="Enunciado de la pregunta")
+    clave = models.CharField(
+        max_length=50, blank=True,
+        help_text="Identificador interno del reactivo para el motor de puntuación (ej. 'item_1')."
+    )
+    tipo_respuesta = models.CharField(max_length=20, choices=TIPO_CHOICES, default=TIPO_OPCION_UNICA)
+    opciones = models.JSONField(
+        blank=True, null=True,
+        help_text="Opciones de respuesta como lista de objetos {valor, etiqueta}. Aplica a opción única/múltiple/escala."
+    )
+    imagen = models.CharField(
+        max_length=400, blank=True, default='',
+        help_text="Ruta relativa a MEDIA_ROOT para la imagen de la pregunta (e.g. 'instrumentos/raven/1.png')."
+    )
+    titulo_grupo = models.CharField(
+        max_length=600, blank=True, default='',
+        help_text="Encabezado de grupo para preguntas que se renderizan en bloque (e.g. ítem Allport S2)."
+    )
+    requerida = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Pregunta de Instrumento"
+        verbose_name_plural = "Preguntas de Instrumento"
+        ordering = ['instrumento', 'orden', 'id']
+
+    def __str__(self):
+        return f"{self.instrumento} #{self.orden}: {self.texto[:60]}"
+
+
+class EnvioInstrumento(models.Model):
+    """Una aplicación concreta de un Instrumento a un Paciente, identificada
+    por un token único que arma el link público que se le comparte al paciente."""
+
+    ESTADO_PENDIENTE  = 'pendiente'
+    ESTADO_RESPONDIDO = 'respondido'
+    ESTADO_CANCELADO  = 'cancelado'
+
+    ESTADO_CHOICES = [
+        (ESTADO_PENDIENTE,  'Pendiente'),
+        (ESTADO_RESPONDIDO, 'Respondido'),
+        (ESTADO_CANCELADO,  'Cancelado'),
+    ]
+
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    instrumento = models.ForeignKey(Instrumento, on_delete=models.PROTECT, related_name='envios')
+    paciente = models.ForeignKey('Paciente', on_delete=models.CASCADE, related_name='instrumentos_enviados')
+    generado_por = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='instrumentos_generados'
+    )
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default=ESTADO_PENDIENTE, db_index=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    respondido_en = models.DateTimeField(null=True, blank=True)
+
+    # Resultado calculado automáticamente con el baremo propio del instrumento
+    puntaje_total = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    interpretacion = models.TextField(
+        blank=True,
+        verbose_name="Interpretación automática",
+        help_text="Texto de interpretación generado por el motor de puntuación a partir del baremo del instrumento."
+    )
+    resultado_detalle = models.JSONField(
+        blank=True, null=True,
+        verbose_name="Detalle del resultado",
+        help_text="Desglose del cálculo (subescalas, rangos, semáforos, etc.) que respalda la interpretación automática."
+    )
+
+    class Meta:
+        verbose_name = "Aplicación de Instrumento"
+        verbose_name_plural = "Aplicaciones de Instrumento"
+        ordering = ['-creado_en']
+
+    def __str__(self):
+        return f"{self.instrumento} → {self.paciente} ({self.get_estado_display()})"
+
+
+class RespuestaInstrumento(models.Model):
+    envio = models.ForeignKey(EnvioInstrumento, on_delete=models.CASCADE, related_name='respuestas')
+    pregunta = models.ForeignKey(PreguntaInstrumento, on_delete=models.CASCADE, related_name='respuestas')
+    valor = models.TextField(blank=True, verbose_name="Respuesta cruda (texto u opción elegida)")
+    valor_numerico = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        verbose_name="Valor numérico",
+        help_text="Equivalente numérico de la respuesta, usado por el motor de puntuación."
+    )
+
+    class Meta:
+        verbose_name = "Respuesta de Instrumento"
+        verbose_name_plural = "Respuestas de Instrumento"
+        unique_together = ('envio', 'pregunta')
+        ordering = ['envio', 'pregunta__orden']
+
+    def __str__(self):
+        return f"{self.envio} — {self.pregunta}: {self.valor[:40]}"

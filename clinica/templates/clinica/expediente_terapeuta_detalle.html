@@ -262,6 +262,30 @@
   font-size:.95rem; flex-shrink:0;
 }
 
+/* ── Instrumentos ───────────────────────────────────────────── */
+.instr-row {
+  display:flex; align-items:center; gap:.75rem;
+  padding:.8rem 1.4rem; border-bottom:1px solid var(--border);
+  transition:background .15s;
+}
+.instr-row:hover { background:#FAFCFE; }
+.instr-row:last-child { border-bottom:none; }
+.instr-ico {
+  width:34px; height:34px; border-radius:8px;
+  background:var(--teal-lt); color:var(--teal-dk);
+  display:flex; align-items:center; justify-content:center;
+  font-size:.95rem; flex-shrink:0;
+}
+.btn-copy-link {
+  background:#F7F9FC; border:1.5px solid var(--border);
+  border-radius:20px; padding:.32rem .8rem;
+  font-size:.72rem; font-weight:700; color:var(--teal-dk);
+  cursor:pointer; transition:all .15s; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:.3rem;
+}
+.btn-copy-link:hover { background:var(--teal-lt); border-color:var(--teal); transform:translateY(-1px); }
+.btn-copy-link.copiado { background:#E8F8F5; color:#009E84; border-color:#A8E6D8; }
+
 /* ── Sidebar sticky ─────────────────────────────────────────── */
 @media (min-width:992px) {
   .sidebar { position:sticky; top:1.5rem; }
@@ -905,6 +929,52 @@
         {% endif %}
       </div>
 
+      <!-- ── INSTRUMENTOS ─────────────────────────────────── -->
+      <div class="xcard">
+        <div class="xcard-hd">
+          <div class="d-flex align-items-center gap-2">
+            <div class="xcard-icon"><i class="bi bi-clipboard2-pulse"></i></div>
+            <span class="xcard-title">Instrumentos</span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            {% if envios_instrumento %}<span class="badge-ok">{{ envios_instrumento|length }}</span>{% endif %}
+            <button type="button"
+                    class="btn btn-sm fw-semibold"
+                    style="background:linear-gradient(135deg,#26C6DA,#00ACC1);color:#fff;border:0;border-radius:8px;font-size:.72rem;padding:.3rem .75rem;"
+                    data-bs-toggle="modal" data-bs-target="#modalAplicarInstrumento">
+              <i class="bi bi-plus-lg me-1"></i>Aplicar instrumento
+            </button>
+          </div>
+        </div>
+        {% if envios_instrumento %}
+          {% for envio in envios_instrumento %}
+          <div class="instr-row">
+            <div class="instr-ico"><i class="bi bi-clipboard2-pulse"></i></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:.85rem;font-weight:600;color:var(--text);">{{ envio.instrumento.nombre }}</div>
+              <div style="font-size:.72rem;color:var(--muted);">
+                {{ envio.creado_en|date:"d/m/Y H:i" }}
+                {% if envio.respondido_en %} · respondido {{ envio.respondido_en|date:"d/m/Y H:i" }}{% endif %}
+              </div>
+            </div>
+            {% if envio.estado == 'respondido' %}
+              <a href="{% url 'resultado_envio_instrumento' paciente.id envio.id %}" class="badge-ok" style="text-decoration:none;">
+                <i class="bi bi-bar-chart-fill me-1"></i>Ver resultado
+              </a>
+            {% elif envio.estado == 'cancelado' %}
+              <span class="badge-warn"><i class="bi bi-x-circle-fill me-1"></i>Cancelado</span>
+            {% else %}
+              <button type="button" class="btn-copy-link" data-link="{{ envio.link_publico }}">
+                <i class="bi bi-clipboard"></i><span class="copy-label">Copiar enlace</span>
+              </button>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% else %}
+        <div class="empty-state"><i class="bi bi-clipboard2-x"></i>Aún no se han aplicado instrumentos</div>
+        {% endif %}
+      </div>
+
       <!-- ── DOCUMENTOS ──────────────────────────────────── -->
       <div class="xcard">
         <div class="xcard-hd">
@@ -1075,5 +1145,279 @@ toggleCondicional('id_intento_suicida',          ['row-intento-hace-cuanto', 'ro
   </div>
 </div>
 
+{# ─── MODAL APLICAR INSTRUMENTO ─── #}
+<div class="modal fade" id="modalAplicarInstrumento" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow" style="border-radius:1.25rem;overflow:hidden;">
+      <div class="modal-header border-0 text-white"
+           style="background:linear-gradient(135deg,#26C6DA,#00ACC1);padding:1.25rem 1.5rem;">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-clipboard2-pulse fs-5"></i>
+          <h5 class="modal-title fw-bold mb-0">Aplicar instrumento — {{ paciente.nombre }}</h5>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+
+        <div id="instrPaso1">
+          <label class="form-label small fw-semibold">Selecciona un instrumento</label>
+          <select id="selectInstrumento" class="form-select mb-3">
+            <option value="">— Elegir instrumento —</option>
+            {% for ins in instrumentos_disponibles %}
+            <option value="{{ ins.id }}" data-clave="{{ ins.clave }}">{{ ins.nombre }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" id="btnGenerarEnlace"
+                  class="btn-teal btn w-100 d-flex align-items-center justify-content-center gap-2" disabled>
+            <i class="bi bi-link-45deg" id="btnInstrIco"></i>
+            <span id="btnInstrLabel">Generar enlace</span>
+          </button>
+          <small id="instrErrorMsg" class="text-danger d-none mt-2 d-block"></small>
+        </div>
+
+        <div id="instrPaso2" class="d-none text-center">
+          <div class="mb-2" style="animation:apareceCheck .4s ease both;">
+            <i class="bi bi-check-circle-fill" style="font-size:2.4rem;color:#00C9A7;"></i>
+          </div>
+          <p class="fw-semibold mb-1" style="color:var(--navy);">¡Enlace generado!</p>
+          <p class="small text-muted mb-3">
+            Cópialo y compártelo con el paciente (WhatsApp, correo, etc.) para que lo conteste desde su navegador — no necesita cuenta ni contraseña.
+          </p>
+          <div class="input-group mb-2">
+            <input type="text" id="inputLinkGenerado" class="form-control" readonly>
+            <button type="button" id="btnCopiarLink" class="btn btn-teal">
+              <i class="bi bi-clipboard me-1"></i>Copiar
+            </button>
+          </div>
+          <small id="copiadoMsg" class="text-success fw-semibold d-none">
+            <i class="bi bi-check2 me-1"></i>¡Copiado al portapapeles!
+          </small>
+          <div class="mt-3">
+            <button type="button" class="btn-ghost" id="btnAplicarOtro">
+              <i class="bi bi-arrow-counterclockwise"></i>Aplicar otro instrumento
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes apareceCheck {
+  from { opacity:0; transform:scale(.6); }
+  to   { opacity:1; transform:scale(1); }
+}
+</style>
+
+<script>
+(function() {
+  const modalEl = document.getElementById('modalAplicarInstrumento');
+  if (!modalEl) return;
+
+  const selectInstrumento = document.getElementById('selectInstrumento');
+  const btnGenerar = document.getElementById('btnGenerarEnlace');
+  const btnIco     = document.getElementById('btnInstrIco');
+  const btnLabel   = document.getElementById('btnInstrLabel');
+  const errorMsg = document.getElementById('instrErrorMsg');
+  const paso1 = document.getElementById('instrPaso1');
+  const paso2 = document.getElementById('instrPaso2');
+  const inputLink = document.getElementById('inputLinkGenerado');
+  const btnCopiar = document.getElementById('btnCopiarLink');
+  const copiadoMsg = document.getElementById('copiadoMsg');
+  const btnOtro = document.getElementById('btnAplicarOtro');
+
+  function getCsrf() {
+    const cookie = document.cookie.split('; ').find(r => r.startsWith('csrftoken='));
+    return cookie ? cookie.split('=')[1] : '';
+  }
+
+  function selectedOpt() {
+    return selectInstrumento.options[selectInstrumento.selectedIndex] || null;
+  }
+
+  function reiniciarModal() {
+    paso2.classList.add('d-none');
+    paso1.classList.remove('d-none');
+    selectInstrumento.value = '';
+    btnGenerar.disabled = true;
+    errorMsg.classList.add('d-none');
+    errorMsg.textContent = '';
+    copiadoMsg.classList.add('d-none');
+    btnIco.className = 'bi bi-link-45deg';
+    btnLabel.textContent = 'Generar enlace';
+  }
+
+  modalEl.addEventListener('hidden.bs.modal', reiniciarModal);
+
+  selectInstrumento.addEventListener('change', function() {
+    const opt = selectedOpt();
+    btnGenerar.disabled = !selectInstrumento.value;
+    if (opt && opt.dataset.url) {
+      // Instrumento de resultado manual (e.g. Raven)
+      btnIco.className = 'bi bi-pencil-square';
+      btnLabel.textContent = 'Registrar resultado';
+    } else {
+      btnIco.className = 'bi bi-link-45deg';
+      btnLabel.textContent = 'Generar enlace';
+    }
+  });
+
+  btnOtro.addEventListener('click', reiniciarModal);
+
+  btnGenerar.addEventListener('click', async function() {
+    if (!selectInstrumento.value) return;
+
+    const opt = selectedOpt();
+    // Raven / instrumentos manuales: navegar a su página de registro
+    if (opt && opt.dataset.url) {
+      window.location.href = opt.dataset.url;
+      return;
+    }
+
+    btnGenerar.disabled = true;
+    errorMsg.classList.add('d-none');
+    btnGenerar.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generando…';
+
+    try {
+      const res = await fetch("{% url 'generar_envio_instrumento' paciente.id %}", {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRFToken': getCsrf(),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'instrumento_id=' + encodeURIComponent(selectInstrumento.value),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'No se pudo generar el enlace.');
+      }
+      inputLink.value = data.link;
+      paso1.classList.add('d-none');
+      paso2.classList.remove('d-none');
+      agregarEnvioALista(data.envio, data.link);
+    } catch (err) {
+      errorMsg.textContent = err.message || 'Ocurrió un error al generar el enlace.';
+      errorMsg.classList.remove('d-none');
+    } finally {
+      btnGenerar.disabled = !selectInstrumento.value;
+      btnGenerar.innerHTML = '<i class="bi bi-link-45deg"></i> Generar enlace';
+    }
+  });
+
+  btnCopiar.addEventListener('click', function() {
+    copiarAlPortapapeles(inputLink.value, function() {
+      copiadoMsg.classList.remove('d-none');
+      setTimeout(() => copiadoMsg.classList.add('d-none'), 2500);
+    });
+  });
+
+  function copiarAlPortapapeles(texto, onOk) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(texto).then(onOk).catch(() => copiarFallback(texto, onOk));
+    } else {
+      copiarFallback(texto, onOk);
+    }
+  }
+
+  function copiarFallback(texto, onOk) {
+    const tmp = document.createElement('textarea');
+    tmp.value = texto;
+    tmp.style.position = 'fixed';
+    tmp.style.opacity = '0';
+    document.body.appendChild(tmp);
+    tmp.select();
+    try { document.execCommand('copy'); onOk(); } catch (e) {}
+    document.body.removeChild(tmp);
+  }
+
+  function agregarEnvioALista(envio, link) {
+    const card = modalEl.closest('body').querySelectorAll('.xcard');
+    let lista = null;
+    card.forEach(function(xc) {
+      if (xc.querySelector('.xcard-title') && xc.querySelector('.xcard-title').textContent.trim() === 'Instrumentos') {
+        lista = xc;
+      }
+    });
+    if (!lista) return;
+
+    const vacio = lista.querySelector('.empty-state');
+    if (vacio) vacio.remove();
+
+    const badge = lista.querySelector('.xcard-hd .badge-ok');
+    if (badge) {
+      badge.textContent = (parseInt(badge.textContent, 10) || 0) + 1;
+    } else {
+      const nuevoBadge = document.createElement('span');
+      nuevoBadge.className = 'badge-ok';
+      nuevoBadge.textContent = '1';
+      lista.querySelector('.xcard-hd .d-flex.align-items-center.gap-2:last-child').prepend(nuevoBadge);
+    }
+
+    const row = document.createElement('div');
+    row.className = 'instr-row';
+    row.style.opacity = '0';
+    row.style.transform = 'translateY(-8px)';
+    row.style.transition = 'opacity .35s ease, transform .35s ease';
+    row.innerHTML =
+      '<div class="instr-ico"><i class="bi bi-clipboard2-pulse"></i></div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-size:.85rem;font-weight:600;color:var(--text);">' + envio.instrumento + '</div>' +
+        '<div style="font-size:.72rem;color:var(--muted);">' + envio.creado_en + '</div>' +
+      '</div>' +
+      '<button type="button" class="btn-copy-link" data-link="' + link + '">' +
+        '<i class="bi bi-clipboard"></i><span class="copy-label">Copiar enlace</span>' +
+      '</button>';
+
+    const primerHijo = lista.querySelector('.instr-row');
+    if (primerHijo) {
+      lista.insertBefore(row, primerHijo);
+    } else {
+      lista.appendChild(row);
+    }
+    requestAnimationFrame(function() {
+      row.style.opacity = '1';
+      row.style.transform = 'translateY(0)';
+    });
+  }
+})();
+
+// Copiar enlace desde la lista de instrumentos enviados
+document.addEventListener('click', function(ev) {
+  const btn = ev.target.closest('.btn-copy-link');
+  if (!btn) return;
+  const link = btn.getAttribute('data-link');
+  if (!link) return;
+
+  const restaurar = btn.querySelector('.copy-label') ? btn.querySelector('.copy-label').textContent : 'Copiar enlace';
+  function marcarCopiado() {
+    btn.classList.add('copiado');
+    const lbl = btn.querySelector('.copy-label');
+    if (lbl) lbl.textContent = '¡Copiado!';
+    setTimeout(function() {
+      btn.classList.remove('copiado');
+      if (lbl) lbl.textContent = restaurar;
+    }, 2000);
+  }
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(link).then(marcarCopiado).catch(function() {
+      const tmp = document.createElement('textarea');
+      tmp.value = link; tmp.style.position = 'fixed'; tmp.style.opacity = '0';
+      document.body.appendChild(tmp); tmp.select();
+      try { document.execCommand('copy'); marcarCopiado(); } catch (e) {}
+      document.body.removeChild(tmp);
+    });
+  } else {
+    const tmp = document.createElement('textarea');
+    tmp.value = link; tmp.style.position = 'fixed'; tmp.style.opacity = '0';
+    document.body.appendChild(tmp); tmp.select();
+    try { document.execCommand('copy'); marcarCopiado(); } catch (e) {}
+    document.body.removeChild(tmp);
+  }
+});
+</script>
 
 {% endblock %}

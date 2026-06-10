@@ -5,11 +5,12 @@ import csv
 import io
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 #Herramientas base de Django
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
+from django.db import transaction
 from django.db.models import Q, Sum, Count
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -57,6 +58,7 @@ from .models import (
 from .models import CorteSemanal, LineaNomina, BonoExtra
 from .models import NotaRecepcion, ReaccionNota, ComentarioNota
 from .models import PerfilCatalogo
+from .models import Instrumento, PreguntaInstrumento, EnvioInstrumento, RespuestaInstrumento
 from .forms import (
     AperturaExpedienteForm,
     AperturaExpedienteGrupalForm,
@@ -72,6 +74,9 @@ from .forms import (
     ReporteSesionForm,
 )
 from .services import calcular_nomina_semanal, preview_nomina_semanal, aprobar_corte_semanal, registrar_pago_penalizacion_terapeuta
+from .services_instrumentos import (calcular_resultado_instrumento, calcular_raven,
+                                     _RAVEN_SERIES, _RAVEN_ESPERADOS,
+                                     _SCL90_REF, _SCL90_REF_SUMMARY)
 #from .utils import sincronizar_google_sheet
 
 def _registrar_actividad(request, accion, categoria, descripcion, terapeuta=None, paciente=None):
@@ -1347,6 +1352,13 @@ def expediente_terapeuta_detalle(request, paciente_id):
         .order_by('-fecha', '-hora')
     )
 
+    instrumentos_disponibles = Instrumento.objects.filter(activo=True).order_by('nombre')
+    envios_instrumento = EnvioInstrumento.objects.filter(
+        paciente=paciente
+    ).select_related('instrumento').order_by('-creado_en')
+    for envio in envios_instrumento:
+        envio.link_publico = request.build_absolute_uri(reverse('responder_instrumento', args=[envio.token]))
+
     return render(request, 'clinica/expediente_terapeuta_detalle.html', {
         'terapeuta': terapeuta,
         'paciente': paciente,
@@ -1363,7 +1375,264 @@ def expediente_terapeuta_detalle(request, paciente_id):
         'fecha_hoy': hoy,
         'apertura': apertura,
         'form_apertura': form_apertura,
+        'instrumentos_disponibles': instrumentos_disponibles,
+        'envios_instrumento': envios_instrumento,
     })
+
+@login_required
+def catalogo_instrumentos(request):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    q = request.GET.get('q', '').strip()
+    instrumentos = Instrumento.objects.filter(activo=True).annotate(
+        total_preguntas=Count('preguntas')
+    ).order_by('nombre')
+    if q:
+        instrumentos = instrumentos.filter(Q(nombre__icontains=q) | Q(descripcion__icontains=q))
+
+    return render(request, 'clinica/catalogo_instrumentos.html', {
+        'instrumentos': instrumentos,
+        'q': q,
+        'total_catalogo': Instrumento.objects.filter(activo=True).count(),
+    })
+
+
+@login_required
+def generar_envio_instrumento(request, paciente_id):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido.'}, status=405)
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return JsonResponse({'ok': False, 'error': 'No autorizado.'}, status=403)
+
+    terapeuta = request.user.perfil_terapeuta
+    if paciente_id not in _pacientes_ids_terapeuta(terapeuta):
+        return JsonResponse({'ok': False, 'error': 'Solo puedes generar enlaces para pacientes agendados contigo.'}, status=403)
+
+    paciente = get_object_or_404(Paciente, id=paciente_id)
+    instrumento = get_object_or_404(Instrumento, id=request.POST.get('instrumento_id'), activo=True)
+
+    envio = EnvioInstrumento.objects.create(
+        instrumento=instrumento,
+        paciente=paciente,
+        generado_por=request.user,
+    )
+    link = request.build_absolute_uri(reverse('responder_instrumento', args=[envio.token]))
+
+    _registrar_actividad(
+        request,
+        accion=RegistroActividad.ACCION_INSTRUMENTO_ENVIADO,
+        categoria=RegistroActividad.CAT_INSTRUMENTO,
+        descripcion=f'{terapeuta.nombre} generó un enlace de "{instrumento.nombre}" para {paciente.nombre}.',
+        terapeuta=terapeuta,
+        paciente=paciente,
+    )
+
+    return JsonResponse({
+        'ok': True,
+        'link': link,
+        'envio': {
+            'id': envio.id,
+            'instrumento': instrumento.nombre,
+            'estado': envio.estado,
+            'estado_display': envio.get_estado_display(),
+            'creado_en': envio.creado_en.strftime('%d/%m/%Y %H:%M'),
+        },
+    })
+
+
+@login_required
+def resultado_envio_instrumento(request, paciente_id, envio_id):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    terapeuta = request.user.perfil_terapeuta
+    if paciente_id not in _pacientes_ids_terapeuta(terapeuta):
+        messages.error(request, 'Solo puedes ver instrumentos de pacientes agendados contigo.')
+        return redirect('expedientes_terapeuta')
+
+    paciente = get_object_or_404(Paciente, id=paciente_id)
+    envio = get_object_or_404(
+        EnvioInstrumento.objects.select_related('instrumento', 'paciente'),
+        id=envio_id, paciente=paciente,
+    )
+
+    if envio.estado != EnvioInstrumento.ESTADO_RESPONDIDO:
+        messages.info(request, 'Este instrumento todavía no ha sido respondido por el paciente.')
+        return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
+
+    respuestas = list(envio.respuestas.select_related('pregunta').order_by('pregunta__orden', 'pregunta__id'))
+
+    detalle_items = []
+    if isinstance(envio.resultado_detalle, dict):
+        # Para Raven, las claves de discrepancia se muestran en los headers de serie;
+        # se excluyen de la grid genérica para evitar duplicación.
+        _excluir_raven = {'Patrón de respuesta'} if envio.instrumento.clave == 'raven' else set()
+        detalle_items = [
+            (k, v) for k, v in envio.resultado_detalle.items()
+            if not k.startswith('Disc. Serie') and k not in _excluir_raven
+        ]
+
+    evolucion = list(EnvioInstrumento.objects.filter(
+        paciente=paciente,
+        instrumento=envio.instrumento,
+        estado=EnvioInstrumento.ESTADO_RESPONDIDO,
+    ).order_by('respondido_en'))
+
+    # Agrupamiento por instrumento para display enriquecido
+    clave = envio.instrumento.clave
+    raven_series = None
+    allport_sec1 = None
+    allport_sec2 = None
+    scl90_data = None
+
+    if clave == 'raven':
+        resp_by_orden = {r.pregunta.orden: r for r in respuestas}
+        raven_series = []
+        for nombre, start, end in _RAVEN_SERIES:
+            items = []
+            for orden in range(start, end + 1):
+                r = resp_by_orden.get(orden)
+                if r:
+                    es_correcta = bool(r.pregunta.opciones) and any(
+                        opt.get('valor') == r.valor and opt.get('correcta')
+                        for opt in r.pregunta.opciones
+                    )
+                    items.append({'resp': r, 'correcta': es_correcta})
+            raven_series.append({
+                'nombre': nombre,
+                'items': items,
+                'correctas': sum(1 for x in items if x['correcta']),
+            })
+
+        # Análisis de discrepancia: expected vs actual por serie
+        total_correctas = sum(s['correctas'] for s in raven_series)
+        esperados_tuple = _RAVEN_ESPERADOS.get(total_correctas)
+        for i, serie in enumerate(raven_series):
+            esp = esperados_tuple[i] if esperados_tuple else None
+            diff = (serie['correctas'] - esp) if esp is not None else None
+            serie['esperado'] = esp
+            serie['diff'] = diff
+            if diff is None:
+                serie['disc_nivel'] = 'sin_dato'
+            elif abs(diff) >= 3:
+                serie['disc_nivel'] = 'significativa'
+            elif abs(diff) == 2:
+                serie['disc_nivel'] = 'notable'
+            else:
+                serie['disc_nivel'] = 'normal'
+
+    elif clave == 'scl90':
+        det = envio.resultado_detalle or {}
+        subescalas = det.get('_scl90_subescalas')
+        summary    = det.get('_scl90_summary')
+        if subescalas and summary:
+            import json
+            scl90_data = {
+                'subescalas': subescalas,
+                'summary': summary,
+                'ref': _SCL90_REF,
+                'ref_summary': _SCL90_REF_SUMMARY,
+                # Series JSON para Chart.js
+                'chart_json': json.dumps({
+                    'labels': [s['abrev'] for s in subescalas],
+                    'paciente':  [s['media'] for s in subescalas],
+                    'normal':    _SCL90_REF['normal'],
+                    'corte':     [round(s['media_norm'] + s['ds_norm'], 2) for s in subescalas],
+                    'externos':  _SCL90_REF['externos'],
+                }),
+            }
+
+    elif clave == 'allport':
+        allport_sec1 = [r for r in respuestas if r.pregunta.orden <= 30]
+        sec2_items = [r for r in respuestas if r.pregunta.orden >= 31]
+        # Agrupar sección 2 en grupos de 4 sub-ítems (a, b, c, d) por pregunta
+        allport_sec2 = []
+        for i in range(0, len(sec2_items), 4):
+            grupo = sec2_items[i:i + 4]
+            if grupo:
+                allport_sec2.append({'num': i // 4 + 1, 'items': grupo})
+
+    raven_patron = None
+    if clave == 'raven' and isinstance(envio.resultado_detalle, dict):
+        raven_patron = envio.resultado_detalle.get('Patrón de respuesta')
+
+    # Para SCL-90: excluir claves privadas (_) del grid genérico
+    if clave == 'scl90':
+        detalle_items = [(k, v) for k, v in detalle_items if not k.startswith('_')]
+
+    return render(request, 'clinica/resultado_instrumento.html', {
+        'terapeuta': terapeuta,
+        'paciente': paciente,
+        'envio': envio,
+        'respuestas': respuestas,
+        'detalle_items': detalle_items,
+        'evolucion': evolucion,
+        'raven_series': raven_series,
+        'raven_patron': raven_patron,
+        'allport_sec1': allport_sec1,
+        'allport_sec2': allport_sec2,
+        'scl90_data':   scl90_data,
+    })
+
+
+@login_required
+def registrar_resultado_raven(request, paciente_id):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return redirect('home')
+
+    terapeuta = request.user.perfil_terapeuta
+    if paciente_id not in _pacientes_ids_terapeuta(terapeuta):
+        messages.error(request, 'Solo puedes registrar resultados de pacientes agendados contigo.')
+        return redirect('expedientes_terapeuta')
+
+    paciente = get_object_or_404(Paciente, id=paciente_id)
+    instrumento = get_object_or_404(Instrumento, clave='raven', activo=True)
+
+    if request.method == 'POST':
+        raw_str = request.POST.get('puntaje_raw', '').strip()
+        try:
+            puntaje_raw = int(raw_str)
+            if not (0 <= puntaje_raw <= 60):
+                raise ValueError
+        except ValueError:
+            messages.error(request, 'El puntaje debe ser un número entero entre 0 y 60.')
+            return render(request, 'clinica/registrar_resultado_raven.html', {
+                'terapeuta': terapeuta, 'paciente': paciente, 'puntaje_raw': raw_str,
+            })
+
+        resultado = calcular_raven(puntaje_raw)
+        now = timezone.now()
+        envio = EnvioInstrumento.objects.create(
+            instrumento=instrumento,
+            paciente=paciente,
+            generado_por=request.user,
+            estado=EnvioInstrumento.ESTADO_RESPONDIDO,
+            respondido_en=now,
+            puntaje_total=resultado['puntaje_total'],
+            interpretacion=resultado['interpretacion'],
+            resultado_detalle=resultado['detalle'],
+        )
+
+        _registrar_actividad(
+            request,
+            accion=RegistroActividad.ACCION_INSTRUMENTO_ENVIADO,
+            categoria=RegistroActividad.CAT_INSTRUMENTO,
+            descripcion=(
+                f'{terapeuta.nombre} registró resultado del Raven SPM '
+                f'(puntaje {puntaje_raw}) para {paciente.nombre}.'
+            ),
+            terapeuta=terapeuta,
+            paciente=paciente,
+        )
+
+        return redirect('resultado_envio_instrumento', paciente_id=paciente.id, envio_id=envio.id)
+
+    return render(request, 'clinica/registrar_resultado_raven.html', {
+        'terapeuta': terapeuta,
+        'paciente': paciente,
+    })
+
 
 @login_required
 def descargar_documento(request, doc_id):
@@ -5691,3 +5960,144 @@ def api_disponibilidad_semanal(request):
             } for h in horarios],
         })
     return JsonResponse(data, safe=False)
+
+
+# ───────────────────────── INSTRUMENTOS — RESPUESTA PÚBLICA ─────────────────────────
+
+def _agrupar_preguntas_display(preguntas):
+    """Agrupa preguntas con el mismo `clave` no vacío en bloques de display.
+
+    Retorna lista de dicts:
+      {'tipo': 'pregunta', 'pregunta': p}
+      {'tipo': 'grupo', 'clave': '...', 'titulo': '...', 'preguntas': [...]}
+    """
+    items = []
+    seen_clave = {}  # clave → index en items (para agrupar)
+    for p in preguntas:
+        clave = (p.clave or '').strip()
+        if clave and clave in seen_clave:
+            items[seen_clave[clave]]['preguntas'].append(p)
+        elif clave:
+            idx = len(items)
+            items.append({
+                'tipo': 'grupo',
+                'clave': clave,
+                'titulo': p.titulo_grupo or '',
+                'preguntas': [p],
+            })
+            seen_clave[clave] = idx
+        else:
+            items.append({'tipo': 'pregunta', 'pregunta': p})
+    return items
+
+
+def _resolver_opcion_instrumento(pregunta, valor_recibido):
+    """Busca, dentro de las opciones de la pregunta, la que coincide con el valor
+    recibido del formulario y regresa (texto_legible, valor_numerico_para_el_motor)."""
+    if not valor_recibido:
+        return "", None
+
+    for opcion in (pregunta.opciones or []):
+        if str(opcion.get("valor")) == str(valor_recibido):
+            etiqueta = opcion.get("etiqueta") or str(valor_recibido)
+            try:
+                numerico = Decimal(str(opcion.get("valor")))
+            except (InvalidOperation, TypeError, ValueError):
+                numerico = None
+            return etiqueta, numerico
+
+    return valor_recibido, None
+
+
+def responder_instrumento(request, token):
+    """Vista pública (sin login): el paciente abre su link único y contesta el
+    instrumento. Se identifica solo por el token UUID — nadie más puede adivinarlo."""
+    envio = get_object_or_404(
+        EnvioInstrumento.objects.select_related("instrumento", "paciente"),
+        token=token,
+    )
+    instrumento = envio.instrumento
+
+    if envio.estado == EnvioInstrumento.ESTADO_RESPONDIDO:
+        return render(request, "clinica/instrumento_publico.html", {
+            "envio": envio, "instrumento": instrumento, "pantalla": "ya_respondido",
+        })
+
+    if envio.estado == EnvioInstrumento.ESTADO_CANCELADO:
+        return render(request, "clinica/instrumento_publico.html", {
+            "envio": envio, "instrumento": instrumento, "pantalla": "cancelado",
+        })
+
+    preguntas = list(instrumento.preguntas.all().order_by("orden", "id"))
+
+    if request.method == "POST":
+        nuevas_respuestas = []
+        faltantes = []
+
+        for pregunta in preguntas:
+            campo = f"pregunta_{pregunta.id}"
+
+            if pregunta.tipo_respuesta == PreguntaInstrumento.TIPO_OPCION_MULTIPLE:
+                seleccionados = request.POST.getlist(campo)
+                etiquetas, numericos = [], []
+                for valor_crudo in seleccionados:
+                    etiqueta, numerico = _resolver_opcion_instrumento(pregunta, valor_crudo)
+                    etiquetas.append(etiqueta)
+                    if numerico is not None:
+                        numericos.append(numerico)
+                valor_legible = ", ".join(etiquetas)
+                valor_numerico = sum(numericos, Decimal("0")) if numericos else None
+
+            elif pregunta.tipo_respuesta == PreguntaInstrumento.TIPO_TEXTO_LIBRE:
+                valor_legible = request.POST.get(campo, "").strip()
+                valor_numerico = None
+
+            else:
+                valor_crudo = request.POST.get(campo, "").strip()
+                valor_legible, valor_numerico = _resolver_opcion_instrumento(pregunta, valor_crudo)
+
+            if pregunta.requerida and not valor_legible:
+                faltantes.append(pregunta.id)
+                continue
+
+            if valor_legible:
+                nuevas_respuestas.append(RespuestaInstrumento(
+                    envio=envio, pregunta=pregunta,
+                    valor=valor_legible, valor_numerico=valor_numerico,
+                ))
+
+        if faltantes:
+            import json as _json
+            valores_previos = _json.dumps({
+                str(p.id): request.POST.get(f"pregunta_{p.id}", "")
+                for p in preguntas
+                if request.POST.get(f"pregunta_{p.id}", "")
+            })
+            return render(request, "clinica/instrumento_publico.html", {
+                "envio": envio, "instrumento": instrumento,
+                "preguntas": preguntas,
+                "display_items": _agrupar_preguntas_display(preguntas),
+                "pantalla": "formulario",
+                "error": "Por favor responde todas las preguntas obligatorias antes de continuar.",
+                "faltantes": set(faltantes),
+                "valores_previos": valores_previos,
+            })
+
+        with transaction.atomic():
+            RespuestaInstrumento.objects.filter(envio=envio).delete()
+            RespuestaInstrumento.objects.bulk_create(nuevas_respuestas)
+            envio.estado = EnvioInstrumento.ESTADO_RESPONDIDO
+            envio.respondido_en = timezone.now()
+            calcular_resultado_instrumento(envio)
+            envio.save()
+
+        return render(request, "clinica/instrumento_publico.html", {
+            "envio": envio, "instrumento": instrumento, "pantalla": "gracias",
+        })
+
+    return render(request, "clinica/instrumento_publico.html", {
+        "envio": envio, "instrumento": instrumento,
+        "preguntas": preguntas,
+        "display_items": _agrupar_preguntas_display(preguntas),
+        "pantalla": "formulario",
+    })

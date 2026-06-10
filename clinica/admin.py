@@ -2,6 +2,7 @@ from django import forms
 from django.contrib import admin
 from .models import AccesoDirectoPortal, Consultoria, Empresa, Host, HostChecklistTask, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta, RecursoPropio
 from .models import Horario
+from .models import Instrumento, PreguntaInstrumento, EnvioInstrumento, RespuestaInstrumento
 
 admin.site.register(Terapeuta)
 admin.site.register(Consultorio)
@@ -130,6 +131,52 @@ class AccesoDirectoPortalAdmin(admin.ModelAdmin):
         if obj and obj.nombre_archivo:
             fieldsets.append(('Archivo actual', {'fields': ('resumen_archivo',)}))
         return fieldsets
+
+
+class PreguntaInstrumentoInline(admin.TabularInline):
+    model = PreguntaInstrumento
+    extra = 1
+    fields = ('orden', 'texto', 'clave', 'tipo_respuesta', 'opciones', 'requerida')
+    ordering = ('orden', 'id')
+
+
+@admin.register(Instrumento)
+class InstrumentoAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'clave', 'activo', 'total_preguntas', 'creado_en')
+    list_filter = ('activo',)
+    search_fields = ('nombre', 'clave', 'descripcion')
+    prepopulated_fields = {'clave': ('nombre',)}
+    inlines = [PreguntaInstrumentoInline]
+
+    @admin.display(description='Preguntas')
+    def total_preguntas(self, obj):
+        return obj.preguntas.count()
+
+
+class RespuestaInstrumentoInline(admin.TabularInline):
+    model = RespuestaInstrumento
+    extra = 0
+    fields = ('pregunta', 'valor', 'valor_numerico')
+    readonly_fields = ('pregunta', 'valor', 'valor_numerico')
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(EnvioInstrumento)
+class EnvioInstrumentoAdmin(admin.ModelAdmin):
+    list_display = ('instrumento', 'paciente', 'estado', 'puntaje_total', 'creado_en', 'respondido_en')
+    list_filter = ('estado', 'instrumento')
+    search_fields = ('paciente__nombre', 'instrumento__nombre', 'token')
+    readonly_fields = (
+        'token', 'instrumento', 'paciente', 'generado_por', 'creado_en', 'respondido_en',
+        'puntaje_total', 'interpretacion', 'resultado_detalle',
+    )
+    inlines = [RespuestaInstrumentoInline]
+
+    def has_add_permission(self, request):
+        return False
 
 
 @admin.register(RecursoPropio)

@@ -1,0 +1,175 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<style>
+:root {
+  --ci-teal:    #26C6DA;
+  --ci-teal-dk: #00ACC1;
+  --ci-blue:    #0d6efd;
+  --ci-navy:    #37474F;
+  --ci-muted:   #78909C;
+  --ci-border:  #DDE5EB;
+}
+
+@keyframes ciFadeIn  { from { opacity:0; } to { opacity:1; } }
+@keyframes ciSlideUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+@keyframes ciPulse   { 0%,100% { box-shadow:0 0 0 0 rgba(13,110,253,.35); } 50% { box-shadow:0 0 0 8px rgba(13,110,253,0); } }
+
+.ci-hero {
+  background: linear-gradient(135deg, var(--ci-blue) 0%, #35c2d8 100%);
+  border-radius: 22px;
+  padding: 2rem 2.25rem;
+  margin-bottom: 1.75rem;
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  animation: ciFadeIn .45s both;
+}
+.ci-hero::before {
+  content:''; position:absolute; top:-70px; right:-50px;
+  width:220px; height:220px; border-radius:50%;
+  background:rgba(255,255,255,.10); pointer-events:none;
+}
+.ci-hero::after {
+  content:''; position:absolute; bottom:-50px; left:32%;
+  width:140px; height:140px; border-radius:50%;
+  background:rgba(255,255,255,.05); pointer-events:none;
+}
+.ci-hero h1 {
+  font-family:'Poppins',sans-serif; font-weight:700; font-size:1.6rem;
+  margin:0 0 .3rem; position:relative;
+}
+.ci-hero p { margin:0; opacity:.9; font-size:.92rem; max-width:640px; position:relative; }
+.ci-hero-row { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; position:relative; }
+.ci-back {
+  border:1.5px solid rgba(255,255,255,.4); color:#fff; background:transparent;
+  border-radius:999px; padding:.45rem 1.05rem; font-size:.8rem;
+  text-decoration:none; transition:all .2s; display:inline-flex; align-items:center; gap:.35rem;
+  flex-shrink:0;
+}
+.ci-back:hover { border-color:#fff; background:rgba(255,255,255,.14); color:#fff; }
+.ci-count-pill {
+  background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.28);
+  border-radius:999px; padding:.45rem 1.1rem; font-size:.82rem; font-weight:700;
+  display:inline-flex; align-items:center; gap:.4rem; margin-top:1rem; position:relative;
+}
+
+/* Buscador */
+.ci-search-wrap { margin-bottom:1.6rem; animation: ciSlideUp .4s .05s both; }
+.ci-search {
+  position:relative; max-width:420px;
+}
+.ci-search i {
+  position:absolute; left:1.05rem; top:50%; transform:translateY(-50%);
+  color:var(--ci-muted); font-size:.95rem;
+}
+.ci-search input {
+  width:100%; border:1.5px solid var(--ci-border); border-radius:999px;
+  padding:.7rem 1.2rem .7rem 2.7rem; font-size:.9rem; color:var(--ci-navy);
+  background:#fff; transition:border-color .2s, box-shadow .2s;
+}
+.ci-search input:focus {
+  outline:none; border-color:var(--ci-teal);
+  box-shadow:0 0 0 4px rgba(38,198,218,.14);
+}
+
+/* Grid de tarjetas */
+.ci-grid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(270px,1fr)); gap:1.1rem;
+}
+.ci-card {
+  background:#fff; border:1px solid var(--ci-border); border-radius:18px;
+  padding:1.4rem; box-shadow:0 8px 24px rgba(0,0,0,.045);
+  transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  opacity:0; transform:translateY(16px);
+  animation: ciSlideUp .45s ease forwards;
+  display:flex; flex-direction:column; gap:.7rem;
+}
+.ci-card:hover {
+  transform:translateY(-4px);
+  box-shadow:0 18px 40px rgba(38,198,218,.16);
+  border-color:var(--ci-teal);
+}
+.ci-card-top { display:flex; align-items:flex-start; gap:.85rem; }
+.ci-ico {
+  width:46px; height:46px; border-radius:13px; flex-shrink:0;
+  background:linear-gradient(135deg, var(--ci-blue), #35c2d8);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  font-size:1.25rem; box-shadow:0 8px 18px rgba(13,110,253,.28);
+}
+.ci-card:hover .ci-ico { animation: ciPulse 1.6s ease infinite; }
+.ci-card-title { font-family:'Poppins',sans-serif; font-weight:700; font-size:1.02rem; color:var(--ci-navy); margin:0; line-height:1.25; }
+.ci-card-desc { font-size:.83rem; color:var(--ci-muted); line-height:1.5; margin:0; flex:1; }
+.ci-card-foot { display:flex; align-items:center; justify-content:space-between; gap:.6rem; }
+.ci-chip {
+  background:#E0F7FA; color:var(--ci-teal-dk); border-radius:999px;
+  padding:.3rem .85rem; font-size:.72rem; font-weight:700;
+  display:inline-flex; align-items:center; gap:.35rem;
+}
+.ci-chip.empty { background:#FFF3E0; color:#C47A00; }
+
+.ci-empty {
+  background:#fff; border:1px dashed var(--ci-border); border-radius:18px;
+  padding:3rem 1.5rem; text-align:center; color:var(--ci-muted); font-size:.9rem;
+  animation: ciSlideUp .4s .05s both;
+}
+.ci-empty i { font-size:2.2rem; opacity:.35; display:block; margin-bottom:.6rem; }
+</style>
+
+<!-- ══ HERO ══ -->
+<div class="ci-hero">
+  <div class="ci-hero-row">
+    <div>
+      <h1><i class="bi bi-clipboard2-pulse-fill me-2"></i>Catálogo de Instrumentos</h1>
+      <p>Encuestas y evaluaciones clínicas listas para aplicar a tus pacientes — ábrelas desde el expediente con un enlace único que el paciente contesta sin necesidad de cuenta.</p>
+    </div>
+    <a href="{% url 'portal_terapeuta' %}" class="ci-back">
+      <i class="bi bi-arrow-left"></i>Volver al portal
+    </a>
+  </div>
+  <span class="ci-count-pill">
+    <i class="bi bi-collection-fill"></i>
+    {{ total_catalogo }} instrumento{{ total_catalogo|pluralize }} disponible{{ total_catalogo|pluralize }}
+  </span>
+</div>
+
+<!-- ══ BUSCADOR ══ -->
+<div class="ci-search-wrap">
+  <form method="get" class="ci-search">
+    <i class="bi bi-search"></i>
+    <input type="text" name="q" value="{{ q }}" placeholder="Buscar instrumento por nombre o descripción…" autocomplete="off">
+  </form>
+</div>
+
+<!-- ══ GRID ══ -->
+{% if instrumentos %}
+<div class="ci-grid">
+  {% for ins in instrumentos %}
+  <div class="ci-card" style="animation-delay: {% widthratio forloop.counter0 1 70 %}ms">
+    <div class="ci-card-top">
+      <div class="ci-ico"><i class="bi bi-clipboard2-pulse"></i></div>
+      <h3 class="ci-card-title">{{ ins.nombre }}</h3>
+    </div>
+    <p class="ci-card-desc">{{ ins.descripcion|default:"Sin descripción registrada todavía." }}</p>
+    <div class="ci-card-foot">
+      {% if ins.total_preguntas %}
+        <span class="ci-chip"><i class="bi bi-list-check"></i>{{ ins.total_preguntas }} pregunta{{ ins.total_preguntas|pluralize }}</span>
+      {% else %}
+        <span class="ci-chip empty"><i class="bi bi-hourglass-split"></i>Aún sin preguntas cargadas</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="ci-empty">
+  <i class="bi bi-clipboard2-x"></i>
+  {% if q %}
+    No encontramos instrumentos que coincidan con "<strong>{{ q }}</strong>".
+  {% else %}
+    Todavía no hay instrumentos activos en el catálogo.
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

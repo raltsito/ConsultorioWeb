@@ -1,0 +1,891 @@
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\models.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 12:46:07
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\models.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 12:59:53
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\models.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:00
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\models.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:04
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\models.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:08
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[08/Jun/2026 13:00:16] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:14
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\core\urls.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:39
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:49
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[08/Jun/2026 13:01:01] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:00:58
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:01:04
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\core\urls.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:18:44
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:18:51
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\core\urls.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:28:55
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\services_instrumentos.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 13:29:00
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\services_instrumentos.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 15:50:41
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\services_instrumentos.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 08, 2026 - 16:24:35
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[09/Jun/2026 10:38:35] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 10:38:18
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 10:38:39
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\core\urls.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 10:38:54
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[09/Jun/2026 10:39:21] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:40:06] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:40:51] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:41:37] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:42:22] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:42:25] "GET /portal-medico/instrumentos/ HTTP/1.1" 200 33245
+[09/Jun/2026 10:42:25] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:42:36] "GET /portal-medico/expedientes/ HTTP/1.1" 200 37078
+[09/Jun/2026 10:42:36] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:42:45] "GET /portal-medico/expedientes/3/ HTTP/1.1" 200 91985
+[09/Jun/2026 10:42:45] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:42:54] "GET /portal-medico/expedientes/3/instrumentos/raven/ HTTP/1.1" 200 32123
+[09/Jun/2026 10:42:54] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:43:38] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:44:24] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:45:09] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:45:55] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:46:40] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:47:26] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:48:11] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:48:56] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:49:42] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:50:27] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:51:13] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:51:58] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:52:43] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:53:28] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\models.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 10:39:04
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[09/Jun/2026 10:54:13] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:54:58] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:55:43] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 10:56:28] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\services_instrumentos.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 10:53:40
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\services_instrumentos.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 10:56:44
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\models.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 10:56:49
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[09/Jun/2026 11:13:22] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:14:07] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 11:13:06
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 11:14:48
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 11:14:56
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[09/Jun/2026 11:15:38] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:16:25] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:17:10] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:17:55] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:18:40] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:19:26] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:20:12] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:20:57] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:21:43] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:22:28] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:23:14] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:24:00] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:24:46] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:25:31] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:26:16] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:27:02] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:27:47] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:28:28] "GET /instrumentos/45e1ab25-6072-4b9a-90b7-a5acf59d92e8/ HTTP/1.1" 200 210538
+[09/Jun/2026 11:28:33] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:29:17] "POST /instrumentos/45e1ab25-6072-4b9a-90b7-a5acf59d92e8/ HTTP/1.1" 200 211899
+[09/Jun/2026 11:29:18] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:29:49] "GET /portal-medico/expedientes/3/instrumentos/raven/ HTTP/1.1" 200 32123
+[09/Jun/2026 11:29:49] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:29:55] "GET /portal-medico/expedientes/3/ HTTP/1.1" 200 92663
+[09/Jun/2026 11:29:55] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:29:58] "GET /portal-medico/expedientes/3/instrumentos/raven/ HTTP/1.1" 200 32123
+[09/Jun/2026 11:29:58] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:30:24] "GET /portal-medico/instrumentos/ HTTP/1.1" 200 33219
+[09/Jun/2026 11:30:24] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:30:32] "GET /portal-medico/instrumentos/ HTTP/1.1" 200 33219
+[09/Jun/2026 11:30:32] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:30:38] "GET /portal-medico/instrumentos/ HTTP/1.1" 200 33219
+[09/Jun/2026 11:30:38] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:30:44] "GET /portal-medico/instrumentos/ HTTP/1.1" 200 33219
+[09/Jun/2026 11:30:44] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:30:56] "GET /portal-medico/instrumentos/ HTTP/1.1" 200 33219
+[09/Jun/2026 11:30:56] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:31:13] "GET /portal-medico/expedientes/ HTTP/1.1" 200 37078
+[09/Jun/2026 11:31:14] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:31:17] "GET /portal-medico/expedientes/1/ HTTP/1.1" 200 171891
+[09/Jun/2026 11:31:18] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:31:59] "GET /portal-medico/expedientes/1/ HTTP/1.1" 200 171891
+[09/Jun/2026 11:31:59] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:32:03] "GET /portal-medico/expedientes/1/instrumentos/raven/ HTTP/1.1" 200 32115
+[09/Jun/2026 11:32:03] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:32:25] "GET /portal-medico/expedientes/1/instrumentos/17/resultado/ HTTP/1.1" 200 69954
+[09/Jun/2026 11:32:25] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:32:55] "GET /portal-medico/expedientes/1/ HTTP/1.1" 200 171280
+[09/Jun/2026 11:32:55] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:33:22] "POST /portal-medico/expedientes/1/instrumentos/generar/ HTTP/1.1" 200 262
+[09/Jun/2026 11:33:25] "GET /instrumentos/3a48739e-22fe-4b06-a41c-525ab3d7ed09/ HTTP/1.1" 200 303445
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/1.png HTTP/1.1" 200 50649
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/4.png HTTP/1.1" 200 71343
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/3.png HTTP/1.1" 200 36623
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/6.png HTTP/1.1" 200 31034
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/2.png HTTP/1.1" 200 186334
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/7.png HTTP/1.1" 200 28884
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/5.png HTTP/1.1" 200 186522
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/9.png HTTP/1.1" 200 22899
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/8.png HTTP/1.1" 200 23029
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/10.png HTTP/1.1" 200 39843
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/25.png HTTP/1.1" 200 117703
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/35.png HTTP/1.1" 200 65536
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/39.png HTTP/1.1" 200 112300
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/43.png HTTP/1.1" 200 91651
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/54.png HTTP/1.1" 200 95766
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/53.png HTTP/1.1" 200 127915
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/12.png HTTP/1.1" 200 140427
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/11.png HTTP/1.1" 200 98005
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/27.png HTTP/1.1" 200 84251
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/31.png HTTP/1.1" 200 36293
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/13.png HTTP/1.1" 200 61204
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/51.png HTTP/1.1" 200 80337
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/47.png HTTP/1.1" 200 87330
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/14.png HTTP/1.1" 200 26154
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/15.png HTTP/1.1" 200 53472
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/49.png HTTP/1.1" 200 89038
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/16.png HTTP/1.1" 200 39159
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/32.png HTTP/1.1" 200 209222
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/46.png HTTP/1.1" 200 97791
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/17.png HTTP/1.1" 200 34708
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/18.png HTTP/1.1" 200 80066
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/36.png HTTP/1.1" 200 143834
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/26.png HTTP/1.1" 200 49648
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/19.png HTTP/1.1" 200 47118
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/20.png HTTP/1.1" 200 44265
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/21.png HTTP/1.1" 200 37173
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/40.png HTTP/1.1" 200 78010
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/22.png HTTP/1.1" 200 53673
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/23.png HTTP/1.1" 200 35203
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/55.png HTTP/1.1" 200 105413
+[09/Jun/2026 11:33:25] "GET /media/instrumentos/raven/24.png HTTP/1.1" 200 43198
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/57.png HTTP/1.1" 200 67695
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/28.png HTTP/1.1" 200 41622
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/48.png HTTP/1.1" 200 74941
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/56.png HTTP/1.1" 200 73759
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/29.png HTTP/1.1" 200 87566
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/30.png HTTP/1.1" 200 34316
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/33.png HTTP/1.1" 200 86814
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/34.png HTTP/1.1" 200 135262
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/37.png HTTP/1.1" 200 58252
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/38.png HTTP/1.1" 200 75546
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/41.png HTTP/1.1" 200 68612
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/42.png HTTP/1.1" 200 56566
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/44.png HTTP/1.1" 200 61578
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/45.png HTTP/1.1" 200 110897
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/50.png HTTP/1.1" 200 145493
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/52.png HTTP/1.1" 200 48889
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/58.png HTTP/1.1" 200 117138
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/59.png HTTP/1.1" 200 121752
+[09/Jun/2026 11:33:26] "GET /media/instrumentos/raven/60.png HTTP/1.1" 200 127266
+[09/Jun/2026 11:33:41] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:34:27] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:34:41] "POST /instrumentos/3a48739e-22fe-4b06-a41c-525ab3d7ed09/ HTTP/1.1" 200 304239
+[09/Jun/2026 11:35:12] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:36:00] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:36:45] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:37:00] "POST /instrumentos/3a48739e-22fe-4b06-a41c-525ab3d7ed09/ HTTP/1.1" 200 303717
+[09/Jun/2026 11:37:19] "POST /instrumentos/3a48739e-22fe-4b06-a41c-525ab3d7ed09/ HTTP/1.1" 200 304239
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/10.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/11.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/16.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/12.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/17.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/13.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/14.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/18.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/19.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/15.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/31.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/28.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/34.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/41.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/44.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/47.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/53.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/50.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/56.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/59.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/30.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/21.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/32.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/39.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/38.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/46.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/48.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/55.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/20.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/57.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/22.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/37.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/35.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/49.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/52.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/60.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/23.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/33.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/43.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/24.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/45.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/40.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/58.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/29.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/27.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/26.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/25.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/36.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/42.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/51.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:19] "GET /media/instrumentos/raven/54.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:30] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:37:33] "POST /instrumentos/3a48739e-22fe-4b06-a41c-525ab3d7ed09/ HTTP/1.1" 200 304239
+[09/Jun/2026 11:37:33] "GET /media/instrumentos/raven/1.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:33] "GET /media/instrumentos/raven/4.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:33] "GET /media/instrumentos/raven/5.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:33] "GET /media/instrumentos/raven/3.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:33] "GET /media/instrumentos/raven/6.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:33] "GET /media/instrumentos/raven/2.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:34] "GET /media/instrumentos/raven/7.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:34] "GET /media/instrumentos/raven/9.png HTTP/1.1" 304 0
+[09/Jun/2026 11:37:34] "GET /media/instrumentos/raven/8.png HTTP/1.1" 304 0
+[09/Jun/2026 11:38:16] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:39:06] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:39:51] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+C:\Users\carlo\Documents\Freelancer\ConsultorioWeb\clinica\views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+June 09, 2026 - 11:15:01
+Django version 5.2.10, using settings 'core.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[09/Jun/2026 11:40:36] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:41:22] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:42:12] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:42:57] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:43:42] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:44:28] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:45:13] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:45:59] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:46:29] "POST /instrumentos/3a48739e-22fe-4b06-a41c-525ab3d7ed09/ HTTP/1.1" 200 308705
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/1.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/2.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/7.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/3.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/8.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/4.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/9.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/10.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/5.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/6.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/21.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/24.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/27.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/30.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/33.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/36.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/39.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/42.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/49.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/52.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/55.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/58.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/11.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/12.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/17.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/25.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/23.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/38.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/40.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/46.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/47.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/54.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/56.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/13.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/18.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/20.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/28.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/32.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/48.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/59.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/51.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/15.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/22.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/29.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/37.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/43.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/16.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/53.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/45.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/35.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/57.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/19.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/50.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/41.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/26.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/14.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/44.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/31.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/34.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:30] "GET /media/instrumentos/raven/60.png HTTP/1.1" 304 0
+[09/Jun/2026 11:46:42] "GET /portal-medico/expedientes/1/ HTTP/1.1" 200 172032
+[09/Jun/2026 11:46:42] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:46:48] "POST /portal-medico/expedientes/1/instrumentos/generar/ HTTP/1.1" 200 262
+[09/Jun/2026 11:46:51] "GET /instrumentos/3a48739e-22fe-4b06-a41c-525ab3d7ed09/ HTTP/1.1" 200 307901
+[09/Jun/2026 11:47:28] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:48:13] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:48:59] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:49:45] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:50:30] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:51:15] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:52:06] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:52:51] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:53:37] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:54:22] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:55:08] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:55:53] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:56:39] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:57:24] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:58:14] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:58:59] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 11:59:44] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:00:29] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:01:15] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:02:00] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:02:45] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:03:31] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:04:16] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:05:01] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:05:47] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:06:32] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:07:17] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:08:03] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:08:48] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:09:33] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:10:19] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:11:04] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:11:50] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:12:36] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:13:22] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:14:07] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:14:52] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:15:38] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:16:23] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:17:09] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:17:54] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:18:40] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:19:26] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:20:14] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:21:00] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:21:45] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:22:30] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:23:15] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:24:00] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:24:46] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:25:31] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:26:16] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:27:02] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:27:47] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:28:32] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:29:18] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:30:03] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:30:49] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:31:34] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:32:19] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:33:05] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:33:50] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:34:36] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:35:21] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:36:07] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:36:52] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:37:38] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:38:24] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:39:09] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:39:54] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:40:39] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:41:25] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:42:11] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:42:56] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:43:42] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:44:28] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:45:13] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:45:58] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:46:43] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:47:29] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:48:14] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:48:59] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:49:44] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:50:29] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:51:15] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:52:00] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:52:45] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:53:34] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:54:20] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:55:05] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:55:50] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:56:35] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:57:21] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:58:07] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:58:53] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 12:59:38] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:00:24] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:01:09] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:01:55] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:02:40] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:03:25] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:04:11] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:04:56] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:05:41] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:06:27] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:07:12] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:07:57] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:08:43] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:09:28] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:10:13] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:10:59] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:11:44] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:12:30] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:13:15] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:14:00] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:14:46] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:15:31] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:16:17] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:17:02] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:17:47] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:18:33] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:19:18] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:20:03] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:20:48] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:21:34] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:22:22] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:23:07] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:23:53] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:24:38] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:25:24] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:26:09] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:26:54] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:27:44] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:28:29] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:29:15] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:30:00] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:30:45] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:31:31] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:32:16] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:33:01] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:33:47] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:34:32] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:35:17] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:36:03] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:36:48] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:37:33] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:38:19] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:39:04] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:39:50] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:40:35] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:41:20] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:42:06] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:42:51] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:43:36] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:44:22] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:45:07] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:45:53] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:46:38] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:47:23] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:48:09] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:48:54] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:49:39] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:50:25] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:51:10] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:51:55] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:52:41] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:53:26] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:54:12] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:54:57] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:55:43] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:56:28] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:57:13] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:57:59] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:58:44] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 13:59:30] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:00:15] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:01:01] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:01:46] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:02:32] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:03:18] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:04:03] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:04:48] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:05:34] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:06:19] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:07:04] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:07:50] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:08:35] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:09:21] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:10:07] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:10:52] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:11:38] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:12:23] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:13:12] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:13:57] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:14:43] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:15:28] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:16:13] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:16:59] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:17:45] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:18:31] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:19:16] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:20:01] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:20:47] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:21:32] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:22:18] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:23:03] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:23:49] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:24:34] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:25:19] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:26:05] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:26:50] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:27:36] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:28:21] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:29:07] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:29:52] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:30:37] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:31:23] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:32:08] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:32:53] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:33:39] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:34:24] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:35:10] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:35:55] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:36:41] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:37:26] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:38:12] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:38:57] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:39:43] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:40:28] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:41:13] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:41:58] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:42:44] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:43:29] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:44:15] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:45:03] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:45:49] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:46:34] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:47:19] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:47:30] "POST /instrumentos/3a48739e-22fe-4b06-a41c-525ab3d7ed09/ HTTP/1.1" 200 16911
+[09/Jun/2026 14:47:42] "GET /portal-medico/expedientes/1/ HTTP/1.1" 200 172772
+[09/Jun/2026 14:47:42] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:47:44] "GET /portal-medico/expedientes/1/instrumentos/20/resultado/ HTTP/1.1" 200 46165
+[09/Jun/2026 14:47:44] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:48:31] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:49:16] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:50:02] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:50:47] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:51:33] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:52:19] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:53:04] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:53:49] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:54:34] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:55:19] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:56:05] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:56:48] "GET / HTTP/1.1" 302 0
+[09/Jun/2026 14:56:48] "GET /portal-medico/ HTTP/1.1" 200 110454
+[09/Jun/2026 14:56:48] "GET /api/notificaciones-terapeuta/ HTTP/1.1" 200 34
+[09/Jun/2026 14:56:53] "POST /accounts/logout/ HTTP/1.1" 302 0
+[09/Jun/2026 14:56:53] "GET /accounts/login/ HTTP/1.1" 200 2261
+[09/Jun/2026 14:56:57] "POST /accounts/login/ HTTP/1.1" 302 0
+[09/Jun/2026 14:56:57] "GET / HTTP/1.1" 200 226784
+[09/Jun/2026 14:57:02] "GET /api/sin-reagendar/?periodo=dia HTTP/1.1" 200 47
+[09/Jun/2026 14:57:03] "GET /api/sin-reagendar/?periodo=todo HTTP/1.1" 200 2932
+[09/Jun/2026 14:57:04] "GET /api/sin-reagendar/?periodo=todo HTTP/1.1" 200 2932
+[09/Jun/2026 14:57:05] "GET /api/sin-reagendar/?periodo=semana HTTP/1.1" 200 47
+[09/Jun/2026 14:57:06] "GET /api/sin-reagendar/?periodo=dia HTTP/1.1" 200 47
+[09/Jun/2026 14:57:07] "GET /api/sin-reagendar/?periodo=semana HTTP/1.1" 200 47
+[09/Jun/2026 14:59:52] "GET /api/sin-reagendar/?periodo=todo HTTP/1.1" 200 2932
+[09/Jun/2026 14:59:54] "GET / HTTP/1.1" 200 229246
+[09/Jun/2026 14:59:55] "GET /api/sin-reagendar/?periodo=dia HTTP/1.1" 200 47
+[09/Jun/2026 14:59:58] "GET /api/sin-reagendar/?periodo=semana HTTP/1.1" 200 47
+[09/Jun/2026 15:00:00] "GET /api/sin-reagendar/?periodo=mes HTTP/1.1" 200 47
+[09/Jun/2026 15:00:02] "GET /api/sin-reagendar/?periodo=todo HTTP/1.1" 200 2932

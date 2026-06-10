@@ -1,0 +1,252 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<style>
+:root {
+  --rv-blue:   #0d6efd;
+  --rv-navy:   #37474F;
+  --rv-muted:  #78909C;
+  --rv-border: #DDE5EB;
+  --rv-bg:     #F0F4F8;
+}
+
+.rv-hero {
+  background: linear-gradient(135deg, var(--rv-blue) 0%, #35c2d8 100%);
+  border-radius: 22px; padding: 1.75rem 2rem; margin-bottom: 1.75rem;
+  position: relative; overflow: hidden; color: #fff;
+}
+.rv-hero::before {
+  content:''; position:absolute; top:-60px; right:-40px;
+  width:200px; height:200px; border-radius:50%;
+  background:rgba(255,255,255,.10); pointer-events:none;
+}
+.rv-hero h1 {
+  font-family:'Poppins',sans-serif; font-weight:700;
+  font-size:1.5rem; margin:0 0 .2rem; position:relative;
+}
+.rv-hero p { margin:0; opacity:.9; font-size:.88rem; position:relative; }
+.rv-back {
+  border:1.5px solid rgba(255,255,255,.4); color:#fff; background:transparent;
+  border-radius:999px; padding:.45rem 1.05rem; font-size:.8rem;
+  text-decoration:none; transition:all .2s; display:inline-flex; align-items:center; gap:.35rem;
+  position:relative;
+}
+.rv-back:hover { border-color:#fff; background:rgba(255,255,255,.14); color:#fff; }
+
+.rv-card {
+  background:#fff; border:1px solid var(--rv-border); border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.05); overflow:hidden;
+}
+.rv-card-hd {
+  padding:1.05rem 1.4rem; border-bottom:1px solid var(--rv-border);
+  display:flex; align-items:center; gap:.6rem;
+}
+.rv-card-hd .ico {
+  width:32px; height:32px; border-radius:9px;
+  background: linear-gradient(135deg, var(--rv-blue), #35c2d8);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  font-size:1rem; flex-shrink:0;
+}
+.rv-card-hd h2 {
+  font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
+  color:var(--rv-navy); margin:0;
+}
+.rv-body { padding:1.75rem; }
+
+.rv-score-input {
+  font-size:2.2rem; font-weight:800; text-align:center; width:130px;
+  border:2px solid var(--rv-border); border-radius:14px;
+  color:var(--rv-navy); font-family:'Poppins',sans-serif;
+  padding:.4rem .6rem; transition:border-color .2s;
+}
+.rv-score-input:focus {
+  outline:none; border-color:var(--rv-blue);
+  box-shadow:0 0 0 3px rgba(13,110,253,.15);
+}
+
+.rv-scale-table {
+  width:100%; border-collapse:collapse; font-size:.82rem;
+  margin-top:1.25rem;
+}
+.rv-scale-table th {
+  font-size:.65rem; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--rv-muted); font-weight:700; padding:.5rem .75rem;
+  border-bottom:2px solid var(--rv-border); text-align:left;
+}
+.rv-scale-table td {
+  padding:.55rem .75rem; border-bottom:1px solid var(--rv-border);
+  color:var(--rv-navy);
+}
+.rv-scale-table tr:last-child td { border-bottom:none; }
+.rv-grade-badge {
+  display:inline-block; border-radius:999px; padding:.2rem .75rem;
+  font-size:.73rem; font-weight:700;
+}
+.grade-i   { background:#E3F2FD; color:#1565C0; }
+.grade-ii  { background:#E8F5E9; color:#2E7D32; }
+.grade-iii { background:#FFF8E1; color:#F57F17; }
+.grade-iv  { background:#FFF3E0; color:#E65100; }
+.grade-v   { background:#FCE4EC; color:#B71C1C; }
+
+.rv-btn-submit {
+  background: linear-gradient(135deg, var(--rv-blue), #35c2d8);
+  border:none; color:#fff; border-radius:12px;
+  padding:.75rem 2rem; font-size:1rem; font-weight:700;
+  cursor:pointer; transition:opacity .2s; display:inline-flex;
+  align-items:center; gap:.5rem;
+}
+.rv-btn-submit:hover { opacity:.9; }
+.rv-btn-submit:disabled { opacity:.5; cursor:default; }
+</style>
+
+<!-- HERO -->
+<div class="rv-hero">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+      <h1><i class="bi bi-grid-3x3-gap-fill me-2"></i>Raven — Matrices Progresivas (SPM)</h1>
+      <p>Registrar resultado para {{ paciente.nombre }}</p>
+    </div>
+    <a href="{% url 'expediente_terapeuta_detalle' paciente.id %}" class="rv-back">
+      <i class="bi bi-arrow-left"></i>Volver al expediente
+    </a>
+  </div>
+</div>
+
+<!-- FORMULARIO -->
+<div class="rv-card">
+  <div class="rv-card-hd">
+    <div class="ico"><i class="bi bi-input-cursor-text"></i></div>
+    <h2>Ingresar puntaje bruto</h2>
+  </div>
+  <div class="rv-body">
+
+    {% if messages %}
+      {% for msg in messages %}
+      <div class="alert alert-danger rounded-3 mb-3">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <p class="text-muted mb-3" style="font-size:.88rem;">
+      Ingresa el número de respuestas correctas del paciente (0 – 60). El sistema
+      calculará el percentil y la clasificación automáticamente usando tablas normativas
+      para adultos mexicanos.
+    </p>
+
+    <form method="post" id="ravenForm">
+      {% csrf_token %}
+      <div class="d-flex align-items-center gap-4 flex-wrap mb-4">
+        <div class="text-center">
+          <label class="form-label fw-semibold d-block mb-1" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.07em; color:var(--rv-muted);">
+            Puntaje bruto (0 – 60)
+          </label>
+          <input type="number" name="puntaje_raw" id="puntajeRaw"
+                 class="rv-score-input" min="0" max="60" step="1"
+                 value="{{ puntaje_raw|default:'' }}"
+                 placeholder="—" required
+                 autocomplete="off">
+        </div>
+        <div id="previewResult" class="d-none flex-grow-1" style="min-width:200px;">
+          <div style="font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:var(--rv-muted); margin-bottom:.3rem;">
+            Vista previa
+          </div>
+          <div id="previewPct" style="font-family:'Poppins',sans-serif; font-size:1.6rem; font-weight:800; color:var(--rv-blue); line-height:1.1;">—</div>
+          <div id="previewGrade" style="font-size:.82rem; color:var(--rv-navy);">—</div>
+        </div>
+      </div>
+
+      <button type="submit" class="rv-btn-submit" id="btnSubmit" disabled>
+        <i class="bi bi-check2-circle"></i> Guardar resultado
+      </button>
+    </form>
+
+    <!-- Tabla de referencia -->
+    <details class="mt-4">
+      <summary style="cursor:pointer; font-size:.82rem; color:var(--rv-blue); font-weight:600;">
+        <i class="bi bi-table me-1"></i>Ver tabla de clasificación
+      </summary>
+      <table class="rv-scale-table mt-2">
+        <thead>
+          <tr>
+            <th>Grado</th>
+            <th>Clasificación</th>
+            <th>Percentil</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="rv-grade-badge grade-i">I</span></td>
+            <td>Superior</td>
+            <td>≥ P95</td>
+          </tr>
+          <tr>
+            <td><span class="rv-grade-badge grade-ii">II</span></td>
+            <td>Superior al término medio</td>
+            <td>P75 – P94</td>
+          </tr>
+          <tr>
+            <td><span class="rv-grade-badge grade-iii">III</span></td>
+            <td>Término medio</td>
+            <td>P25 – P74</td>
+          </tr>
+          <tr>
+            <td><span class="rv-grade-badge grade-iv">IV</span></td>
+            <td>Inferior al término medio</td>
+            <td>P10 – P24</td>
+          </tr>
+          <tr>
+            <td><span class="rv-grade-badge grade-v">V</span></td>
+            <td>Intelectualmente deficiente</td>
+            <td>< P10</td>
+          </tr>
+        </tbody>
+      </table>
+    </details>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  // Inline percentile table (mirrors services_instrumentos._RAVEN_PERCENTILES)
+  const PCT = [
+    1,1,1,1,2,2,3,3,4,5,
+    5,7,8,10,12,14,16,18,20,
+    22,25,28,30,33,36,39,42,
+    45,48,51,54,57,60,63,66,
+    68,71,73,75,77,79,81,83,
+    85,87,89,90,91,92,93,94,
+    95,96,97,97,98,98,99,99,
+    99,99,99
+  ];
+
+  function gradeInfo(pct) {
+    if (pct >= 95) return { grado:'I',   desc:'Superior',                    css:'grade-i'   };
+    if (pct >= 75) return { grado:'II',  desc:'Superior al término medio',   css:'grade-ii'  };
+    if (pct >= 25) return { grado:'III', desc:'Término medio',               css:'grade-iii' };
+    if (pct >= 10) return { grado:'IV',  desc:'Inferior al término medio',   css:'grade-iv'  };
+    return              { grado:'V',  desc:'Intelectualmente deficiente',  css:'grade-v'   };
+  }
+
+  const inp    = document.getElementById('puntajeRaw');
+  const btn    = document.getElementById('btnSubmit');
+  const prev   = document.getElementById('previewResult');
+  const prevP  = document.getElementById('previewPct');
+  const prevG  = document.getElementById('previewGrade');
+
+  inp.addEventListener('input', function() {
+    const val = parseInt(inp.value, 10);
+    const ok  = !isNaN(val) && val >= 0 && val <= 60;
+    btn.disabled = !ok;
+    if (ok) {
+      const pct  = PCT[val];
+      const info = gradeInfo(pct);
+      prevP.textContent = 'P' + pct;
+      prevG.innerHTML   = '<span class="rv-grade-badge ' + info.css + '">Grado ' + info.grado + '</span> ' + info.desc;
+      prev.classList.remove('d-none');
+    } else {
+      prev.classList.add('d-none');
+    }
+  });
+})();
+</script>
+{% endblock %}
