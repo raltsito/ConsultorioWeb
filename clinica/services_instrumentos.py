@@ -45,7 +45,15 @@ _SCID2_TRASTORNOS = [
 
 
 def _calcular_scid2(respuestas, **kwargs):
-    mapa = {r.pregunta.orden: (r.valor_numerico or Decimal('0')) for r in respuestas}
+    mapa_orden = {r.pregunta.orden: (r.valor_numerico or Decimal('0')) for r in respuestas}
+    # Las escalas de _SCID2_TRASTORNOS están numeradas según los criterios de la
+    # hoja de calificación original (1-119), que están desfasados +3 respecto a
+    # la numeración del cuestionario (`pregunta.orden`): el criterio r corresponde
+    # al ítem (r+3) del cuestionario. Los criterios 117-119 no tienen ítem
+    # asociado (la hoja original no los resuelve) y siempre suman 0.
+    mapa = {r: mapa_orden.get(r + 3, Decimal('0')) for r in range(1, 117)}
+    for r in range(117, 120):
+        mapa[r] = Decimal('0')
     detalle = {}
     significativos = []
 
@@ -98,9 +106,9 @@ _SCL90_ESCALAS = [
     ('Psicoticismo',                  'Psic.', [7,16,35,62,77,84,85,87,88,90],            10, 0.14, 0.25),
 ]
 
-# ISG: media de los 90 ítems (normativa: M=0.31, DS≈0.32)
+# ISG: media de los 90 ítems (normativa: M=0.31, DS≈0.31)
 _SCL90_ISG_MEDIA = 0.31
-_SCL90_ISG_DS    = 0.32
+_SCL90_ISG_DS    = 0.31
 
 # Poblaciones de referencia (medias por subescala en el mismo orden que _SCL90_ESCALAS)
 # Fuente: hoja SCL del Excel de calificación del consultorio
@@ -110,9 +118,9 @@ _SCL90_REF = {
     'internos':  [0.87, 1.47, 1.41, 1.79, 1.47, 1.10, 0.74, 1.16, 0.94],
 }
 _SCL90_REF_SUMMARY = {
-    'normal':   {'isg': 0.31, 'isg_ds': 0.32, 'sp': 19.29, 'mrsp': 1.32, 'mrsp_ds': 0.42},
-    'externos': {'isg': 1.30, 'isg_ds': 0.68, 'sp': 50.17, 'mrsp': 2.15, 'mrsp_ds': 0.73},
-    'internos': {'isg': 1.26, 'isg_ds': 0.82, 'sp': 50.03, 'mrsp': 2.14, 'mrsp_ds': 0.58},
+    'normal':   {'isg': 0.31, 'isg_ds': 0.31, 'sp': 19.29, 'mrsp': 1.32, 'mrsp_ds': 0.42},
+    'internos': {'isg': 1.30, 'isg_ds': 0.82, 'sp': 50.03, 'mrsp': 2.15, 'mrsp_ds': 0.73},
+    'externos': {'isg': 1.26, 'isg_ds': 0.68, 'sp': 50.17, 'mrsp': 2.14, 'mrsp_ds': 0.58},
 }
 
 
@@ -232,54 +240,92 @@ _ALLPORT_S2 = {
     87: 'Y', 88: 'X', 89: 'Z', 90: 'T', 91: 'Z', 92: 'S', 93: 'R', 94: 'T',
 }
 
-_ALLPORT_NOMBRE = {
-    'R': 'Religioso', 'S': 'Social', 'T': 'Teórico',
-    'X': 'Económico', 'Y': 'Estético', 'Z': 'Político',
+# El cuestionario está dividido en "páginas" (Sección 1: 4 páginas de 7-8 ítems;
+# Sección 2: 3 páginas de 20 ítems). Cada página tiene su propia rotación
+# letra→categoría (diseño tipo cuadrado latino del instrumento original).
+_ALLPORT_PAGINAS_S1 = [
+    (range(1, 9),   {'R': 'Teórico', 'S': 'Económico', 'T': 'Estético', 'X': 'Social', 'Y': 'Político', 'Z': 'Religioso'}),
+    (range(9, 17),  {'Z': 'Teórico', 'Y': 'Económico', 'X': 'Estético', 'T': 'Social', 'S': 'Político', 'R': 'Religioso'}),
+    (range(17, 24), {'X': 'Teórico', 'R': 'Económico', 'Z': 'Estético', 'S': 'Social', 'T': 'Político', 'Y': 'Religioso'}),
+    (range(24, 31), {'S': 'Teórico', 'X': 'Económico', 'Y': 'Estético', 'R': 'Social', 'Z': 'Político', 'T': 'Religioso'}),
+]
+_ALLPORT_PAGINAS_S2 = [
+    (range(31, 55), {'Y': 'Teórico', 'T': 'Económico', 'S': 'Estético', 'Z': 'Social', 'R': 'Político', 'X': 'Religioso'}),
+    (range(55, 75), {'T': 'Teórico', 'Z': 'Económico', 'R': 'Estético', 'Y': 'Social', 'X': 'Político', 'S': 'Religioso'}),
+    (range(75, 95), {'R': 'Teórico', 'S': 'Económico', 'T': 'Estético', 'X': 'Social', 'Y': 'Político', 'Z': 'Religioso'}),
+]
+
+# Cifras de corrección del baremo original, sumadas al puntaje crudo de cada categoría
+_ALLPORT_CORRECCION = {
+    'Teórico': 3, 'Económico': -1, 'Estético': 4, 'Social': -3, 'Político': 2, 'Religioso': -5,
 }
+
+_ALLPORT_CATEGORIAS = ['Teórico', 'Económico', 'Estético', 'Social', 'Político', 'Religioso']
+
+
+def _allport_pagina_s1(orden):
+    for rango, mapeo in _ALLPORT_PAGINAS_S1:
+        if orden in rango:
+            return mapeo
+    return None
+
+
+def _allport_pagina_s2(orden):
+    for rango, mapeo in _ALLPORT_PAGINAS_S2:
+        if orden in rango:
+            return mapeo
+    return None
 
 
 def _calcular_allport(respuestas, **kwargs):
     mapa = {r.pregunta.orden: (r.valor_numerico or Decimal('0')) for r in respuestas}
-    totales = {k: Decimal('0') for k in 'RSTXYZ'}
-    sec1 = {k: Decimal('0') for k in 'RSTXYZ'}
-    sec2 = {k: Decimal('0') for k in 'RSTXYZ'}
+    crudo = {c: Decimal('0') for c in _ALLPORT_CATEGORIAS}
+    sec1 = {c: Decimal('0') for c in _ALLPORT_CATEGORIAS}
+    sec2 = {c: Decimal('0') for c in _ALLPORT_CATEGORIAS}
 
     # Sección 1
     for orden, (esc_a, esc_b) in _ALLPORT_S1.items():
         v = mapa.get(orden)
-        if v is not None:
-            totales[esc_a] += v
-            totales[esc_b] += Decimal('3') - v
-            sec1[esc_a] += v
-            sec1[esc_b] += Decimal('3') - v
+        if v is None:
+            continue
+        mapeo = _allport_pagina_s1(orden)
+        cat_a, cat_b = mapeo[esc_a], mapeo[esc_b]
+        crudo[cat_a] += v
+        crudo[cat_b] += Decimal('3') - v
+        sec1[cat_a] += v
+        sec1[cat_b] += Decimal('3') - v
 
     # Sección 2
     for orden, escala in _ALLPORT_S2.items():
         v = mapa.get(orden)
-        if v is not None:
-            totales[escala] += v
-            sec2[escala] += v
+        if v is None:
+            continue
+        mapeo = _allport_pagina_s2(orden)
+        cat = mapeo[escala]
+        crudo[cat] += v
+        sec2[cat] += v
 
-    ranking = sorted(totales.items(), key=lambda x: -x[1])
-    top_escala, top_pts = ranking[0]
+    # Cifras de corrección + totales finales
+    finales = {c: crudo[c] + Decimal(str(_ALLPORT_CORRECCION[c])) for c in _ALLPORT_CATEGORIAS}
 
-    detalle = {
-        f'{_ALLPORT_NOMBRE[k]} ({k})': str(int(v))
-        for k, v in ranking
-    }
+    ranking = sorted(finales.items(), key=lambda x: -x[1])
+    top_cat, top_pts = ranking[0]
 
-    # Subtotales por sección
-    for k, v in sorted(sec1.items(), key=lambda x: -x[1]):
-        detalle[f'Sec.1 — {_ALLPORT_NOMBRE[k]} ({k})'] = str(int(v))
-    for k, v in sorted(sec2.items(), key=lambda x: -x[1]):
-        detalle[f'Sec.2 — {_ALLPORT_NOMBRE[k]} ({k})'] = str(int(v))
+    detalle = {}
+    for cat, final in ranking:
+        bruto = crudo[cat]
+        corr = _ALLPORT_CORRECCION[cat]
+        signo = '+' if corr >= 0 else ''
+        detalle[cat] = f'{int(bruto)} {signo}{corr} = {int(final)}'
 
-    ranking_str = ' > '.join(
-        f'{_ALLPORT_NOMBRE[k]}({int(v)})' for k, v in ranking
-    )
+    for cat, v in sorted(sec1.items(), key=lambda x: -x[1]):
+        detalle[f'Sec.1 — {cat}'] = str(int(v))
+    for cat, v in sorted(sec2.items(), key=lambda x: -x[1]):
+        detalle[f'Sec.2 — {cat}'] = str(int(v))
+
+    ranking_str = ' > '.join(f'{cat}({int(v)})' for cat, v in ranking)
     interpretacion = (
-        f'Valor predominante: {_ALLPORT_NOMBRE[top_escala]} ({top_escala}) '
-        f'con {int(top_pts)} puntos. '
+        f'Valor predominante: {top_cat} con {int(top_pts)} puntos (tras corrección). '
         f'Ranking: {ranking_str}.'
     )
     return {
