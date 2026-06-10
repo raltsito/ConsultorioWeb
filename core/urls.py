@@ -130,6 +130,12 @@ urlpatterns = [
     path('api/notificaciones-terapeuta/', clinica_views.api_notificaciones_terapeuta, name='api_notificaciones_terapeuta'),
     path('api/notificaciones-terapeuta/leer/', clinica_views.marcar_notificaciones_leidas, name='marcar_notificaciones_leidas'),
 
+    # API endpoints externos (protegidos con X-API-Key)
+    path('api/notas-recepcion/', clinica_views.api_notas_recepcion, name='api_notas_recepcion'),
+    path('api/notas-recepcion/<int:nota_id>/', clinica_views.api_nota_recepcion_detail, name='api_nota_recepcion_detail'),
+    path('api/nomina-semanal/', clinica_views.api_nomina_semanal, name='api_nomina_semanal'),
+    path('api/disponibilidad-semanal/', clinica_views.api_disponibilidad_semanal, name='api_disponibilidad_semanal'),
+
     # Trazabilidad
     path('trazabilidad/', clinica_views.trazabilidad_admin, name='trazabilidad_admin'),
 

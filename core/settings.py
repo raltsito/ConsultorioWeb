@@ -145,3 +145,5 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 LOGIN_REDIRECT_URL = 'home'
 
 LOGOUT_REDIRECT_URL = 'login'
+
+DJANGO_API_KEY = os.environ.get('DJANGO_API_KEY', 'bgyrhhjr')

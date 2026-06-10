@@ -14,6 +14,7 @@ from django.db.models import Q, Sum, Count
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
+from .api_auth import api_key_required
 from django.urls import reverse
 
 #Excel
@@ -635,7 +636,7 @@ def checklist_host_config(request):
     })
 
 
-@login_required
+@api_key_required
 def api_sin_reagendar(request):
     periodo = request.GET.get('periodo', 'mes')
     if periodo not in ('dia', 'semana', 'mes', 'todo'):
@@ -1490,7 +1491,7 @@ def agendar_cita(request, paciente_id):
 def vista_calendario(request):
     return render(request, 'clinica/calendario.html')
 
-@login_required
+@api_key_required
 def calendario_citas(request):
     """API que devuelve las citas en formato JSON para FullCalendar"""
     from django.http import JsonResponse
@@ -1701,7 +1702,7 @@ def crear_cita(request):
     return render(request, 'clinica/crear_cita.html', {'form': form})
 
 
-@login_required
+@api_key_required
 def api_penalizacion_paciente(request):
     """Devuelve la penalización pendiente de un paciente, si existe."""
     from clinica.models import PenalizacionPaciente
@@ -1727,7 +1728,7 @@ def api_penalizacion_paciente(request):
     })
 
 
-@login_required
+@api_key_required
 def api_pacientes_relacionados(request):
     paciente_id = request.GET.get('paciente_id')
     if not paciente_id:
@@ -1743,6 +1744,7 @@ def api_pacientes_relacionados(request):
 
 # En clinica/views.py
 
+@api_key_required
 def verificar_disponibilidad(request):
     fecha_str = request.GET.get('fecha')
     hora_str = request.GET.get('hora')
@@ -2034,6 +2036,7 @@ def eliminar_paciente(request, paciente_id):
     return redirect('lista_pacientes')
 
 
+@api_key_required
 def api_citas_calendario(request):
     citas = Cita.objects.select_related(
         'division', 'servicio', 'terapeuta', 'consultorio', 'paciente'
@@ -2086,6 +2089,7 @@ def api_citas_calendario(request):
         
     return JsonResponse(eventos, safe=False)
 
+@api_key_required
 def api_terapeutas_paciente(request):
     paciente_id = request.GET.get('paciente_id')
     if not paciente_id:
@@ -2949,6 +2953,7 @@ def solicitar_cita_terapeuta(request):
         'mi_perfil': mi_perfil,
     })
 
+@api_key_required
 def api_disponibilidad_terapeuta(request):
     fecha_str = request.GET.get('fecha')
     terapeuta_id = request.GET.get('terapeuta')
@@ -4485,6 +4490,7 @@ def eliminar_disponibilidad(request, horario_id):
     return redirect('disponibilidad_semanal')
 
 
+@api_key_required
 def api_consultorios_por_horario(request):
     """Devuelve los consultorios válidos para un terapeuta en una fecha y hora dadas."""
     from .models import Consultorio as ConsultorioModel
@@ -5118,7 +5124,7 @@ def expediente_grupal_detalle(request, expediente_id):
     })
 
 
-@login_required
+@api_key_required
 def api_notificaciones_terapeuta(request):
     """Devuelve las notificaciones no leídas del terapeuta como JSON."""
     from django.http import JsonResponse
@@ -5401,7 +5407,7 @@ def catalogo_terapeutas(request):
 
 # ── API Catálogo ──────────────────────────────────────────────────────────────
 
-@login_required
+@api_key_required
 def api_catalogo_list(request):
     if request.method == 'GET':
         perfiles = (PerfilCatalogo.objects
@@ -5454,7 +5460,7 @@ def api_catalogo_list(request):
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
-@login_required
+@api_key_required
 def api_catalogo_detail(request, perfil_id):
     perfil = get_object_or_404(PerfilCatalogo, id=perfil_id)
 
@@ -5490,7 +5496,7 @@ def api_catalogo_detail(request, perfil_id):
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
-@login_required
+@api_key_required
 def api_terapeutas_activos(request):
     vinculados = set(
         PerfilCatalogo.objects
@@ -5584,3 +5590,104 @@ def trazabilidad_admin(request):
         'f_q':                    q,
         'hoy':                    hoy,
     })
+
+
+# =============================================================================
+# API endpoints externos (protegidos con api_key_required)
+# =============================================================================
+
+@api_key_required
+def api_notas_recepcion(request):
+    from .models import NotaRecepcion
+    if request.method == 'GET':
+        notas = NotaRecepcion.objects.all().order_by('-creado_en')
+        data = [{
+            'id': n.id,
+            'texto': n.texto,
+            'creado_por': str(n.creado_por),
+            'creado_en': n.creado_en.isoformat(),
+        } for n in notas]
+        return JsonResponse(data, safe=False)
+    elif request.method == 'POST':
+        import json
+        body = json.loads(request.body)
+        nota = NotaRecepcion.objects.create(
+            texto=body['texto'],
+            creado_por=request.user
+        )
+        return JsonResponse({
+            'id': nota.id,
+            'texto': nota.texto,
+            'creado_por': str(nota.creado_por),
+            'creado_en': nota.creado_en.isoformat(),
+        }, status=201)
+
+
+@api_key_required
+def api_nota_recepcion_detail(request, nota_id):
+    from .models import NotaRecepcion
+    try:
+        nota = NotaRecepcion.objects.get(id=nota_id)
+    except NotaRecepcion.DoesNotExist:
+        return JsonResponse({'error': 'Not found'}, status=404)
+    if request.method == 'DELETE':
+        nota.delete()
+        return JsonResponse({'ok': True})
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@api_key_required
+def api_nomina_semanal(request):
+    from .models import CorteSemanal, LineaNomina
+    from django.utils.dateparse import parse_date
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+    cortes = CorteSemanal.objects.all()
+    if fecha_inicio:
+        cortes = cortes.filter(fecha_inicio__gte=parse_date(fecha_inicio))
+    if fecha_fin:
+        cortes = cortes.filter(fecha_fin__lte=parse_date(fecha_fin))
+    data = []
+    for c in cortes:
+        lineas = LineaNomina.objects.filter(corte=c)
+        detalles = [{
+            'paciente': l.cita.paciente.nombre if l.cita and l.cita.paciente else '',
+            'fecha': l.cita.fecha.isoformat() if l.cita else '',
+            'servicio': l.cita.servicio.nombre if l.cita and l.cita.servicio else '',
+            'monto': float(l.monto),
+        } for l in lineas]
+        data.append({
+            'id': c.id,
+            'terapeuta': c.terapeuta.nombre,
+            'fecha_inicio': c.fecha_inicio.isoformat(),
+            'fecha_fin': c.fecha_fin.isoformat(),
+            'total_sesiones': c.total_sesiones,
+            'subtotal_sesiones': float(c.subtotal_sesiones),
+            'total_bonos': float(c.total_bonos),
+            'total_pago': float(c.total_pago),
+            'estatus': c.estatus,
+            'confirmacion_terapeuta': c.confirmacion_terapeuta,
+            'notas': c.notas,
+            'detalles': detalles,
+        })
+    return JsonResponse(data, safe=False)
+
+
+@api_key_required
+def api_disponibilidad_semanal(request):
+    from .models import Terapeuta, Horario
+    terapeutas = Terapeuta.objects.filter(activo=True)
+    data = []
+    for t in terapeutas:
+        horarios = Horario.objects.filter(terapeuta=t)
+        data.append({
+            'terapeuta_id': t.id,
+            'terapeuta': t.nombre,
+            'horarios': [{
+                'dia': h.dia,
+                'hora_inicio': h.hora_inicio.strftime('%H:%M'),
+                'hora_fin': h.hora_fin.strftime('%H:%M'),
+                'sede': h.sede,
+            } for h in horarios],
+        })
+    return JsonResponse(data, safe=False)
