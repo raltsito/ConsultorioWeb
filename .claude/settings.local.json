@@ -88,7 +88,22 @@
       "Bash(ls clinica/management)",
       "Bash(ls clinica/management/commands)",
       "Bash(where railway *)",
-      "Bash(railway whoami *)"
+      "Bash(railway whoami *)",
+      "Bash(railway domain *)",
+      "Bash(findstr /i \"scid\")",
+      "Bash(dir /b *.py)",
+      "Bash(tasklist)",
+      "WebFetch(domain:railway.com)",
+      "WebFetch(domain:docs.railway.com)",
+      "Bash(grep -n \"^Procfile\\\\|cron\\\\|worker\" Procfile start.sh)",
+      "Bash(cat Procfile)",
+      "Bash(cat start.sh)",
+      "Bash(./venv/Scripts/python.exe -c \"import django; print\\(django.get_version\\(\\)\\)\")",
+      "Bash(./venv/Scripts/python.exe manage.py makemigrations clinica)",
+      "Bash(./venv/Scripts/python.exe manage.py migrate clinica)",
+      "Bash(./venv/Scripts/python.exe manage.py check)",
+      "Bash(./venv/Scripts/python.exe manage.py shell -c ' *)",
+      "Bash(./venv/Scripts/python.exe manage.py enviar_recordatorios_whatsapp)"
     ]
   }
 }
