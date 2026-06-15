@@ -8,13 +8,16 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 #Herramientas base de Django
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.db import transaction
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum, Count, Max
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from .api_auth import api_key_required
 from django.urls import reverse
 
@@ -45,6 +48,8 @@ from .models import (
     ReporteSesion,
     Terapeuta,
     Cita,
+    ConfiguracionWhatsApp,
+    MensajeWhatsApp,
     Horario,
     SolicitudCita,
     SolicitudReagendo,
@@ -77,6 +82,7 @@ from .services import calcular_nomina_semanal, preview_nomina_semanal, aprobar_c
 from .services_instrumentos import (calcular_resultado_instrumento, calcular_raven,
                                      _RAVEN_SERIES, _RAVEN_ESPERADOS,
                                      _SCL90_REF, _SCL90_REF_SUMMARY)
+from . import services_whatsapp as wa
 #from .utils import sincronizar_google_sheet
 
 def _registrar_actividad(request, accion, categoria, descripcion, terapeuta=None, paciente=None):
@@ -6101,3 +6107,311 @@ def responder_instrumento(request, token):
         "display_items": _agrupar_preguntas_display(preguntas),
         "pantalla": "formulario",
     })
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# WhatsApp (Meta Cloud API) — recordatorios, confirmación, encuesta, reactivación
+# ─────────────────────────────────────────────────────────────────────────
+
+MAP_WHATSAPP_MANUAL = {
+    MensajeWhatsApp.TIPO_RECORDATORIO_5D: ('recordatorio_cita_5_dias',
+        lambda d: [d['nombre_paciente'], d['fecha'], d['hora'],
+                   d['sucursal'], d['terapeuta'], d['servicio']]),
+    MensajeWhatsApp.TIPO_RECORDATORIO_3D: ('recordatorio_cita_3_dias',
+        lambda d: [d['nombre_paciente'], d['fecha'], d['hora'],
+                   d['sucursal'], d['terapeuta'], d['servicio']]),
+    MensajeWhatsApp.TIPO_CONFIRMACION_1D: ('confirmacion_cita_1_dia',
+        lambda d: [d['fecha'], d['hora'], d['sucursal'], d['terapeuta'],
+                   d['nombre_paciente'], d['servicio'], d['monto']]),
+    MensajeWhatsApp.TIPO_ENCUESTA: ('encuesta_conformidad',
+        lambda d: [d['nombre_paciente'], d['servicio'], d['terapeuta']]),
+}
+
+# Campo de Cita que se marca al enviar exitosamente, para que el cron no reenvíe.
+CAMPO_MARCA_WHATSAPP = {
+    MensajeWhatsApp.TIPO_RECORDATORIO_5D: 'recordatorio_5d_enviado_en',
+    MensajeWhatsApp.TIPO_RECORDATORIO_3D: 'recordatorio_3d_enviado_en',
+    MensajeWhatsApp.TIPO_CONFIRMACION_1D: 'recordatorio_1d_enviado_en',
+    MensajeWhatsApp.TIPO_ENCUESTA: 'encuesta_enviada_en',
+}
+
+
+@login_required
+@require_POST
+def whatsapp_enviar_manual(request, cita_id, tipo):
+    """Botón manual en la ficha de cita: envía cualquiera de los 4 tipos de mensaje."""
+    if tipo not in MAP_WHATSAPP_MANUAL:
+        return JsonResponse({'error': 'Tipo inválido'}, status=400)
+
+    cita = get_object_or_404(
+        Cita.objects.select_related('paciente', 'terapeuta', 'servicio', 'consultorio'),
+        pk=cita_id,
+    )
+    if not cita.paciente.telefono:
+        return JsonResponse({'error': 'El paciente no tiene teléfono registrado'}, status=400)
+
+    nombre_template, get_params = MAP_WHATSAPP_MANUAL[tipo]
+    datos = wa.construir_parametros_cita(cita)
+
+    try:
+        resp = wa.enviar_template(cita.paciente.telefono, nombre_template, get_params(datos))
+        exitoso = 'messages' in resp
+    except Exception as e:
+        resp = {'error': str(e)}
+        exitoso = False
+
+    campo = CAMPO_MARCA_WHATSAPP.get(tipo)
+    if exitoso and campo:
+        setattr(cita, campo, timezone.now())
+        cita.save(update_fields=[campo])
+
+    MensajeWhatsApp.objects.create(
+        cita=cita,
+        paciente=cita.paciente,
+        telefono=cita.paciente.telefono,
+        tipo=tipo,
+        origen='manual',
+        exitoso=exitoso,
+        respuesta_api=resp,
+        enviado_por=request.user,
+    )
+    return JsonResponse({'ok': exitoso, 'meta_response': resp})
+
+
+@login_required
+@require_POST
+def whatsapp_reactivacion_seguimiento(request):
+    """
+    Botón en la vista de pacientes sin seguimiento.
+    Body JSON: { "paciente_ids": [1, 2, 3] }
+    """
+    data = json.loads(request.body)
+    ids = data.get('paciente_ids', [])
+    pacientes = Paciente.objects.filter(pk__in=ids).exclude(telefono='')
+
+    resultados = []
+    for paciente in pacientes:
+        try:
+            resp = wa.enviar_template(
+                paciente.telefono,
+                'reactivacion_paciente',
+                [paciente.nombre, 'INTRA']
+            )
+            exitoso = 'messages' in resp
+        except Exception as e:
+            resp = {'error': str(e)}
+            exitoso = False
+
+        MensajeWhatsApp.objects.create(
+            paciente=paciente,
+            telefono=paciente.telefono,
+            tipo=MensajeWhatsApp.TIPO_REACTIVACION,
+            origen='manual',
+            exitoso=exitoso,
+            respuesta_api=resp,
+            enviado_por=request.user,
+        )
+        resultados.append({'paciente_id': paciente.pk, 'ok': exitoso})
+
+    return JsonResponse({'resultados': resultados})
+
+
+@csrf_exempt
+def whatsapp_webhook(request):
+    """
+    GET:  verificación inicial de Meta (handshake)
+    POST: mensajes entrantes (reservado para fases futuras)
+    """
+    if request.method == 'GET':
+        mode = request.GET.get('hub.mode')
+        token = request.GET.get('hub.verify_token')
+        challenge = request.GET.get('hub.challenge')
+        if mode == 'subscribe' and token == settings.WHATSAPP_VERIFY_TOKEN:
+            return HttpResponse(challenge, content_type='text/plain')
+        return HttpResponse(status=403)
+
+    if request.method == 'POST':
+        return HttpResponse(status=200)
+
+    return HttpResponse(status=405)
+
+
+@api_key_required
+@require_POST
+def whatsapp_trigger_cron(request):
+    """Disparado por cron-job.org (cron gratuito externo) con header X-API-Key."""
+    from django.core import management
+    management.call_command('enviar_recordatorios_whatsapp')
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def pacientes_sin_seguimiento(request):
+    """
+    Pacientes cuya última cita con ESTATUS_SI_ASISTIO fue antes de `desde`
+    y que no tienen ninguna cita futura activa.
+    Filtro vía querystring: ?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+    """
+    hoy = timezone.localdate()
+    desde_str = request.GET.get('desde', '')
+    hasta_str = request.GET.get('hasta', '')
+    desde = datetime.strptime(desde_str, '%Y-%m-%d').date() if desde_str else None
+    hasta = datetime.strptime(hasta_str, '%Y-%m-%d').date() if hasta_str else hoy
+
+    pacientes_con_cita_futura = Cita.objects.filter(
+        fecha__gte=hoy,
+        estatus__in=Cita.ESTATUS_ACTIVOS,
+    ).values_list('paciente_id', flat=True)
+
+    pacientes = (
+        Paciente.objects.exclude(telefono='')
+        .exclude(pk__in=pacientes_con_cita_futura)
+        .annotate(ultima_asistencia=Max(
+            'citas__fecha', filter=Q(citas__estatus=Cita.ESTATUS_SI_ASISTIO)
+        ))
+        .filter(ultima_asistencia__isnull=False, ultima_asistencia__lte=hasta)
+    )
+    if desde:
+        pacientes = pacientes.filter(ultima_asistencia__gte=desde)
+
+    return render(request, 'clinica/pacientes_sin_seguimiento.html', {
+        'pacientes': pacientes.order_by('-ultima_asistencia'),
+        'desde': desde_str,
+        'hasta': hasta_str or hoy.isoformat(),
+    })
+
+
+@login_required
+def whatsapp_recordatorios(request):
+    """
+    Panel para enviar manualmente, por lote, los mensajes que normalmente
+    dispara el cron diario: recordatorios (5d/3d), confirmación (1d) y
+    encuesta de conformidad, a las citas que aún no los tienen marcados.
+    """
+    hoy = timezone.localdate()
+
+    base = (
+        Cita.objects
+        .select_related('paciente', 'terapeuta', 'servicio', 'consultorio')
+        .exclude(paciente__telefono='')
+    )
+
+    grupos = [
+        {
+            'tipo': MensajeWhatsApp.TIPO_RECORDATORIO_5D,
+            'titulo': 'Recordatorio 5 días',
+            'subtitulo': 'Citas del ' + (hoy + timedelta(days=5)).strftime('%d/%m/%Y'),
+            'icono': 'bi-calendar-week',
+            'color': '#0D6EFD',
+            'citas': base.filter(
+                fecha=hoy + timedelta(days=5),
+                estatus__in=Cita.ESTATUS_ACTIVOS,
+                recordatorio_5d_enviado_en__isnull=True,
+            ).order_by('hora'),
+        },
+        {
+            'tipo': MensajeWhatsApp.TIPO_RECORDATORIO_3D,
+            'titulo': 'Recordatorio 3 días',
+            'subtitulo': 'Citas del ' + (hoy + timedelta(days=3)).strftime('%d/%m/%Y'),
+            'icono': 'bi-calendar3',
+            'color': '#3B82F6',
+            'citas': base.filter(
+                fecha=hoy + timedelta(days=3),
+                estatus__in=Cita.ESTATUS_ACTIVOS,
+                recordatorio_3d_enviado_en__isnull=True,
+            ).order_by('hora'),
+        },
+        {
+            'tipo': MensajeWhatsApp.TIPO_CONFIRMACION_1D,
+            'titulo': 'Confirmación 1 día',
+            'subtitulo': 'Citas del ' + (hoy + timedelta(days=1)).strftime('%d/%m/%Y'),
+            'icono': 'bi-check2-circle',
+            'color': '#0EA5E9',
+            'citas': base.filter(
+                fecha=hoy + timedelta(days=1),
+                estatus__in=Cita.ESTATUS_ACTIVOS,
+                recordatorio_1d_enviado_en__isnull=True,
+            ).order_by('hora'),
+        },
+        {
+            'tipo': MensajeWhatsApp.TIPO_ENCUESTA,
+            'titulo': 'Encuesta de satisfacción',
+            'subtitulo': 'Asistencias de los últimos 14 días',
+            'icono': 'bi-emoji-smile',
+            'color': '#0D9488',
+            'citas': base.filter(
+                fecha__lt=hoy,
+                fecha__gte=hoy - timedelta(days=14),
+                estatus=Cita.ESTATUS_SI_ASISTIO,
+                encuesta_enviada_en__isnull=True,
+            ).order_by('-fecha', 'hora'),
+        },
+    ]
+
+    return render(request, 'clinica/whatsapp_recordatorios.html', {
+        'grupos': grupos,
+        'hoy': hoy,
+        'automatizacion_activa': ConfiguracionWhatsApp.get_actual().automatizacion_activa,
+    })
+
+
+@login_required
+@require_POST
+def whatsapp_toggle_automatizacion(request):
+    """Activa/desactiva el envío automático (cron) de recordatorios, confirmaciones y encuestas."""
+    config = ConfiguracionWhatsApp.get_actual()
+    config.automatizacion_activa = not config.automatizacion_activa
+    config.save(update_fields=['automatizacion_activa'])
+    return JsonResponse({'automatizacion_activa': config.automatizacion_activa})
+
+
+@login_required
+@require_POST
+def whatsapp_enviar_lote(request):
+    """
+    Envío masivo desde el panel de recordatorios pendientes.
+    Body JSON: { "cita_ids": [1, 2, 3], "tipo": "recordatorio_5d" }
+    """
+    data = json.loads(request.body)
+    tipo = data.get('tipo')
+    ids = data.get('cita_ids', [])
+    if tipo not in MAP_WHATSAPP_MANUAL:
+        return JsonResponse({'error': 'Tipo inválido'}, status=400)
+
+    nombre_template, get_params = MAP_WHATSAPP_MANUAL[tipo]
+    campo = CAMPO_MARCA_WHATSAPP.get(tipo)
+
+    citas = (
+        Cita.objects
+        .select_related('paciente', 'terapeuta', 'servicio', 'consultorio')
+        .filter(pk__in=ids)
+        .exclude(paciente__telefono='')
+    )
+
+    resultados = []
+    for cita in citas:
+        datos = wa.construir_parametros_cita(cita)
+        try:
+            resp = wa.enviar_template(cita.paciente.telefono, nombre_template, get_params(datos))
+            exitoso = 'messages' in resp
+        except Exception as e:
+            resp = {'error': str(e)}
+            exitoso = False
+
+        if exitoso and campo:
+            setattr(cita, campo, timezone.now())
+            cita.save(update_fields=[campo])
+
+        MensajeWhatsApp.objects.create(
+            cita=cita,
+            paciente=cita.paciente,
+            telefono=cita.paciente.telefono,
+            tipo=tipo,
+            origen='manual',
+            exitoso=exitoso,
+            respuesta_api=resp,
+            enviado_por=request.user,
+        )
+        resultados.append({'cita_id': cita.pk, 'ok': exitoso})
+
+    return JsonResponse({'resultados': resultados})

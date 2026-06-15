@@ -621,6 +621,12 @@ class Cita(models.Model):
         help_text="Indica si el paciente tiene descuento / estudio socioeconómico activo al momento de la cita."
     )
 
+    # Marcas de envío de recordatorios/encuesta por WhatsApp (evitan reenvíos del cron)
+    recordatorio_5d_enviado_en = models.DateTimeField(null=True, blank=True)
+    recordatorio_3d_enviado_en = models.DateTimeField(null=True, blank=True)
+    recordatorio_1d_enviado_en = models.DateTimeField(null=True, blank=True)
+    encuesta_enviada_en = models.DateTimeField(null=True, blank=True)
+
     @property
     def es_finalizable(self):
         """True si la cita puede ser cerrada por el terapeuta (aún no tiene resultado final)."""
@@ -659,7 +665,73 @@ class Cita(models.Model):
         verbose_name_plural = "Citas"
         ordering = ['-fecha', '-hora']
 
-    # En clinica/models.py
+
+class MensajeWhatsApp(models.Model):
+    TIPO_RECORDATORIO_5D = 'recordatorio_5d'
+    TIPO_RECORDATORIO_3D = 'recordatorio_3d'
+    TIPO_CONFIRMACION_1D = 'confirmacion_1d'
+    TIPO_ENCUESTA = 'encuesta'
+    TIPO_REACTIVACION = 'reactivacion'
+
+    TIPO_CHOICES = [
+        (TIPO_RECORDATORIO_5D, 'Recordatorio 5 días'),
+        (TIPO_RECORDATORIO_3D, 'Recordatorio 3 días'),
+        (TIPO_CONFIRMACION_1D, 'Confirmación 1 día'),
+        (TIPO_ENCUESTA, 'Encuesta conformidad'),
+        (TIPO_REACTIVACION, 'Reactivación seguimiento'),
+    ]
+    ORIGEN_CHOICES = [
+        ('automatico', 'Automático'),
+        ('manual', 'Manual'),
+    ]
+
+    cita = models.ForeignKey(
+        'Cita', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='mensajes_whatsapp',
+    )
+    paciente = models.ForeignKey(
+        'Paciente', on_delete=models.CASCADE,
+        related_name='mensajes_whatsapp',
+    )
+    telefono = models.CharField(max_length=20)
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='automatico')
+    enviado_en = models.DateTimeField(auto_now_add=True)
+    exitoso = models.BooleanField(default=False)
+    respuesta_api = models.JSONField(null=True, blank=True)
+    enviado_por = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+    )
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} a {self.paciente} ({self.enviado_en:%d/%m/%Y %H:%M})"
+
+    class Meta:
+        verbose_name = 'Mensaje WhatsApp'
+        verbose_name_plural = 'Mensajes WhatsApp'
+        ordering = ['-enviado_en']
+
+
+class ConfiguracionWhatsApp(models.Model):
+    """Configuración global (registro único) del módulo de WhatsApp."""
+    automatizacion_activa = models.BooleanField(
+        default=True,
+        help_text='Si está desactivado, el cron diario no envía recordatorios, '
+                   'confirmaciones ni encuestas; solo queda disponible el envío manual.',
+    )
+
+    def __str__(self):
+        return 'Automatización activa' if self.automatizacion_activa else 'Automatización desactivada'
+
+    @classmethod
+    def get_actual(cls):
+        config, _ = cls.objects.get_or_create(pk=1)
+        return config
+
+    class Meta:
+        verbose_name = 'Configuración WhatsApp'
+        verbose_name_plural = 'Configuración WhatsApp'
+
 
 class Horario(models.Model):
     DIAS_SEMANA = [

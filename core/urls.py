@@ -146,6 +146,24 @@ urlpatterns = [
     # Trazabilidad
     path('trazabilidad/', clinica_views.trazabilidad_admin, name='trazabilidad_admin'),
 
+    # WhatsApp
+    path('api/whatsapp/webhook/',
+         clinica_views.whatsapp_webhook, name='whatsapp_webhook'),
+    path('api/whatsapp/trigger-cron/',
+         clinica_views.whatsapp_trigger_cron, name='whatsapp_trigger_cron'),
+    path('api/whatsapp/manual/<int:cita_id>/<str:tipo>/',
+         clinica_views.whatsapp_enviar_manual, name='whatsapp_manual'),
+    path('api/whatsapp/reactivacion/',
+         clinica_views.whatsapp_reactivacion_seguimiento, name='whatsapp_reactivacion'),
+    path('api/whatsapp/lote/',
+         clinica_views.whatsapp_enviar_lote, name='whatsapp_enviar_lote'),
+    path('pacientes/sin-seguimiento/',
+         clinica_views.pacientes_sin_seguimiento, name='pacientes_sin_seguimiento'),
+    path('whatsapp/recordatorios/',
+         clinica_views.whatsapp_recordatorios, name='whatsapp_recordatorios'),
+    path('api/whatsapp/automatizacion/toggle/',
+         clinica_views.whatsapp_toggle_automatizacion, name='whatsapp_toggle_automatizacion'),
+
 ]
 
 if settings.DEBUG:

@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib import admin
-from .models import AccesoDirectoPortal, Consultoria, Empresa, Host, HostChecklistTask, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta, RecursoPropio
+from .models import AccesoDirectoPortal, Consultoria, Empresa, Host, HostChecklistTask, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta, RecursoPropio, MensajeWhatsApp, ConfiguracionWhatsApp
 from .models import Horario
 from .models import Instrumento, PreguntaInstrumento, EnvioInstrumento, RespuestaInstrumento
 
@@ -50,6 +50,29 @@ class CitaAdmin(admin.ModelAdmin):
 
 admin.site.register(Paciente, PacienteAdmin)
 admin.site.register(Cita, CitaAdmin)
+
+
+@admin.register(MensajeWhatsApp)
+class MensajeWhatsAppAdmin(admin.ModelAdmin):
+    list_display = ('paciente', 'tipo', 'origen', 'telefono', 'exitoso', 'enviado_en')
+    list_filter = ('tipo', 'origen', 'exitoso')
+    search_fields = ('paciente__nombre', 'telefono')
+    readonly_fields = ('cita', 'paciente', 'telefono', 'tipo', 'origen', 'enviado_en',
+                        'exitoso', 'respuesta_api', 'enviado_por')
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(ConfiguracionWhatsApp)
+class ConfiguracionWhatsAppAdmin(admin.ModelAdmin):
+    list_display = ('automatizacion_activa',)
+
+    def has_add_permission(self, request):
+        return not ConfiguracionWhatsApp.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 @admin.register(Horario)
 class HorarioAdmin(admin.ModelAdmin):
