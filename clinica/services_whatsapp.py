@@ -13,18 +13,19 @@ DIAS_SEMANA = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 
 
 # Dirección/instrucciones de llegada por sede, usadas en el template de confirmación.
 # 'republica' es el fallback cuando consultorio es None o la sede no está en este mapa.
+# Sin saltos de línea: WhatsApp rechaza parámetros de template con \n/\t (error 132018).
 SEDE_DIRECCIONES = {
-    'republica': '📍 Piedras Negras 1925, República Oriente, 25280 Saltillo, Coah.\n'
+    'republica': '📍 Piedras Negras 1925, República Oriente, 25280 Saltillo, Coah. '
                  'https://goo.gl/maps/ZT79pYXUtkrZAow1A',
-    'morelos': '📍 Blvd Morelos 801, Morelos, Saltillo, Coah.\n'
+    'morelos': '📍 Blvd Morelos 801, Morelos, Saltillo, Coah. '
                'https://maps.app.goo.gl/psTTcpmYCcWPc6yX6',
-    'colinas': '📍 Mier 1235, Colinas de Santiago, Real del Sol III, 25016, Saltillo, Coah.\n'
+    'colinas': '📍 Mier 1235, Colinas de Santiago, Real del Sol III, 25016, Saltillo, Coah. '
                'https://maps.app.goo.gl/BpnUL9PL2511a9qF8',
     'trabajo_social': '📍 2do Piso, Facultad de Trabajo Social UAdeC "Dra. Cuquita Cepeda de Dávila", '
-                       'Col. Adolfo López Mateos, Saltillo, Coah.\n'
+                       'Col. Adolfo López Mateos, Saltillo, Coah. '
                        'https://maps.app.goo.gl/v6EVAQJZXDPjDecJ9',
     'zoom': 'El enlace de la reunión virtual se le enviará una vez realizada la transferencia '
-            'y compartido el comprobante al 844 443 9987.\n'
+            'y compartido el comprobante al 844 443 9987. '
             'Le solicitamos conectarse puntualmente.',
     'externo': 'En la ubicación acordada con su terapeuta.',
 }
