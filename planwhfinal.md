@@ -95,30 +95,30 @@ Hola {{1}}, te recordamos que en 3 días tienes una cita con nosotros.
 ### Template 3 — Confirmación 1 día antes
 **Nombre:** `confirmacion_cita_1_dia` · **Categoría:** `UTILITY`
 ```
-Buenas tardes, para confirmar su asistencia a la cita programada para el {{1}} a las {{2}} en el consultorio de {{3}}.
+Buenas tardes, confirmamos su cita el {{1}} a las {{2}}, consultorio {{3}}.
 
-El profesional de la salud que lo atenderá es: {{4}}
+Profesional: {{4}}
 Paciente: {{5}}
 Servicio: {{6}}
 
-Le solicitamos llegar puntualmente, ya que no podremos reprogramar ni extender el tiempo asignado.
+Por favor llegue puntual; no podremos reprogramar ni extender el tiempo.
 
-La cantidad a pagar es: ${{7}}. ¿Podría indicarnos cómo realizará su pago? ¿Será por transferencia, en efectivo o con tarjeta?
+Costo: ${{7}}. ¿Pagará por transferencia, efectivo o tarjeta?
 
-En caso de elegir transferencia, los datos son:
+Transferencia:
 🏦 Banco: BBVA
-💳 N° de Tarjeta: 4555 1130 1572 4679
-👤 Titular: Miriam Rubí Iracheta (Instituto de Atención Integral y Desarrollo Humano A.C.)
-
-Agradecemos su atención.
+💳 Tarjeta: 4555 1130 1572 4679
+👤 Titular: Miriam Rubí Iracheta
 
 {{8}}
+
+Para cambios o dudas, escríbanos al 844 443 9987.
 ```
-*Variables: fecha_completa, hora, sucursal, terapeuta, nombre_paciente, servicio, monto, direccion*
+*Variables: fecha_completa, hora, sucursal, terapeuta, nombre_paciente, servicio, monto, direccion* (415 caracteres, límite de Meta: 550)
 
 `direccion` varía según `cita.consultorio.sede` (ver `SEDE_DIRECCIONES` en `services_whatsapp.py`): cada sede (República, Morelos, Colinas, Trabajo Social, Zoom, Externo) tiene su propio texto de ubicación o instrucciones de acceso.
 
-*Botón: Llamar a un número de teléfono → `+52 844 443 9987` · Texto: "Cambio o duda"*
+*Sin botón: el número de WhatsApp ya queda como texto plano (tap-to-message nativo en WhatsApp), no se necesita botón de llamada en esta plantilla.*
 
 ---
 
