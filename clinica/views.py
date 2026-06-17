@@ -359,6 +359,15 @@ def aviso_privacidad(request):
     return render(request, 'clinica/privacidad.html')
 
 
+def contacto_recepcion(request):
+    """
+    Redirect propio para el botón "Cambio o duda" de las plantillas de WhatsApp.
+    Meta no permite usar wa.me directamente como URL de botón de plantilla;
+    este endpoint en nuestro dominio sirve de intermediario.
+    """
+    return redirect('https://wa.me/528444439987')
+
+
 @login_required
 def home(request):
     # --- EL SEMAFORO INTELIGENTE ---
@@ -6126,7 +6135,7 @@ MAP_WHATSAPP_MANUAL = {
                    d['sucursal'], d['terapeuta'], d['servicio']]),
     MensajeWhatsApp.TIPO_CONFIRMACION_1D: ('confirmacion_cita_1_dia',
         lambda d: [d['fecha'], d['hora'], d['sucursal'], d['terapeuta'],
-                   d['nombre_paciente'], d['servicio'], d['monto']]),
+                   d['nombre_paciente'], d['servicio'], d['monto'], d['direccion']]),
     MensajeWhatsApp.TIPO_ENCUESTA: ('encuesta_conformidad',
         lambda d: [d['nombre_paciente'], d['servicio'], d['terapeuta']]),
 }

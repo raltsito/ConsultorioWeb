@@ -11,6 +11,24 @@ MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
          'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 DIAS_SEMANA = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
 
+# Dirección/instrucciones de llegada por sede, usadas en el template de confirmación.
+# 'republica' es el fallback cuando consultorio es None o la sede no está en este mapa.
+SEDE_DIRECCIONES = {
+    'republica': '📍 Piedras Negras 1925, República Oriente, 25280 Saltillo, Coah.\n'
+                 'https://goo.gl/maps/ZT79pYXUtkrZAow1A',
+    'morelos': '📍 Blvd Morelos 801, Morelos, Saltillo, Coah.\n'
+               'https://maps.app.goo.gl/psTTcpmYCcWPc6yX6',
+    'colinas': '📍 Mier 1235, Colinas de Santiago, Real del Sol III, 25016, Saltillo, Coah.\n'
+               'https://maps.app.goo.gl/BpnUL9PL2511a9qF8',
+    'trabajo_social': '📍 2do Piso, Facultad de Trabajo Social UAdeC "Dra. Cuquita Cepeda de Dávila", '
+                       'Col. Adolfo López Mateos, Saltillo, Coah.\n'
+                       'https://maps.app.goo.gl/v6EVAQJZXDPjDecJ9',
+    'zoom': 'El enlace de la reunión virtual se le enviará una vez realizada la transferencia '
+            'y compartido el comprobante al 844 443 9987.\n'
+            'Le solicitamos conectarse puntualmente.',
+    'externo': 'En la ubicación acordada con su terapeuta.',
+}
+
 
 def _normalizar_telefono(telefono: str) -> str:
     """
@@ -76,6 +94,9 @@ def construir_parametros_cita(cita) -> dict:
     terapeuta = cita.terapeuta.nombre if cita.terapeuta else "—"
     servicio = cita.servicio.nombre if cita.servicio else "—"
 
+    sede = cita.consultorio.sede if cita.consultorio else None
+    direccion = SEDE_DIRECCIONES.get(sede, SEDE_DIRECCIONES['republica'])
+
     monto = cita.costo
     if monto is None and cita.servicio:
         monto = cita.servicio.precio
@@ -91,4 +112,5 @@ def construir_parametros_cita(cita) -> dict:
         "terapeuta":       terapeuta,
         "servicio":        servicio,
         "monto":           monto_str,
+        "direccion":       direccion,
     }

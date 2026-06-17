@@ -71,6 +71,7 @@ Servicio: {{6}}
 Ante cualquier cambio o duda, no dudes en contactarnos. ¡Te esperamos!
 ```
 *Variables: nombre_paciente, fecha, hora, sucursal, terapeuta, servicio*
+*Botón: Visitar sitio web (URL estática) → `https://www.agenda.intra.org.mx/contacto/` · Texto: "Cambio o duda"*
 
 ---
 
@@ -87,6 +88,7 @@ Hola {{1}}, te recordamos que en 3 días tienes una cita con nosotros.
 ¡Te esperamos puntualmente!
 ```
 *Variables: nombre_paciente, fecha, hora, sucursal, terapeuta, servicio*
+*Botón: Visitar sitio web (URL estática) → `https://www.agenda.intra.org.mx/contacto/` · Texto: "Cambio o duda"*
 
 ---
 
@@ -110,10 +112,13 @@ En caso de elegir transferencia, los datos son:
 
 Agradecemos su atención.
 
-📍 Piedras Negras 1925, República Oriente, 25280 Saltillo, Coah.
-https://goo.gl/maps/ZT79pYXUtkrZAow1A
+{{8}}
 ```
-*Variables: fecha_completa, hora, sucursal, terapeuta, nombre_paciente, servicio, monto*
+*Variables: fecha_completa, hora, sucursal, terapeuta, nombre_paciente, servicio, monto, direccion*
+
+`direccion` varía según `cita.consultorio.sede` (ver `SEDE_DIRECCIONES` en `services_whatsapp.py`): cada sede (República, Morelos, Colinas, Trabajo Social, Zoom, Externo) tiene su propio texto de ubicación o instrucciones de acceso.
+
+*Botón: Visitar sitio web (URL estática) → `https://www.agenda.intra.org.mx/contacto/` · Texto: "Cambio o duda"*
 
 ---
 
@@ -146,6 +151,7 @@ En {{2}} seguimos disponibles para apoyarte en tu bienestar. Si deseas retomar t
 Comunícate con nosotros o escríbenos aquí. ¡Te esperamos! 🌿
 ```
 *Variables: nombre_paciente, nombre_clinica (fijo: "INTRA")*
+*Botón: Visitar sitio web (URL estática) → `https://www.agenda.intra.org.mx/contacto/` · Texto: "Cambio o duda"*
 
 ---
 

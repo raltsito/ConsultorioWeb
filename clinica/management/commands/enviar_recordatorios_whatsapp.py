@@ -35,7 +35,7 @@ class Command(BaseCommand):
                 recordatorio_1d_enviado_en__isnull=True):
             self._enviar(cita, MensajeWhatsApp.TIPO_CONFIRMACION_1D, 'confirmacion_cita_1_dia',
                 lambda d: [d['fecha'], d['hora'], d['sucursal'], d['terapeuta'],
-                           d['nombre_paciente'], d['servicio'], d['monto']])
+                           d['nombre_paciente'], d['servicio'], d['monto'], d['direccion']])
 
         # --- Encuesta 1 día después (solo a quien SÍ asistió) ---
         fecha_ayer = hoy - timedelta(days=1)
