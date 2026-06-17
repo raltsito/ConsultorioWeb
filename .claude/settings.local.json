@@ -103,7 +103,20 @@
       "Bash(./venv/Scripts/python.exe manage.py migrate clinica)",
       "Bash(./venv/Scripts/python.exe manage.py check)",
       "Bash(./venv/Scripts/python.exe manage.py shell -c ' *)",
-      "Bash(./venv/Scripts/python.exe manage.py enviar_recordatorios_whatsapp)"
+      "Bash(./venv/Scripts/python.exe manage.py enviar_recordatorios_whatsapp)",
+      "Bash(dir /a \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\")",
+      "Bash(findstr -i env)",
+      "WebFetch(domain:intra.org.mx)",
+      "Bash(python3 -c ' *)",
+      "Bash(railway up *)",
+      "Bash(timeout 90 railway logs)",
+      "WebFetch(domain:www.agenda.intra.org.mx)",
+      "Bash(timeout 30 railway logs)",
+      "Bash(xxd start.sh)",
+      "Bash(xxd)",
+      "Bash(railway logs *)",
+      "Bash(railway deployment *)",
+      "Read(//tmp/**)"
     ]
   }
 }
