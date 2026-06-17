@@ -355,6 +355,10 @@ def _sin_reagendar_stats():
     }
 
 
+def aviso_privacidad(request):
+    return render(request, 'clinica/privacidad.html')
+
+
 @login_required
 def home(request):
     # --- EL SEMAFORO INTELIGENTE ---

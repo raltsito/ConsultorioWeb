@@ -12,6 +12,7 @@ urlpatterns = [
     
     
     path('', clinica_views.home, name='home'),
+    path('privacidad/', clinica_views.aviso_privacidad, name='aviso_privacidad'),
     path('manual/actualizar/', clinica_views.actualizar_manual_portal, name='actualizar_manual_portal'),
     path('pacientes/', clinica_views.lista_pacientes, name='lista_pacientes'),
     path('pacientes/nuevo/', clinica_views.registrar_paciente, name='registrar_paciente'),
