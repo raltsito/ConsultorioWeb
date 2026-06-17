@@ -71,7 +71,7 @@ Servicio: {{6}}
 Ante cualquier cambio o duda, no dudes en contactarnos. ¡Te esperamos!
 ```
 *Variables: nombre_paciente, fecha, hora, sucursal, terapeuta, servicio*
-*Botón: Visitar sitio web (URL estática) → `https://www.agenda.intra.org.mx/contacto/` · Texto: "Cambio o duda"*
+*Botón: Llamar a un número de teléfono → `+52 844 443 9987` · Texto: "Cambio o duda"*
 
 ---
 
@@ -88,7 +88,7 @@ Hola {{1}}, te recordamos que en 3 días tienes una cita con nosotros.
 ¡Te esperamos puntualmente!
 ```
 *Variables: nombre_paciente, fecha, hora, sucursal, terapeuta, servicio*
-*Botón: Visitar sitio web (URL estática) → `https://www.agenda.intra.org.mx/contacto/` · Texto: "Cambio o duda"*
+*Botón: Llamar a un número de teléfono → `+52 844 443 9987` · Texto: "Cambio o duda"*
 
 ---
 
@@ -118,7 +118,7 @@ Agradecemos su atención.
 
 `direccion` varía según `cita.consultorio.sede` (ver `SEDE_DIRECCIONES` en `services_whatsapp.py`): cada sede (República, Morelos, Colinas, Trabajo Social, Zoom, Externo) tiene su propio texto de ubicación o instrucciones de acceso.
 
-*Botón: Visitar sitio web (URL estática) → `https://www.agenda.intra.org.mx/contacto/` · Texto: "Cambio o duda"*
+*Botón: Llamar a un número de teléfono → `+52 844 443 9987` · Texto: "Cambio o duda"*
 
 ---
 
@@ -151,7 +151,7 @@ En {{2}} seguimos disponibles para apoyarte en tu bienestar. Si deseas retomar t
 Comunícate con nosotros o escríbenos aquí. ¡Te esperamos! 🌿
 ```
 *Variables: nombre_paciente, nombre_clinica (fijo: "INTRA")*
-*Botón: Visitar sitio web (URL estática) → `https://www.agenda.intra.org.mx/contacto/` · Texto: "Cambio o duda"*
+*Botón: Llamar a un número de teléfono → `+52 844 443 9987` · Texto: "Cambio o duda"*
 
 ---
 
