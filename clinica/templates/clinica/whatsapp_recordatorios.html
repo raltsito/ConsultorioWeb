@@ -142,34 +142,31 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white">
                     <strong>Mensajes recibidos</strong>
-                    <span class="text-muted small ms-2">Respuestas de pacientes al número de WhatsApp automático, pendientes de revisión</span>
+                    <span class="text-muted small ms-2">Conversaciones con respuestas pendientes de revisión — clic para abrir el chat</span>
                 </div>
                 <div class="card-body p-0">
-                    {% if mensajes_entrantes %}
+                    {% if conversaciones %}
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
                                     <th>Paciente</th>
                                     <th>Teléfono</th>
-                                    <th>Mensaje</th>
+                                    <th>Último mensaje</th>
+                                    <th style="width:90px;">Pendientes</th>
                                     <th>Recibido</th>
-                                    <th style="width:140px;"></th>
                                 </tr>
                             </thead>
-                            <tbody id="tbody-mensajes-recibidos">
-                                {% for mensaje in mensajes_entrantes %}
-                                <tr data-mensaje-id="{{ mensaje.id }}">
-                                    <td>{{ mensaje.paciente.nombre|default:"— sin identificar —" }}</td>
-                                    <td>{{ mensaje.wa_id }}</td>
-                                    <td>{{ mensaje.texto|default:"(mensaje sin texto)" }}</td>
-                                    <td>{{ mensaje.recibido_en|date:"d/m/Y H:i" }}</td>
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-outline-success btn-marcar-atendido"
-                                                data-url="{% url 'whatsapp_marcar_atendido' mensaje.id %}">
-                                            <i class="bi bi-check2 me-1"></i>Atendido
-                                        </button>
-                                    </td>
+                            <tbody id="tbody-conversaciones">
+                                {% for conv in conversaciones %}
+                                <tr class="fila-conversacion" role="button"
+                                    data-paciente-id="{{ conv.paciente_id|default:'' }}"
+                                    data-wa-id="{{ conv.wa_id }}">
+                                    <td>{{ conv.nombre|default:"— sin identificar —" }}</td>
+                                    <td>{{ conv.wa_id }}</td>
+                                    <td class="text-truncate" style="max-width:280px;">{{ conv.ultimo_texto|default:"(mensaje sin texto)" }}</td>
+                                    <td><span class="badge bg-secondary">{{ conv.pendientes }}</span></td>
+                                    <td>{{ conv.ultimo_en|date:"d/m/Y H:i" }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -186,6 +183,27 @@
         </div>
     </div>
 
+</div>
+
+<div class="modal fade" id="modal-chat-whatsapp" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="height: 80vh;">
+            <div class="modal-header">
+                <div>
+                    <h6 class="modal-title mb-0" id="chat-titulo">Conversación</h6>
+                    <small class="text-muted" id="chat-telefono"></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body d-flex flex-column" style="overflow-y: auto; background:#e5ddd5;" id="chat-cuerpo">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success w-100" id="btn-marcar-atendido-chat">
+                    <i class="bi bi-check2-all me-1"></i>Marcar conversación como atendida
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -210,6 +228,42 @@
     color: #fff;
     font-size: 1.4rem;
     flex-shrink: 0;
+}
+.fila-conversacion {
+    cursor: pointer;
+}
+.burbuja {
+    max-width: 75%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+    box-shadow: 0 1px 1px rgba(0,0,0,.1);
+}
+.burbuja-entrante {
+    align-self: flex-start;
+    background: #fff;
+    border-top-left-radius: 0;
+}
+.burbuja-saliente {
+    align-self: flex-end;
+    background: #dcf8c6;
+    border-top-right-radius: 0;
+}
+.burbuja-tipo {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #0d6efd;
+    display: block;
+    margin-bottom: 2px;
+}
+.burbuja-hora {
+    font-size: 0.68rem;
+    color: #667781;
+    display: block;
+    text-align: right;
+    margin-top: 2px;
 }
 </style>
 
@@ -348,40 +402,105 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Marcar mensaje recibido como atendido
-    document.querySelectorAll('.btn-marcar-atendido').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            const fila = this.closest('tr');
-            const csrf = document.cookie.split('; ').find(r => r.startsWith('csrftoken='));
-            const token = csrf ? csrf.split('=')[1] : '';
+    // Chat: abrir conversación al hacer clic en una fila
+    const modalChatEl = document.getElementById('modal-chat-whatsapp');
+    const modalChat = new bootstrap.Modal(modalChatEl);
+    const chatCuerpo = document.getElementById('chat-cuerpo');
+    const chatTitulo = document.getElementById('chat-titulo');
+    const chatTelefono = document.getElementById('chat-telefono');
+    const btnMarcarAtendidoChat = document.getElementById('btn-marcar-atendido-chat');
+    let conversacionActual = null;
 
-            this.disabled = true;
-            fetch(this.dataset.url, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'X-CSRFToken': token },
-            })
+    function csrfToken() {
+        const csrf = document.cookie.split('; ').find(r => r.startsWith('csrftoken='));
+        return csrf ? csrf.split('=')[1] : '';
+    }
+
+    document.querySelectorAll('.fila-conversacion').forEach(function (fila) {
+        fila.addEventListener('click', function () {
+            conversacionActual = {
+                pacienteId: this.dataset.pacienteId || null,
+                waId: this.dataset.waId,
+                fila: this,
+            };
+
+            chatTitulo.textContent = 'Cargando…';
+            chatTelefono.textContent = '';
+            chatCuerpo.innerHTML = '';
+            modalChat.show();
+
+            const params = conversacionActual.pacienteId
+                ? `paciente_id=${conversacionActual.pacienteId}`
+                : `wa_id=${encodeURIComponent(conversacionActual.waId)}`;
+
+            fetch(`{% url 'whatsapp_conversacion' %}?${params}`, { credentials: 'same-origin' })
                 .then(r => r.json())
-                .then(() => {
-                    fila.remove();
-                    const contador = document.getElementById('contador-mensajes-recibidos');
-                    if (contador) {
-                        contador.textContent = Math.max(0, parseInt(contador.textContent, 10) - 1);
-                    }
-                    const tbody = document.getElementById('tbody-mensajes-recibidos');
-                    if (tbody && tbody.children.length === 0) {
-                        tbody.closest('.card-body').innerHTML = `
-                            <div class="text-center py-5">
-                                <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
-                                <h6 class="mt-3 text-muted">No hay mensajes pendientes de revisión</h6>
-                            </div>`;
-                    }
+                .then(data => {
+                    chatTitulo.textContent = data.paciente || '— sin identificar —';
+                    chatTelefono.textContent = data.telefono;
+                    data.mensajes.forEach(function (m) {
+                        const burbuja = document.createElement('div');
+                        burbuja.className = `burbuja ${m.origen === 'saliente' ? 'burbuja-saliente' : 'burbuja-entrante'}`;
+                        if (m.origen === 'saliente') {
+                            const etiqueta = document.createElement('span');
+                            etiqueta.className = 'burbuja-tipo';
+                            etiqueta.textContent = m.tipo + (m.exitoso ? '' : ' (no enviado)');
+                            burbuja.appendChild(etiqueta);
+                        }
+                        const texto = document.createElement('span');
+                        texto.textContent = m.texto || '(mensaje sin texto)';
+                        burbuja.appendChild(texto);
+                        const hora = document.createElement('span');
+                        hora.className = 'burbuja-hora';
+                        hora.textContent = m.fecha;
+                        burbuja.appendChild(hora);
+                        chatCuerpo.appendChild(burbuja);
+                    });
+                    chatCuerpo.scrollTop = chatCuerpo.scrollHeight;
                 })
                 .catch(() => {
-                    mostrarAlerta('danger', 'Error de conexión al marcar el mensaje.');
-                    this.disabled = false;
+                    chatTitulo.textContent = 'Error';
+                    chatCuerpo.innerHTML = '<div class="text-center text-muted py-4">No se pudo cargar la conversación.</div>';
                 });
         });
+    });
+
+    btnMarcarAtendidoChat.addEventListener('click', function () {
+        if (!conversacionActual) return;
+        this.disabled = true;
+
+        fetch("{% url 'whatsapp_marcar_atendido' %}", {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'X-CSRFToken': csrfToken(),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                paciente_id: conversacionActual.pacienteId,
+                wa_id: conversacionActual.waId,
+            }),
+        })
+            .then(r => r.json())
+            .then(() => {
+                conversacionActual.fila.remove();
+                const tbody = document.getElementById('tbody-conversaciones');
+                if (tbody && tbody.children.length === 0) {
+                    tbody.closest('.card-body').innerHTML = `
+                        <div class="text-center py-5">
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
+                            <h6 class="mt-3 text-muted">No hay mensajes pendientes de revisión</h6>
+                        </div>`;
+                }
+                const contador = document.getElementById('contador-mensajes-recibidos');
+                if (contador && tbody) {
+                    contador.textContent = tbody.children.length;
+                }
+                modalChat.hide();
+                mostrarAlerta('success', 'Conversación marcada como atendida.');
+            })
+            .catch(() => mostrarAlerta('danger', 'Error de conexión al marcar la conversación.'))
+            .finally(() => { this.disabled = false; });
     });
 });
 </script>

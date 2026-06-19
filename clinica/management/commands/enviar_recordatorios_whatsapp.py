@@ -59,8 +59,9 @@ class Command(BaseCommand):
 
     def _enviar(self, cita, tipo, nombre_template, get_params):
         datos = wa.construir_parametros_cita(cita)
+        parametros = get_params(datos)
         try:
-            resp = wa.enviar_template(cita.paciente.telefono, nombre_template, get_params(datos))
+            resp = wa.enviar_template(cita.paciente.telefono, nombre_template, parametros)
             exitoso = 'messages' in resp
         except Exception as e:
             resp = {'error': str(e)}
@@ -81,6 +82,7 @@ class Command(BaseCommand):
             telefono=cita.paciente.telefono,
             tipo=tipo,
             origen='automatico',
+            texto=wa.renderizar_template(nombre_template, parametros),
             exitoso=exitoso,
             respuesta_api=resp,
         )

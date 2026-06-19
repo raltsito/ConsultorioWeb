@@ -6177,6 +6177,7 @@ def whatsapp_enviar_manual(request, cita_id, tipo):
         telefono=cita.paciente.telefono,
         tipo=tipo,
         origen='manual',
+        texto=wa.renderizar_template(nombre_template, get_params(datos)),
         exitoso=exitoso,
         respuesta_api=resp,
         enviado_por=request.user,
@@ -6197,12 +6198,9 @@ def whatsapp_reactivacion_seguimiento(request):
 
     resultados = []
     for paciente in pacientes:
+        parametros = [paciente.nombre, 'INTRA']
         try:
-            resp = wa.enviar_template(
-                paciente.telefono,
-                'reactivacion_paciente',
-                [paciente.nombre, 'INTRA']
-            )
+            resp = wa.enviar_template(paciente.telefono, 'reactivacion_paciente', parametros)
             exitoso = 'messages' in resp
         except Exception as e:
             resp = {'error': str(e)}
@@ -6213,6 +6211,7 @@ def whatsapp_reactivacion_seguimiento(request):
             telefono=paciente.telefono,
             tipo=MensajeWhatsApp.TIPO_REACTIVACION,
             origen='manual',
+            texto=wa.renderizar_template('reactivacion_paciente', parametros),
             exitoso=exitoso,
             respuesta_api=resp,
             enviado_por=request.user,
@@ -6391,31 +6390,102 @@ def whatsapp_recordatorios(request):
         },
     ]
 
-    mensajes_entrantes = (
+    # Una "conversación" pendiente = un paciente (o número sin identificar) con
+    # al menos un mensaje entrante sin atender. Se agrupa en Python porque el
+    # volumen es bajo (mensajes pendientes de un consultorio) y así se evita una
+    # subconsulta para traer el último texto por grupo.
+    conversaciones_por_clave = {}
+    pendientes_qs = (
         MensajeWhatsAppEntrante.objects
         .filter(atendido=False)
         .select_related('paciente')
         .order_by('-recibido_en')
     )
+    for mensaje in pendientes_qs:
+        clave = mensaje.paciente_id or f'wa:{mensaje.wa_id}'
+        conversacion = conversaciones_por_clave.get(clave)
+        if conversacion is None:
+            conversaciones_por_clave[clave] = {
+                'paciente_id': mensaje.paciente_id,
+                'wa_id': mensaje.wa_id,
+                'nombre': mensaje.paciente.nombre if mensaje.paciente else None,
+                'ultimo_texto': mensaje.texto,
+                'ultimo_en': mensaje.recibido_en,
+                'pendientes': 1,
+            }
+        else:
+            conversacion['pendientes'] += 1
+
+    conversaciones = sorted(conversaciones_por_clave.values(), key=lambda c: c['ultimo_en'], reverse=True)
 
     return render(request, 'clinica/whatsapp_recordatorios.html', {
         'grupos': grupos,
         'hoy': hoy,
         'automatizacion_activa': ConfiguracionWhatsApp.get_actual().automatizacion_activa,
-        'mensajes_entrantes': mensajes_entrantes,
+        'conversaciones': conversaciones,
+    })
+
+
+@login_required
+def whatsapp_conversacion(request):
+    """
+    Historial completo (entrante + saliente) con un paciente, para el panel de chat.
+    Recibe ?paciente_id=N o ?wa_id=528... (cuando el número no matcheó a ningún paciente).
+    """
+    paciente_id = request.GET.get('paciente_id')
+    wa_id = request.GET.get('wa_id')
+
+    mensajes = []
+    paciente = None
+    telefono = wa_id or ''
+
+    if paciente_id:
+        paciente = get_object_or_404(Paciente, pk=paciente_id)
+        telefono = paciente.telefono
+        entrantes = MensajeWhatsAppEntrante.objects.filter(paciente_id=paciente_id)
+        salientes = MensajeWhatsApp.objects.filter(paciente_id=paciente_id)
+    else:
+        entrantes = MensajeWhatsAppEntrante.objects.filter(wa_id=wa_id, paciente__isnull=True)
+        salientes = MensajeWhatsApp.objects.none()
+
+    for m in entrantes:
+        mensajes.append({'origen': 'entrante', 'texto': m.texto, 'fecha': m.recibido_en})
+    for m in salientes:
+        mensajes.append({
+            'origen': 'saliente',
+            'texto': m.texto,
+            'fecha': m.enviado_en,
+            'tipo': m.get_tipo_display(),
+            'exitoso': m.exitoso,
+        })
+
+    mensajes.sort(key=lambda m: m['fecha'])
+    for m in mensajes:
+        m['fecha'] = timezone.localtime(m['fecha']).strftime('%d/%m/%Y %H:%M')
+
+    return JsonResponse({
+        'paciente': paciente.nombre if paciente else None,
+        'telefono': telefono,
+        'mensajes': mensajes,
     })
 
 
 @login_required
 @require_POST
-def whatsapp_marcar_atendido(request, mensaje_id):
-    """Marca un mensaje entrante como revisado por el personal."""
-    mensaje = get_object_or_404(MensajeWhatsAppEntrante, pk=mensaje_id)
-    mensaje.atendido = True
-    mensaje.atendido_por = request.user
-    mensaje.atendido_en = timezone.now()
-    mensaje.save(update_fields=['atendido', 'atendido_por', 'atendido_en'])
-    return JsonResponse({'ok': True})
+def whatsapp_marcar_atendido(request):
+    """
+    Marca como atendidos todos los mensajes pendientes de una conversación (un paciente
+    o un número sin identificar). Body JSON: { "paciente_id": N } o { "wa_id": "528..." }.
+    """
+    data = json.loads(request.body)
+    paciente_id = data.get('paciente_id')
+    wa_id = data.get('wa_id')
+
+    qs = MensajeWhatsAppEntrante.objects.filter(atendido=False)
+    qs = qs.filter(paciente_id=paciente_id) if paciente_id else qs.filter(wa_id=wa_id, paciente__isnull=True)
+
+    marcados = qs.update(atendido=True, atendido_por=request.user, atendido_en=timezone.now())
+    return JsonResponse({'ok': True, 'marcados': marcados})
 
 
 @login_required
@@ -6454,8 +6524,9 @@ def whatsapp_enviar_lote(request):
     resultados = []
     for cita in citas:
         datos = wa.construir_parametros_cita(cita)
+        parametros = get_params(datos)
         try:
-            resp = wa.enviar_template(cita.paciente.telefono, nombre_template, get_params(datos))
+            resp = wa.enviar_template(cita.paciente.telefono, nombre_template, parametros)
             exitoso = 'messages' in resp
         except Exception as e:
             resp = {'error': str(e)}
@@ -6471,6 +6542,7 @@ def whatsapp_enviar_lote(request):
             telefono=cita.paciente.telefono,
             tipo=tipo,
             origen='manual',
+            texto=wa.renderizar_template(nombre_template, parametros),
             exitoso=exitoso,
             respuesta_api=resp,
             enviado_por=request.user,

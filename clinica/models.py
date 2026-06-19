@@ -696,6 +696,7 @@ class MensajeWhatsApp(models.Model):
     telefono = models.CharField(max_length=20)
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
     origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='automatico')
+    texto = models.TextField(blank=True)
     enviado_en = models.DateTimeField(auto_now_add=True)
     exitoso = models.BooleanField(default=False)
     respuesta_api = models.JSONField(null=True, blank=True)
