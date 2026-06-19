@@ -1,5 +1,6 @@
 #Librerias estandar de Python
 import json
+import logging
 import unicodedata
 import csv
 import io
@@ -50,6 +51,7 @@ from .models import (
     Cita,
     ConfiguracionWhatsApp,
     MensajeWhatsApp,
+    MensajeWhatsAppEntrante,
     Horario,
     SolicitudCita,
     SolicitudReagendo,
@@ -6220,11 +6222,39 @@ def whatsapp_reactivacion_seguimiento(request):
     return JsonResponse({'resultados': resultados})
 
 
+def _registrar_mensaje_entrante(mensaje: dict):
+    """Guarda un mensaje entrante de Meta, si no se había registrado ya (Meta reintenta envíos)."""
+    wa_message_id = mensaje.get('id')
+    if not wa_message_id or MensajeWhatsAppEntrante.objects.filter(wa_message_id=wa_message_id).exists():
+        return
+
+    wa_id = mensaje.get('from', '')
+    tipo = mensaje.get('type')
+    if tipo == 'text':
+        texto = mensaje.get('text', {}).get('body', '')
+    elif tipo == 'button':
+        texto = mensaje.get('button', {}).get('text', '')
+    elif tipo == 'interactive':
+        interactive = mensaje.get('interactive', {})
+        respuesta = interactive.get('button_reply') or interactive.get('list_reply') or {}
+        texto = respuesta.get('title', '')
+    else:
+        texto = ''
+
+    MensajeWhatsAppEntrante.objects.create(
+        wa_message_id=wa_message_id,
+        wa_id=wa_id,
+        texto=texto,
+        paciente=wa.buscar_paciente_por_wa_id(wa_id),
+    )
+
+
 @csrf_exempt
 def whatsapp_webhook(request):
     """
     GET:  verificación inicial de Meta (handshake)
-    POST: mensajes entrantes (reservado para fases futuras)
+    POST: mensajes entrantes — se guardan para revisión manual del personal
+          (panel "Mensajes recibidos" en whatsapp_recordatorios.html)
     """
     if request.method == 'GET':
         mode = request.GET.get('hub.mode')
@@ -6235,6 +6265,15 @@ def whatsapp_webhook(request):
         return HttpResponse(status=403)
 
     if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            for entry in data.get('entry', []):
+                for change in entry.get('changes', []):
+                    for mensaje in change.get('value', {}).get('messages', []):
+                        _registrar_mensaje_entrante(mensaje)
+        except Exception:
+            logging.getLogger(__name__).exception('Error procesando webhook de WhatsApp')
+        # Siempre 200: si Meta recibe un error, reintenta el mismo payload repetidamente.
         return HttpResponse(status=200)
 
     return HttpResponse(status=405)
@@ -6352,11 +6391,31 @@ def whatsapp_recordatorios(request):
         },
     ]
 
+    mensajes_entrantes = (
+        MensajeWhatsAppEntrante.objects
+        .filter(atendido=False)
+        .select_related('paciente')
+        .order_by('-recibido_en')
+    )
+
     return render(request, 'clinica/whatsapp_recordatorios.html', {
         'grupos': grupos,
         'hoy': hoy,
         'automatizacion_activa': ConfiguracionWhatsApp.get_actual().automatizacion_activa,
+        'mensajes_entrantes': mensajes_entrantes,
     })
+
+
+@login_required
+@require_POST
+def whatsapp_marcar_atendido(request, mensaje_id):
+    """Marca un mensaje entrante como revisado por el personal."""
+    mensaje = get_object_or_404(MensajeWhatsAppEntrante, pk=mensaje_id)
+    mensaje.atendido = True
+    mensaje.atendido_por = request.user
+    mensaje.atendido_en = timezone.now()
+    mensaje.save(update_fields=['atendido', 'atendido_por', 'atendido_en'])
+    return JsonResponse({'ok': True})
 
 
 @login_required

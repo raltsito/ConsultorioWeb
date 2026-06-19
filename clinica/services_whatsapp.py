@@ -45,6 +45,21 @@ def _normalizar_telefono(telefono: str) -> str:
     return digits
 
 
+def buscar_paciente_por_wa_id(wa_id: str):
+    """
+    Busca el Paciente cuyo teléfono corresponde al wa_id que llegó por el webhook.
+    BD guarda 10 dígitos (Paciente.telefono); Meta entrega 52XXXXXXXXXX (12) o
+    5218110001001-style ocasionalmente con el '1' extra (13) -> se toman los
+    últimos 10 dígitos para el match.
+    """
+    from .models import Paciente
+    digits = ''.join(filter(str.isdigit, wa_id or ''))
+    if len(digits) < 10:
+        return None
+    local = digits[-10:]
+    return Paciente.objects.filter(telefono=local).first()
+
+
 def enviar_template(telefono: str, nombre_template: str, parametros: list) -> dict:
     """
     Envía un template pre-aprobado por Meta.

@@ -59,6 +59,22 @@
             </div>
         </div>
         {% endfor %}
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100 tarjeta-grupo"
+                 role="button"
+                 data-target="#panel-mensajes-recibidos"
+                 style="--accent: #6f42c1;">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <span class="icono-grupo" style="background: #6f42c1;">
+                        <i class="bi bi-chat-left-text"></i>
+                    </span>
+                    <div>
+                        <div class="fs-3 fw-bold lh-1" id="contador-mensajes-recibidos">{{ mensajes_entrantes|length }}</div>
+                        <div class="small text-muted">Mensajes recibidos</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="tab-content">
@@ -121,6 +137,53 @@
             </div>
         </div>
         {% endfor %}
+
+        <div class="tab-pane fade" id="panel-mensajes-recibidos">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <strong>Mensajes recibidos</strong>
+                    <span class="text-muted small ms-2">Respuestas de pacientes al número de WhatsApp automático, pendientes de revisión</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if mensajes_entrantes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Paciente</th>
+                                    <th>Teléfono</th>
+                                    <th>Mensaje</th>
+                                    <th>Recibido</th>
+                                    <th style="width:140px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-mensajes-recibidos">
+                                {% for mensaje in mensajes_entrantes %}
+                                <tr data-mensaje-id="{{ mensaje.id }}">
+                                    <td>{{ mensaje.paciente.nombre|default:"— sin identificar —" }}</td>
+                                    <td>{{ mensaje.wa_id }}</td>
+                                    <td>{{ mensaje.texto|default:"(mensaje sin texto)" }}</td>
+                                    <td>{{ mensaje.recibido_en|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-success btn-marcar-atendido"
+                                                data-url="{% url 'whatsapp_marcar_atendido' mensaje.id %}">
+                                            <i class="bi bi-check2 me-1"></i>Atendido
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
+                        <h6 class="mt-3 text-muted">No hay mensajes pendientes de revisión</h6>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -281,6 +344,42 @@ document.addEventListener('DOMContentLoaded', function () {
                     btn.innerHTML = original;
                     const tbody = document.getElementById(`tbody-${tipo}`);
                     btn.disabled = !tbody || tbody.children.length === 0;
+                });
+        });
+    });
+
+    // Marcar mensaje recibido como atendido
+    document.querySelectorAll('.btn-marcar-atendido').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const fila = this.closest('tr');
+            const csrf = document.cookie.split('; ').find(r => r.startsWith('csrftoken='));
+            const token = csrf ? csrf.split('=')[1] : '';
+
+            this.disabled = true;
+            fetch(this.dataset.url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'X-CSRFToken': token },
+            })
+                .then(r => r.json())
+                .then(() => {
+                    fila.remove();
+                    const contador = document.getElementById('contador-mensajes-recibidos');
+                    if (contador) {
+                        contador.textContent = Math.max(0, parseInt(contador.textContent, 10) - 1);
+                    }
+                    const tbody = document.getElementById('tbody-mensajes-recibidos');
+                    if (tbody && tbody.children.length === 0) {
+                        tbody.closest('.card-body').innerHTML = `
+                            <div class="text-center py-5">
+                                <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
+                                <h6 class="mt-3 text-muted">No hay mensajes pendientes de revisión</h6>
+                            </div>`;
+                    }
+                })
+                .catch(() => {
+                    mostrarAlerta('danger', 'Error de conexión al marcar el mensaje.');
+                    this.disabled = false;
                 });
         });
     });

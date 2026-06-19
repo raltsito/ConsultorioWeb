@@ -712,6 +712,33 @@ class MensajeWhatsApp(models.Model):
         ordering = ['-enviado_en']
 
 
+class MensajeWhatsAppEntrante(models.Model):
+    """
+    Mensajes que los pacientes responden al número de WhatsApp Cloud API (el que
+    envía recordatorios/confirmaciones automáticos), capturados vía webhook.
+    Distinto del número que el personal usa para chats manuales (app normal).
+    """
+    wa_message_id = models.CharField(max_length=100, unique=True)
+    wa_id = models.CharField(max_length=20, verbose_name='Número (formato Meta)')
+    paciente = models.ForeignKey(
+        'Paciente', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='mensajes_whatsapp_recibidos',
+    )
+    texto = models.TextField(blank=True)
+    recibido_en = models.DateTimeField(auto_now_add=True)
+    atendido = models.BooleanField(default=False)
+    atendido_por = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    atendido_en = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.wa_id}: {self.texto[:40]}"
+
+    class Meta:
+        verbose_name = 'Mensaje WhatsApp recibido'
+        verbose_name_plural = 'Mensajes WhatsApp recibidos'
+        ordering = ['-recibido_en']
+
+
 class ConfiguracionWhatsApp(models.Model):
     """Configuración global (registro único) del módulo de WhatsApp."""
     automatizacion_activa = models.BooleanField(

@@ -164,6 +164,8 @@ urlpatterns = [
          clinica_views.whatsapp_recordatorios, name='whatsapp_recordatorios'),
     path('api/whatsapp/automatizacion/toggle/',
          clinica_views.whatsapp_toggle_automatizacion, name='whatsapp_toggle_automatizacion'),
+    path('api/whatsapp/mensajes/<int:mensaje_id>/atendido/',
+         clinica_views.whatsapp_marcar_atendido, name='whatsapp_marcar_atendido'),
 
 ]
 
