@@ -156,25 +156,6 @@ class AccesoDirectoPortalAdmin(admin.ModelAdmin):
         return fieldsets
 
 
-class PreguntaInstrumentoInline(admin.TabularInline):
-    model = PreguntaInstrumento
-    extra = 1
-    fields = ('orden', 'texto', 'clave', 'tipo_respuesta', 'opciones', 'requerida')
-    ordering = ('orden', 'id')
-
-
-@admin.register(Instrumento)
-class InstrumentoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'clave', 'activo', 'total_preguntas', 'creado_en')
-    list_filter = ('activo',)
-    search_fields = ('nombre', 'clave', 'descripcion')
-    prepopulated_fields = {'clave': ('nombre',)}
-    inlines = [PreguntaInstrumentoInline]
-
-    @admin.display(description='Preguntas')
-    def total_preguntas(self, obj):
-        return obj.preguntas.count()
-
 
 class RespuestaInstrumentoInline(admin.TabularInline):
     model = RespuestaInstrumento
@@ -212,3 +193,14 @@ class RecursoPropioAdmin(admin.ModelAdmin):
         if not obj or not obj.nombre_archivo:
             return 'No hay archivo cargado.'
         return f'{obj.nombre_archivo} | {obj.actualizado_en:%d/%m/%Y %H:%M}'
+
+# --- Registro forzado para que aparezcan ---
+@admin.register(Instrumento)
+class InstrumentoAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'clave', 'activo')
+
+@admin.register(PreguntaInstrumento)
+class PreguntaInstrumentoAdmin(admin.ModelAdmin):
+    list_display = ('instrumento', 'texto', 'orden')
+
+

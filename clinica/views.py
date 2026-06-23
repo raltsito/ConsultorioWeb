@@ -6550,3 +6550,4 @@ def whatsapp_enviar_lote(request):
         resultados.append({'cita_id': cita.pk, 'ok': exitoso})
 
     return JsonResponse({'resultados': resultados})
+
