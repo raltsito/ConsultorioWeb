@@ -7,7 +7,7 @@ from clinica import views as clinica_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    
+    path('hola/', clinica_views.hola_mundo, name='hola_mundo'),
 
     path('accounts/', include('django.contrib.auth.urls')),
     
