@@ -17,12 +17,14 @@ class Command(BaseCommand):
         ruta = options['ruta']
         self.stdout.write(f'Abriendo: {ruta}')
         wb = openpyxl.load_workbook(ruta, data_only=True)
-        ws = wb['TCI'] # Asegúrate que este sea el nombre de la hoja en tu Excel
+        ws = wb['DTCI'] # Nombre de la hoja de calculo como esta guardado en Excel.
         headers = [cell.value for cell in ws[1]]
-        
+              
+
         # Rango de preguntas en Excel
         preguntas_raw = headers[8:108] 
 
+       
         ins, created = Instrumento.objects.update_or_create(
             clave='tci',
             defaults={
