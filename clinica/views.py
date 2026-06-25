@@ -6242,12 +6242,45 @@ def _registrar_mensaje_entrante(mensaje: dict):
     else:
         texto = ''
 
+    paciente = wa.buscar_paciente_por_wa_id(wa_id)
     MensajeWhatsAppEntrante.objects.create(
         wa_message_id=wa_message_id,
         wa_id=wa_id,
         texto=texto,
-        paciente=wa.buscar_paciente_por_wa_id(wa_id),
+        paciente=paciente,
     )
+
+    if paciente and _es_confirmacion(texto):
+        _confirmar_cita_pendiente(paciente)
+
+
+def _es_confirmacion(texto: str) -> bool:
+    """True si el texto contiene la palabra CONFIRMO (sin acentos, sin importar mayúsculas)."""
+    normalizado = unicodedata.normalize('NFKD', texto or '').encode('ascii', 'ignore').decode('ascii').upper()
+    return 'CONFIRMO' in normalizado
+
+
+def _confirmar_cita_pendiente(paciente):
+    """
+    Si el paciente responde CONFIRMO después de haber recibido el template de
+    confirmación (1 día antes), marca esa cita como confirmada automáticamente.
+    Solo aplica a la cita ligada al último envío de ese template, y solo si
+    sigue sin confirmar y no es una fecha ya pasada.
+    """
+    ultimo_envio = (
+        MensajeWhatsApp.objects
+        .filter(paciente=paciente, tipo=MensajeWhatsApp.TIPO_CONFIRMACION_1D, exitoso=True)
+        .select_related('cita')
+        .order_by('-enviado_en')
+        .first()
+    )
+    if not ultimo_envio or not ultimo_envio.cita:
+        return
+
+    cita = ultimo_envio.cita
+    if cita.estatus == Cita.ESTATUS_SIN_CONFIRMAR and cita.fecha >= timezone.localdate():
+        cita.estatus = Cita.ESTATUS_CONFIRMADA
+        cita.save(update_fields=['estatus'])
 
 
 @csrf_exempt

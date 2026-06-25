@@ -50,7 +50,8 @@ TEMPLATE_BODIES = {
         'Por favor llegue puntual; no podremos reprogramar ni extender el tiempo.\n\n'
         'Costo: ${{7}}. ¿Pagará por transferencia, efectivo o tarjeta?\n\n'
         'Transferencia:\n🏦 Banco: BBVA\n💳 Tarjeta: 4555 1130 1572 4679\n👤 Titular: Miriam Rubí Iracheta\n\n'
-        '{{8}}\n\nPara cambios o dudas, escríbanos al 844 443 9987.',
+        '{{8}}\n\nResponda *CONFIRMO* a este mensaje para confirmar su cita.\n\n'
+        'Para cambios o dudas, escríbanos al 844 443 9987.',
     'encuesta_conformidad':
         'Hola {{1}}, esperamos que tu sesión de {{2}} con {{3}} haya sido de gran beneficio para ti.\n\n'
         'Nos gustaría conocer tu experiencia. ¿Cómo calificarías tu atención del 1 al 5?\n\n'
