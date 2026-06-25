@@ -6554,6 +6554,3 @@ def whatsapp_enviar_lote(request):
     return JsonResponse({'resultados': resultados})
 
 from django.http import HttpResponse
-
-def hola_mundo(request):
-    return HttpResponse("¡Funciona! El despliegue automático está activo.")
