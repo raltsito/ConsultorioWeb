@@ -396,7 +396,19 @@ class Paciente(models.Model):
     usuario = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='perfil_paciente')
     nombre = models.CharField(max_length=200, verbose_name="Nombre Completo")
     fecha_nacimiento = models.DateField(verbose_name="Fecha de Nacimiento")
-    
+
+    # Dar de alta un paciente
+    dado_de_alta = models.BooleanField(
+        default = False,
+        verbose_name = "Dado de alta"
+    )
+
+    fecha_alta = models.DateTimeField(
+        null = True,
+        blank = True
+    )
+
+
     # EL CAMPO SECRETO
     nombre_normalizado = models.CharField(max_length=200, blank=True, editable=False)
     
