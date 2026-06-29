@@ -112,9 +112,15 @@ Transferencia:
 
 {{8}}
 
+Responda *CONFIRMO* a este mensaje para confirmar su cita.
+
 Para cambios o dudas, escríbanos al 844 443 9987.
 ```
-*Variables: fecha_completa, hora, sucursal, terapeuta, nombre_paciente, servicio, monto, direccion* (415 caracteres, límite de Meta: 550)
+*Variables: fecha_completa, hora, sucursal, terapeuta, nombre_paciente, servicio, monto, direccion* (475 caracteres, límite de Meta: 550)
+
+**Confirmación automática:** al responder "CONFIRMO" (sin importar mayúsculas/acentos),
+el webhook marca esa `Cita` como `confirmada` automáticamente — ver `_confirmar_cita_pendiente`
+en `clinica/views.py`. Solo aplica si la cita sigue `sin_confirmar` y su fecha no pasó.
 
 `direccion` varía según `cita.consultorio.sede` (ver `SEDE_DIRECCIONES` en `services_whatsapp.py`): cada sede (República, Morelos, Colinas, Trabajo Social, Zoom, Externo) tiene su propio texto de ubicación o instrucciones de acceso.
 

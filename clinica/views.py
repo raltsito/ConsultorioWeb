@@ -785,7 +785,7 @@ def asignar_division_paciente(request, paciente_id):
 @login_required
 def registrar_paciente(request):
     if request.method == 'POST':
-        form = PacienteForm(request.POST)
+        form = PacienteForm(request.POST, request.FILES)
         if form.is_valid():
             paciente = form.save()
             _registrar_actividad(request, 'paciente_registrado', 'paciente',
@@ -1120,7 +1120,7 @@ def registrar_paciente_terapeuta(request):
 
     terapeuta = request.user.perfil_terapeuta
     if request.method == 'POST':
-        form = PacienteForm(request.POST)
+        form = PacienteForm(request.POST, request.FILES)
         if form.is_valid():
             paciente = form.save()
             PacienteTerapeutaAcceso.objects.get_or_create(
