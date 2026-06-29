@@ -112,16 +112,20 @@ class ManualPortalForm(forms.Form):
 
 
 class PacienteForm(forms.ModelForm):
+    fecha_nacimiento = forms.DateField(
+        input_formats=['%Y-%m-%d'],
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+    )
+
     class Meta:
         model = Paciente
         fields = [
-            'nombre', 'fecha_nacimiento', 'telefono', 'identidad_contacto', 
-            'servicio_inicial','pacientes_relacionados', 'consentimiento_firmado', 'estudio_socioeconomico', 
+            'nombre', 'fecha_nacimiento', 'telefono', 'identidad_contacto',
+            'servicio_inicial','pacientes_relacionados', 'consentimiento_firmado', 'estudio_socioeconomico',
             'apertura_expediente', 'resumen_clinico', 'enlace_resultados'
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre completo'}),
-            'fecha_nacimiento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'WhatsApp'}),
             'identidad_contacto': forms.Select(attrs={'class': 'form-select'}),
             'servicio_inicial': forms.Select(attrs={'class': 'form-select'}),
@@ -566,7 +570,8 @@ class AperturaExpedienteForm(forms.ModelForm):
     )
     fecha_nacimiento = forms.DateField(
         required=False,
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        input_formats=['%Y-%m-%d'],
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
         label='Fecha de Nacimiento',
     )
     telefono = forms.CharField(
