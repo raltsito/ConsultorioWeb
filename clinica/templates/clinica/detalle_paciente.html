@@ -419,6 +419,30 @@
           </button>
           {% endif %}
         </div>
+        {% if paciente.dado_de_alta %}
+            <span class="badge bg-primary">
+                <i class="bi bi-check-circle-fill"></i>
+                Dado de alta
+            </span>
+        {% endif %}
+
+        {% if request.user.is_superuser %}
+
+          <button class="btn btn-primary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalAltaPaciente">
+
+              {% if paciente.dado_de_alta %}
+                  <i class="bi bi-arrow-clockwise"></i>
+                  Reactivar seguimiento
+              {% else %}
+                  <i class="bi bi-check-circle"></i>
+                  Dar de alta
+              {% endif %}
+
+          </button>
+
+          {% endif %}
         <!-- Mini-form división (oculto por defecto) -->
         <div id="div-form-wrap" style="display:none;margin-top:.75rem;animation:fadeIn .2s both;">
           <form method="post" action="{% url 'asignar_division_paciente' paciente.id %}" class="d-flex align-items-center gap-2">
@@ -919,5 +943,41 @@ function toggleDivForm() {
   wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
 }
 </script>
+<!-- Dar de alta el paciente -->>
+<div class="modal fade" id="modalAltaPaciente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    {% if paciente.dado_de_alta %}
+                        Reactivar seguimiento
+                    {% else %}
+                        Dar de alta paciente
+                    {% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% if paciente.dado_de_alta %}
+                    El paciente volverá a aparecer en seguimiento.
+                {% else %}
+                    El paciente dejará de aparecer en el widget "Sin Reagendar".
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <form method="post" action="{% url 'toggle_alta_paciente' paciente.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">
+                        Confirmar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

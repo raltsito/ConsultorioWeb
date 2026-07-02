@@ -1817,3 +1817,14 @@ class RespuestaInstrumento(models.Model):
 
     def __str__(self):
         return f"{self.envio} — {self.pregunta}: {self.valor[:40]}"
+
+
+    # Dar de alta un paciente
+    dado_de_alta = models.BooleanField(
+        default = False,
+        verbose_name = "Dado de alta"
+    )
+    fecha_alta = models.DateTimeField(
+        null = True,
+        blank = True
+    )
