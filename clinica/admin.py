@@ -40,7 +40,7 @@ class HostChecklistTaskAdmin(admin.ModelAdmin):
 
 
 class PacienteAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'telefono', 'empresa', 'servicio_inicial', 'fecha_registro')
+    list_display = ('nombre', 'telefono', 'empresa', 'servicio_inicial', 'fecha_registro','dado_de_alta','fecha_alta')
     list_filter = ('empresa',)
     search_fields = ('nombre',)
 
