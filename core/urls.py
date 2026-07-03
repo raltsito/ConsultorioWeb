@@ -168,6 +168,9 @@ urlpatterns = [
     path('api/whatsapp/conversacion/atendido/',
          clinica_views.whatsapp_marcar_atendido, name='whatsapp_marcar_atendido'),
 
+     # URL para dar de alta al paciente
+     path('pacientes/<int:paciente_id>/toggle-alta/',
+          clinica_views.toggle_alta_paciente, name='toggle_alta_paciente'),
 ]
 
 if settings.DEBUG:

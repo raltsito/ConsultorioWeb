@@ -386,7 +386,7 @@
           Exp. #{{ paciente.id }}
           {% if paciente.sexo %}&nbsp;·&nbsp;{{ paciente.sexo }}{% endif %}
         </div>
-        <div class="d-flex flex-wrap gap-2 mt-2">
+        < class="d-flex flex-wrap gap-2 mt-2">
           <div class="stat-pill">
             <div class="sp-lbl">Nacimiento</div>
             <div class="sp-val">{{ paciente.fecha_nacimiento }}</div>
@@ -418,31 +418,29 @@
             <div class="sp-val" style="opacity:.7;font-size:.78rem;">+ Asignar</div>
           </button>
           {% endif %}
-        </div>
-        {% if paciente.dado_de_alta %}
+                  <!-- para dar de alta a un paciente-->>
+          {% if paciente.dado_de_alta %}
             <span class="badge bg-primary">
-                <i class="bi bi-check-circle-fill"></i>
-                Dado de alta
+              <i class="bi bi-check-circle-fill"></i>
+              Dado de alta
             </span>
-        {% endif %}
-
-        {% if request.user.is_superuser %}
-
-          <button class="btn btn-primary"
-                  data-bs-toggle="modal"
-                  data-bs-target="#modalAltaPaciente">
-
-              {% if paciente.dado_de_alta %}
-                  <i class="bi bi-arrow-clockwise"></i>
-                  Reactivar seguimiento
-              {% else %}
-                  <i class="bi bi-check-circle"></i>
-                  Dar de alta
-              {% endif %}
-
-          </button>
-
           {% endif %}
+          <!-- Boton para dar de alta al paciente -->>
+          {% if request.user.is_superuser %}
+            <button class="btn btn-primary"
+              data-bs-toggle="modal"
+              data-bs-target="#modalAltaPaciente">
+          {% if paciente.dado_de_alta %}
+            <i class="bi bi-arrow-clockwise"></i>
+              Reactivar seguimiento
+          {% else %}
+            <i class="bi bi-check-circle"></i>
+              Dar de alta
+          {% endif %}
+            </button>
+          {% endif %}
+        </div>
+
         <!-- Mini-form división (oculto por defecto) -->
         <div id="div-form-wrap" style="display:none;margin-top:.75rem;animation:fadeIn .2s both;">
           <form method="post" action="{% url 'asignar_division_paciente' paciente.id %}" class="d-flex align-items-center gap-2">
