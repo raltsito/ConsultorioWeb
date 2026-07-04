@@ -435,7 +435,10 @@ class Paciente(models.Model):
     pacientes_relacionados = models.ManyToManyField('self', blank=True, symmetrical=True)
     enlace_resultados = models.URLField(blank=True, null=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
-    
+
+    dado_de_alta = models.BooleanField(default=False, verbose_name="Dado de alta")
+    fecha_alta = models.DateTimeField(null=True, blank=True)
+
     # --- LA MAGIA (INDENTACIÓN CORRECTA) ---
     def save(self, *args, **kwargs):
         # Antes de guardar, llenamos el campo normalizado automáticamente
