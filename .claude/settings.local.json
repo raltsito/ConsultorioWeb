@@ -155,7 +155,8 @@
       "PowerShell(git stash *)",
       "PowerShell($content = Get-Content \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\requirements.txt\" -Encoding Unicode; $content | ForEach-Object { $_ })",
       "PowerShell(git *)",
-      "PowerShell(Get-Content \"C:\\\\Users\\\\carlo\\\\.claude\\\\projects\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\728ad522-e9f9-4223-acf5-48086daa61e2\\\\tool-results\\\\b9vsh0f0b.txt\" | ConvertFrom-Json | Where-Object { $_.level -eq \"error\" } | Select-Object -Last 30 -ExpandProperty message)"
+      "PowerShell(Get-Content \"C:\\\\Users\\\\carlo\\\\.claude\\\\projects\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\728ad522-e9f9-4223-acf5-48086daa61e2\\\\tool-results\\\\b9vsh0f0b.txt\" | ConvertFrom-Json | Where-Object { $_.level -eq \"error\" } | Select-Object -Last 30 -ExpandProperty message)",
+      "Bash(venv/Scripts/python.exe manage.py migrate clinica)"
     ]
   }
 }
