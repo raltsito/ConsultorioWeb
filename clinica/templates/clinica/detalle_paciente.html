@@ -125,6 +125,19 @@
     border-radius:999px; padding:.55rem 1.15rem; font-size:.82rem; font-weight:700;
     text-decoration:none; white-space:nowrap; transition:all .2s;
   }
+  .btn-hero-warning{
+    background:#FACC15;
+    color:#000;
+    border:none;
+    border-radius:999px;
+    padding:.8rem 1.25rem;
+    font-weight:700;
+    text-decoration:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:.35rem;
+}
   .btn-hero-primary:hover { background:#fff; color:var(--teal-dk); transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,0,0,.12); }
   .btn-hero-danger {
     border:1.5px solid rgba(255,255,255,.4); color:#fff;
@@ -418,29 +431,7 @@
             <div class="sp-val" style="opacity:.7;font-size:.78rem;">+ Asignar</div>
           </button>
           {% endif %}
-          <!-- para dar de alta a un paciente-->>
-          {% if paciente.dado_de_alta %}
-            <span class="badge bg-primary">
-              <i class="bi bi-check-circle-fill"></i>
-              Dado de alta
-            </span>
-          {% endif %}
-          <!-- Boton para dar de alta al paciente -->>
-          {% if request.user.is_superuser %}
-            <button class="btn btn-primary"
-              data-bs-toggle="modal"
-              data-bs-target="#modalAltaPaciente">
 
-          {% if paciente.dado_de_alta %}
-            <i class="bi bi-arrow-clockwise"></i>
-              Reactivar seguimiento
-          {% else %}
-            <i class="bi bi-check-circle"></i>
-              Dar de alta
-          {% endif %}
-            </button>
-          {% endif %}
-        </div>
         <!-- Mini-form división (oculto por defecto) -->
         <div id="div-form-wrap" style="display:none;margin-top:.75rem;animation:fadeIn .2s both;">
           <form method="post" action="{% url 'asignar_division_paciente' paciente.id %}" class="d-flex align-items-center gap-2">
@@ -456,13 +447,67 @@
           </form>
         </div>
       </div>
+          <!-- para dar de alta a un paciente-->
+          {% if paciente.dado_de_alta %}
+            <span class="badge bg-primary">
+              <i class="bi bi-check-circle-fill"></i>
+              Dado de alta
+            </span>
+          {% endif %}
+
+        </div>
+        <div class="modal fade" id="modalSuspenderPaciente" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">
+                Suspender seguimiento del paciente
+              </h5>
+            </div>
+            <div class="modal-body">
+              ¿Desea suspender el seguimiento de este paciente?
+              <br><br>
+              El paciente permanecerá registrado en el sistema para conservar su expediente clínico conforme a los requisitos institucionales.
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">
+                Cancelar
+              </button>
+              <button class="btn btn-warning">
+                Confirmar suspensión
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="hero-actions flex-shrink-0">
-        <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
-          <i class="bi bi-pencil-square me-1"></i>Editar
-        </a>
-        <button class="btn-hero-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
-          <i class="bi bi-trash3 me-1"></i>Eliminar
-        </button>
+          {% if request.user.is_superuser %}
+          <button class="btn-hero-primary" data-bs-toggle="modal" data-bs-target="#modalAltaPaciente">
+              {% if paciente.dado_de_alta %}
+                  <i class="bi bi-arrow-clockwise me-1"></i>
+                  Reactivar seguimiento
+              {% else %}
+                  <i class="bi bi-check-circle me-1"></i>
+                  Dar de alta
+              {% endif %}
+          </button>
+
+          <button class="btn-hero-warning" data-bs-toggle="modal" data-bs-target="#modalSuspenderPaciente">
+              <i class="bi bi-pause-circle me-1"></i>
+              Suspender
+          </button>
+          {% endif %}
+
+          <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
+              <i class="bi bi-pencil-square me-1"></i>
+              Editar
+          </a>
+
+          <button class="btn-hero-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
+              <i class="bi bi-trash3 me-1"></i>
+              Eliminar
+          </button>
       </div>
     </div>
   </div>
@@ -942,7 +987,7 @@ function toggleDivForm() {
 }
 </script>
 
-<!-- Dar de alta el paciente -->>
+<!-- Dar de alta el paciente -->
 <div class="modal fade" id="modalAltaPaciente" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
