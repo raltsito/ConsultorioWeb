@@ -766,6 +766,10 @@ def lista_pacientes(request):
     if division_id:
         pacientes = pacientes.filter(division_id=division_id)
 
+    # select_related evita una query extra por fila para servicio_inicial y
+    # division (ambos FK), que la tabla de lista_pacientes.html muestra siempre.
+    pacientes = pacientes.select_related('servicio_inicial', 'division')
+
     divisiones = Division.objects.all().order_by('nombre')
     return render(request, 'clinica/lista_pacientes.html', {
         'pacientes': pacientes,
