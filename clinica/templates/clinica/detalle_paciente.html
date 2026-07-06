@@ -119,7 +119,7 @@
   }
   .stat-pill .sp-lbl { font-size:.58rem; text-transform:uppercase; letter-spacing:.09em; color:rgba(255,255,255,.68); }
   .stat-pill .sp-val { font-size:.85rem; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .hero-actions { display:flex; flex-direction:column; gap:12px; width:180px; align-items:flex-end; }
+  .hero-actions { display:flex; flex-direction:column; gap:12px; width:180px; align-items:stretch; }
   .btn-hero-primary {
     background:#fff; color:var(--teal-dk); border:none;
     border-radius:999px; padding:.55rem 1.15rem; font-size:.82rem; font-weight:700;
@@ -379,6 +379,10 @@
       font-size:1.1rem;
       font-weight:700;
       border-radius:999px;
+
+      .modal {z-index: 99999 !important; }
+
+      .modal-backdrop {z-index: 99998 !important;}
   }
   </style>
 </head>
@@ -474,7 +478,7 @@
               Dado de alta
             </span>
           {% endif %}
-          // Para suspender a un paciente
+          <! -- Para suspender a un paciente -- >
           {% if paciente.estado == 'suspendido' %}
           <span class="badge bg-warning text-dark">
               <i class="bi bi-pause-circle-fill"></i>
