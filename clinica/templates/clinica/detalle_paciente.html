@@ -474,6 +474,13 @@
               Dado de alta
             </span>
           {% endif %}
+          // Para suspender a un paciente
+          {% if paciente.estado == 'suspendido' %}
+          <span class="badge bg-warning text-dark">
+              <i class="bi bi-pause-circle-fill"></i>
+              Suspendido
+          </span>
+          {% endif %}
 
         </div>
         <div class="modal fade" id="modalSuspenderPaciente" tabindex="-1" aria-hidden="true">
@@ -493,9 +500,14 @@
               <button class="btn btn-secondary" data-bs-dismiss="modal">
                 Cancelar
               </button>
-              <button class="btn btn-warning">
-                Confirmar suspensión
-              </button>
+              <form method="post"
+                    action="{% url 'suspender_paciente' paciente.id %}">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="btn btn-warning">
+                      Confirmar suspensión
+                  </button>
+              </form>
             </div>
           </div>
         </div>
