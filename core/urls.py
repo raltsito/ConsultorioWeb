@@ -173,6 +173,8 @@ urlpatterns = [
          clinica_views.demos_whatsapp, name='demos_whatsapp'),
     path('api/demos/whatsapp/enviar/',
          clinica_views.demos_whatsapp_enviar, name='demos_whatsapp_enviar'),
+    path('demos/pago/dorothea/',
+         clinica_views.demo_pago_dorothea, name='demo_pago_dorothea'),
 
 ]
 

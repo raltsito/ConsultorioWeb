@@ -6657,4 +6657,18 @@ def demos_whatsapp_enviar(request):
 
     return JsonResponse({'ok': exitoso, 'meta_response': resp})
 
+
+def demo_pago_dorothea(request):
+    """
+    Página de "pago" simulada para el botón de las plantillas recordatorio_pago_*
+    de la demo de Dorothea. No procesa ningún pago real, solo muestra los datos
+    recibidos por querystring (?nombre=&monto=&referencia=). Pública (sin login)
+    porque quien la abre es el prospecto, no el personal de INTRA.
+    """
+    return render(request, 'clinica/demo_pago_dorothea.html', {
+        'nombre': request.GET.get('nombre', 'Alumno(a)'),
+        'monto': request.GET.get('monto', '850'),
+        'referencia': request.GET.get('referencia', 'DEMO-12345'),
+    })
+
 from django.http import HttpResponse
