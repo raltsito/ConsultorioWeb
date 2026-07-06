@@ -119,7 +119,7 @@
   }
   .stat-pill .sp-lbl { font-size:.58rem; text-transform:uppercase; letter-spacing:.09em; color:rgba(255,255,255,.68); }
   .stat-pill .sp-val { font-size:.85rem; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .hero-actions { display:flex; flex-direction:column; gap:.5rem; align-items:flex-end; }
+  .hero-actions { display:flex; flex-direction:column; gap:12px; width:180px; align-items:flex-end; }
   .btn-hero-primary {
     background:#fff; color:var(--teal-dk); border:none;
     border-radius:999px; padding:.55rem 1.15rem; font-size:.82rem; font-weight:700;
@@ -360,6 +360,12 @@
     .ap-grid { grid-template-columns:1fr; }
     .doc-upload-grid { grid-template-columns:1fr; }
   }
+
+  .hero-actions .btn-hero-primary,
+  .hero-actions .btn-hero-danger,
+  .hero-actions .btn-hero-warning{
+      width:100%;
+      justify-content:center;}
   </style>
 </head>
 <body>
