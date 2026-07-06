@@ -128,14 +128,18 @@ document.addEventListener('DOMContentLoaded', function () {
         return campana.plantillas.find(p => p.clave === selectPlantilla.value) || null;
     }
 
+    const LLAVE_ABRE = '{' + '{';
+    const LLAVE_CIERRA = '}' + '}';
+
     function actualizarPreview() {
         const plantilla = plantillaActual();
         if (!plantilla) { preview.textContent = ''; return; }
         let texto = plantillaTextos[plantilla.clave] || '';
         plantilla.campos.forEach(function (campo, i) {
             const input = document.getElementById(`campo-${campo}`);
-            const valor = input ? (input.value || `{{${i + 1}}}`) : `{{${i + 1}}}`;
-            texto = texto.split(`{{${i + 1}}}`).join(valor);
+            const marcador = LLAVE_ABRE + (i + 1) + LLAVE_CIERRA;
+            const valor = input && input.value ? input.value : marcador;
+            texto = texto.split(marcador).join(valor);
         });
         preview.textContent = texto;
     }
