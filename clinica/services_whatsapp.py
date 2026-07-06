@@ -71,7 +71,9 @@ TEMPLATE_BODIES = {
         '🏪 Pago en OXXO: menciona la referencia DEMO-12345 en cualquier tienda\n\n'
         'Si ya realizaste tu pago, ignora este mensaje.\n\n'
         '¡Gracias por formar parte de Dorothea!',
-    'recordatorio_pago_mismo_dia':
+    # Nombre con guion bajo inicial: asi quedo registrada/aprobada en Meta
+    # (WhatsApp Manager), no coincide con la convencion de las demas.
+    '_recordatorio_pago_mismo_dia':
         'Hola {{1}}, hoy {{2}} vence tu mensualidad en la Escuela de Enfermería Dorothea 🩺\n\n'
         '💳 Monto a pagar: ${{3}}\n\n'
         '🏪 Pago en OXXO: menciona la referencia DEMO-12345 en cualquier tienda\n\n'
@@ -93,7 +95,7 @@ DEMOS_CAMPANAS = {
                 'campos': ['nombre', 'fecha_vencimiento', 'monto'],
             },
             {
-                'clave': 'recordatorio_pago_mismo_dia',
+                'clave': '_recordatorio_pago_mismo_dia',
                 'titulo': 'Recordatorio de pago — mismo día',
                 'campos': ['nombre', 'fecha_vencimiento', 'monto'],
             },
