@@ -501,14 +501,14 @@
               El paciente permanecerá registrado en el sistema para conservar su expediente clínico conforme a los requisitos institucionales.
             </div>
             <div class="modal-footer">
-              <button class="btn btn-secondary" data-bs-dismiss="modal">
-                Cancelar
-              </button>
-              <form method="post"
-                    action="{% url 'suspender_paciente' paciente.id %}">
+              <form method="post" action="{% url 'suspender_paciente' paciente.id %}">
                   {% csrf_token %}
-                  <button type="submit"
-                          class="btn btn-warning">
+
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                      Cancelar
+                  </button>
+
+                  <button type="submit" class="btn btn-warning">
                       Confirmar suspensión
                   </button>
               </form>
