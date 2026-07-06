@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib import admin
-from .models import AccesoDirectoPortal, Consultoria, Empresa, Host, HostChecklistTask, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta, RecursoPropio, MensajeWhatsApp, ConfiguracionWhatsApp
+from .models import AccesoDirectoPortal, Consultoria, Empresa, Host, HostChecklistTask, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta, RecursoPropio, MensajeWhatsApp, ConfiguracionWhatsApp, MensajeWhatsAppDemo
 from .models import Horario
 from .models import Instrumento, PreguntaInstrumento, EnvioInstrumento, RespuestaInstrumento
 
@@ -58,6 +58,18 @@ class MensajeWhatsAppAdmin(admin.ModelAdmin):
     list_filter = ('tipo', 'origen', 'exitoso')
     search_fields = ('paciente__nombre', 'telefono')
     readonly_fields = ('cita', 'paciente', 'telefono', 'tipo', 'origen', 'enviado_en',
+                        'exitoso', 'respuesta_api', 'enviado_por')
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(MensajeWhatsAppDemo)
+class MensajeWhatsAppDemoAdmin(admin.ModelAdmin):
+    list_display = ('campana', 'tipo', 'nombre_contacto', 'telefono', 'exitoso', 'enviado_en')
+    list_filter = ('campana', 'tipo', 'exitoso')
+    search_fields = ('nombre_contacto', 'telefono')
+    readonly_fields = ('campana', 'tipo', 'telefono', 'nombre_contacto', 'texto', 'enviado_en',
                         'exitoso', 'respuesta_api', 'enviado_por')
 
     def has_add_permission(self, request):

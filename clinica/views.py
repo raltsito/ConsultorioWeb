@@ -54,6 +54,7 @@ from .models import (
     ConfiguracionWhatsApp,
     MensajeWhatsApp,
     MensajeWhatsAppEntrante,
+    MensajeWhatsAppDemo,
     Horario,
     SolicitudCita,
     SolicitudReagendo,
@@ -6585,5 +6586,75 @@ def whatsapp_enviar_lote(request):
         resultados.append({'cita_id': cita.pk, 'ok': exitoso})
 
     return JsonResponse({'resultados': resultados})
+
+
+@login_required
+def demos_whatsapp(request):
+    """
+    Panel exclusivo de is_superuser: enviar plantillas de WhatsApp a números
+    sueltos (prospectos, no ligados a un Paciente) para mostrar el producto
+    antes de que un cliente lo contrate. Arranca con la campaña Dorothea.
+    """
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    historial = MensajeWhatsAppDemo.objects.select_related('enviado_por')[:100]
+    claves_plantillas = {p['clave'] for c in wa.DEMOS_CAMPANAS.values() for p in c['plantillas']}
+    plantilla_textos = {k: v for k, v in wa.TEMPLATE_BODIES.items() if k in claves_plantillas}
+
+    return render(request, 'clinica/demos_whatsapp.html', {
+        'campanas': wa.DEMOS_CAMPANAS,
+        'campos_labels': wa.CAMPOS_DEMO_LABELS,
+        'plantilla_textos': plantilla_textos,
+        'historial': historial,
+    })
+
+
+@login_required
+@require_POST
+def demos_whatsapp_enviar(request):
+    """
+    Envía una plantilla de demo a un número suelto.
+    Body JSON: { "campana": "dorothea", "plantilla": "recordatorio_pago_3_dias",
+                 "telefono": "8441234567", "campos": {"nombre": "...", ...} }
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    data = json.loads(request.body)
+    campana_clave = data.get('campana', '')
+    plantilla_clave = data.get('plantilla', '')
+    telefono = (data.get('telefono') or '').strip()
+    campos = data.get('campos') or {}
+
+    campana = wa.DEMOS_CAMPANAS.get(campana_clave)
+    plantilla = next(
+        (p for p in campana['plantillas'] if p['clave'] == plantilla_clave), None
+    ) if campana else None
+
+    if not plantilla or not telefono:
+        return JsonResponse({'error': 'Datos incompletos'}, status=400)
+
+    parametros = [campos.get(campo, '') for campo in plantilla['campos']]
+
+    try:
+        resp = wa.enviar_template(telefono, plantilla_clave, parametros)
+        exitoso = 'messages' in resp
+    except Exception as e:
+        resp = {'error': str(e)}
+        exitoso = False
+
+    MensajeWhatsAppDemo.objects.create(
+        campana=campana_clave,
+        tipo=plantilla_clave,
+        telefono=telefono,
+        nombre_contacto=campos.get('nombre', ''),
+        texto=wa.renderizar_template(plantilla_clave, parametros),
+        exitoso=exitoso,
+        respuesta_api=resp,
+        enviado_por=request.user,
+    )
+
+    return JsonResponse({'ok': exitoso, 'meta_response': resp})
 
 from django.http import HttpResponse

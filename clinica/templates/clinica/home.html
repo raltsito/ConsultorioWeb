@@ -559,6 +559,16 @@
                         <span class="dock-sub">Registro del día</span>
                     </span>
                 </a>
+
+                <a href="{% url 'demos_whatsapp' %}" class="dock-tile">
+                    <span class="dock-chip" style="--c1:#0d6efd;--c2:#0a58ca;">
+                        <i class="bi bi-whatsapp"></i>
+                    </span>
+                    <span class="dock-text">
+                        <span class="dock-label">DEMOS</span>
+                        <span class="dock-sub">Plantillas WhatsApp a prospectos</span>
+                    </span>
+                </a>
                 {% endif %}
 
                 {% if user.is_superuser or user.is_staff %}

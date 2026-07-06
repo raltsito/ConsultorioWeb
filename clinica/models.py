@@ -743,6 +743,31 @@ class MensajeWhatsAppEntrante(models.Model):
         ordering = ['-recibido_en']
 
 
+class MensajeWhatsAppDemo(models.Model):
+    """
+    Envíos de plantillas WhatsApp a números sueltos con fines de demo/venta
+    (prospectos, no ligados a un Paciente). Panel exclusivo de is_superuser
+    (ver clinica.views.demos_whatsapp).
+    """
+    campana = models.CharField(max_length=50, help_text='Prospecto/cliente de la demo, ej. "dorothea"')
+    tipo = models.CharField(max_length=50, help_text='Clave de la plantilla de Meta enviada')
+    telefono = models.CharField(max_length=20)
+    nombre_contacto = models.CharField(max_length=150, blank=True)
+    texto = models.TextField(blank=True)
+    enviado_en = models.DateTimeField(auto_now_add=True)
+    exitoso = models.BooleanField(default=False)
+    respuesta_api = models.JSONField(null=True, blank=True)
+    enviado_por = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+
+    def __str__(self):
+        return f"[{self.campana}] {self.tipo} a {self.telefono} ({self.enviado_en:%d/%m/%Y %H:%M})"
+
+    class Meta:
+        verbose_name = 'Mensaje WhatsApp Demo'
+        verbose_name_plural = 'Mensajes WhatsApp Demo'
+        ordering = ['-enviado_en']
+
+
 class ConfiguracionWhatsApp(models.Model):
     """Configuración global (registro único) del módulo de WhatsApp."""
     automatizacion_activa = models.BooleanField(

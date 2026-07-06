@@ -62,6 +62,49 @@ TEMPLATE_BODIES = {
         'En {{2}} seguimos disponibles para apoyarte en tu bienestar. Si deseas retomar tu '
         'proceso o agendar una nueva cita, con gusto te atendemos.\n\n'
         'Comunícate con nosotros o escríbenos aquí. ¡Te esperamos! 🌿',
+
+    # --- Plantillas de DEMO para prospectos (panel exclusivo SUPERADMIN) ---
+    'recordatorio_pago_3_dias':
+        'Hola {{1}}, te recordamos que en 3 días vence tu mensualidad en la Escuela de '
+        'Enfermería Dorothea 🩺\n\n'
+        '📅 Fecha de vencimiento: {{2}}\n💳 Monto: ${{3}}\n\n'
+        '🏪 Pago en OXXO: menciona la referencia DEMO-12345 en cualquier tienda\n\n'
+        'Si ya realizaste tu pago, ignora este mensaje.\n\n'
+        '¡Gracias por formar parte de Dorothea!',
+    'recordatorio_pago_mismo_dia':
+        'Hola {{1}}, hoy {{2}} vence tu mensualidad en la Escuela de Enfermería Dorothea 🩺\n\n'
+        '💳 Monto a pagar: ${{3}}\n\n'
+        '🏪 Pago en OXXO: menciona la referencia DEMO-12345 en cualquier tienda\n\n'
+        'Te recordamos realizar tu pago hoy para mantener tu acceso a clases y evitar recargos.\n\n'
+        '¡Gracias por tu compromiso con tu formación! 🩺',
+}
+
+# Campañas de demo mostradas en el panel "DEMOS" (acceso exclusivo SUPERADMIN).
+# Cada plantilla debe existir y estar aprobada en Meta Business Manager con el
+# mismo nombre en 'clave' antes de poder enviarse. 'campos' define el orden
+# exacto de los {{N}} del body (ver TEMPLATE_BODIES arriba).
+DEMOS_CAMPANAS = {
+    'dorothea': {
+        'nombre': 'Escuela de Enfermería Dorothea',
+        'plantillas': [
+            {
+                'clave': 'recordatorio_pago_3_dias',
+                'titulo': 'Recordatorio de pago — 3 días antes',
+                'campos': ['nombre', 'fecha_vencimiento', 'monto'],
+            },
+            {
+                'clave': 'recordatorio_pago_mismo_dia',
+                'titulo': 'Recordatorio de pago — mismo día',
+                'campos': ['nombre', 'fecha_vencimiento', 'monto'],
+            },
+        ],
+    },
+}
+
+CAMPOS_DEMO_LABELS = {
+    'nombre': 'Nombre del contacto',
+    'fecha_vencimiento': 'Fecha de vencimiento',
+    'monto': 'Monto ($)',
 }
 
 

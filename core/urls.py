@@ -168,6 +168,12 @@ urlpatterns = [
     path('api/whatsapp/conversacion/atendido/',
          clinica_views.whatsapp_marcar_atendido, name='whatsapp_marcar_atendido'),
 
+    # Demos WhatsApp (acceso exclusivo SUPERADMIN)
+    path('demos/whatsapp/',
+         clinica_views.demos_whatsapp, name='demos_whatsapp'),
+    path('api/demos/whatsapp/enviar/',
+         clinica_views.demos_whatsapp_enviar, name='demos_whatsapp_enviar'),
+
 ]
 
 if settings.DEBUG:
