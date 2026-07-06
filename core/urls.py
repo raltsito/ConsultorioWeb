@@ -171,8 +171,8 @@ urlpatterns = [
     # Demos WhatsApp (acceso exclusivo SUPERADMIN)
     path('demos/whatsapp/',
          clinica_views.demos_whatsapp, name='demos_whatsapp'),
-    path('api/demos/whatsapp/enviar/',
-         clinica_views.demos_whatsapp_enviar, name='demos_whatsapp_enviar'),
+    path('api/demos/whatsapp/lote/',
+         clinica_views.demos_whatsapp_enviar_lote, name='demos_whatsapp_enviar_lote'),
     path('demos/pago/dorothea/',
          clinica_views.demo_pago_dorothea, name='demo_pago_dorothea'),
 

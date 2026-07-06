@@ -6616,50 +6616,65 @@ def demos_whatsapp(request):
 
 @login_required
 @require_POST
-def demos_whatsapp_enviar(request):
+def demos_whatsapp_enviar_lote(request):
     """
-    Envía una plantilla de demo a un número suelto.
-    Body JSON: { "campana": "dorothea", "plantilla": "recordatorio_pago_3_dias",
-                 "telefono": "8441234567", "campos": {"nombre": "...", ...} }
+    Envía en una sola llamada varias combinaciones de (campaña, plantilla,
+    teléfono) armadas en la "cola" del panel DEMOS — permite mandar varios
+    números y varias plantillas/campañas a la vez.
+    Body JSON: { "envios": [
+        {"campana": "dorothea", "plantilla": "recordatorio_pago_3_dias",
+         "telefono": "8441234567", "campos": {"nombre": "...", ...}},
+        ...
+    ] }
     """
     if not request.user.is_superuser:
         return JsonResponse({'error': 'No autorizado'}, status=403)
 
     data = json.loads(request.body)
-    campana_clave = data.get('campana', '')
-    plantilla_clave = data.get('plantilla', '')
-    telefono = (data.get('telefono') or '').strip()
-    campos = data.get('campos') or {}
+    envios = data.get('envios') or []
 
-    campana = wa.DEMOS_CAMPANAS.get(campana_clave)
-    plantilla = next(
-        (p for p in campana['plantillas'] if p['clave'] == plantilla_clave), None
-    ) if campana else None
+    resultados = []
+    for envio in envios:
+        campana_clave = envio.get('campana', '')
+        plantilla_clave = envio.get('plantilla', '')
+        telefono = (envio.get('telefono') or '').strip()
+        campos = envio.get('campos') or {}
 
-    if not plantilla or not telefono:
-        return JsonResponse({'error': 'Datos incompletos'}, status=400)
+        campana = wa.DEMOS_CAMPANAS.get(campana_clave)
+        plantilla = next(
+            (p for p in campana['plantillas'] if p['clave'] == plantilla_clave), None
+        ) if campana else None
 
-    parametros = [campos.get(campo, '') for campo in plantilla['campos']]
+        if not plantilla or not telefono:
+            resultados.append({'ok': False, 'telefono': telefono, 'plantilla': plantilla_clave,
+                                'error': 'Datos incompletos'})
+            continue
 
-    try:
-        resp = wa.enviar_template(telefono, plantilla_clave, parametros)
-        exitoso = 'messages' in resp
-    except Exception as e:
-        resp = {'error': str(e)}
-        exitoso = False
+        parametros = [campos.get(campo, '') for campo in plantilla['campos']]
 
-    MensajeWhatsAppDemo.objects.create(
-        campana=campana_clave,
-        tipo=plantilla_clave,
-        telefono=telefono,
-        nombre_contacto=campos.get('nombre', ''),
-        texto=wa.renderizar_template(plantilla_clave, parametros),
-        exitoso=exitoso,
-        respuesta_api=resp,
-        enviado_por=request.user,
-    )
+        try:
+            resp = wa.enviar_template(telefono, plantilla_clave, parametros)
+            exitoso = 'messages' in resp
+        except Exception as e:
+            resp = {'error': str(e)}
+            exitoso = False
 
-    return JsonResponse({'ok': exitoso, 'meta_response': resp})
+        MensajeWhatsAppDemo.objects.create(
+            campana=campana_clave,
+            tipo=plantilla_clave,
+            telefono=telefono,
+            nombre_contacto=campos.get('nombre', ''),
+            texto=wa.renderizar_template(plantilla_clave, parametros),
+            exitoso=exitoso,
+            respuesta_api=resp,
+            enviado_por=request.user,
+        )
+        resultados.append({
+            'ok': exitoso, 'telefono': telefono, 'campana': campana_clave,
+            'plantilla': plantilla_clave, 'meta_response': resp,
+        })
+
+    return JsonResponse({'resultados': resultados})
 
 
 def demo_pago_dorothea(request):

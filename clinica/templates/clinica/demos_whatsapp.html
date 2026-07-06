@@ -19,39 +19,72 @@
 
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white">
-            <strong>Nueva demo</strong>
+            <strong>Agregar a la cola</strong>
+            <span class="text-muted small ms-2">Elige una o varias plantillas y un teléfono, agrégalo, y repite para armar el lote</span>
         </div>
         <div class="card-body">
-            <form id="form-demo">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label small text-muted">Campaña</label>
-                        <select id="select-campana" class="form-select"></select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label small text-muted">Plantilla</label>
-                        <select id="select-plantilla" class="form-select"></select>
-                    </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Campaña</label>
+                    <select id="select-campana" class="form-select"></select>
                 </div>
-
-                <div class="row g-3 mt-1">
-                    <div class="col-md-6">
-                        <label class="form-label small text-muted">Teléfono (10 dígitos)</label>
-                        <input type="tel" id="campo-telefono" class="form-control" placeholder="8441234567" maxlength="10">
-                    </div>
+                <div class="col-md-8">
+                    <label class="form-label small text-muted">Plantillas (puedes elegir varias)</label>
+                    <div id="plantillas-checks" class="d-flex flex-wrap gap-3 pt-2"></div>
                 </div>
+            </div>
 
-                <div class="row g-3 mt-1" id="campos-dinamicos"></div>
-
-                <div class="mt-3">
-                    <label class="form-label small text-muted">Vista previa</label>
-                    <pre id="preview-mensaje" class="border rounded p-3 bg-light small mb-0" style="white-space: pre-wrap; font-family: inherit;"></pre>
+            <div class="row g-3 mt-1">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Teléfono (10 dígitos)</label>
+                    <input type="tel" id="campo-telefono" class="form-control" placeholder="8441234567" maxlength="10">
                 </div>
+                <div class="col-md-8 row g-3" id="campos-dinamicos"></div>
+            </div>
 
-                <button type="submit" id="btn-enviar-demo" class="btn text-white mt-3" style="background:#0d6efd;">
-                    <i class="bi bi-whatsapp me-1"></i>Enviar demo
+            <div class="mt-3" id="previews-container"></div>
+
+            <button type="button" id="btn-agregar-cola" class="btn text-white mt-3" style="background:#0d6efd;">
+                <i class="bi bi-plus-lg me-1"></i>Agregar a la cola
+            </button>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <strong>Cola de envío</strong>
+                <span class="text-muted small ms-2" id="contador-cola">0 pendientes</span>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" id="btn-vaciar-cola" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-trash me-1"></i>Vaciar cola
                 </button>
-            </form>
+                <button type="button" id="btn-enviar-cola" class="btn text-white btn-sm" style="background:#0d6efd;" disabled>
+                    <i class="bi bi-whatsapp me-1"></i>Enviar seleccionados
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:40px;"><input type="checkbox" class="form-check-input" id="check-todos-cola"></th>
+                            <th>Campaña</th>
+                            <th>Plantilla</th>
+                            <th>Teléfono</th>
+                            <th>Contacto</th>
+                            <th style="width:40px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-cola">
+                        <tr id="fila-cola-vacia">
+                            <td colspan="6" class="text-center text-muted py-4">La cola está vacía. Agrega contactos arriba.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -89,7 +122,7 @@
                             </td>
                         </tr>
                         {% empty %}
-                        <tr>
+                        <tr id="fila-historial-vacia">
                             <td colspan="6" class="text-center text-muted py-4">Aún no se han enviado demos.</td>
                         </tr>
                         {% endfor %}
@@ -111,44 +144,57 @@ document.addEventListener('DOMContentLoaded', function () {
     const camposLabels = JSON.parse(document.getElementById('campos-labels-data').textContent);
     const plantillaTextos = JSON.parse(document.getElementById('plantilla-textos-data').textContent);
 
+    const LLAVE_ABRE = '{' + '{';
+    const LLAVE_CIERRA = '}' + '}';
+
     const selectCampana = document.getElementById('select-campana');
-    const selectPlantilla = document.getElementById('select-plantilla');
+    const plantillasChecks = document.getElementById('plantillas-checks');
     const camposDinamicos = document.getElementById('campos-dinamicos');
-    const preview = document.getElementById('preview-mensaje');
+    const previewsContainer = document.getElementById('previews-container');
     const alerta = document.getElementById('alerta-resultado');
+    const tbodyCola = document.getElementById('tbody-cola');
+    const tbodyHistorial = document.getElementById('tbody-historial');
+    const contadorCola = document.getElementById('contador-cola');
+    const btnEnviarCola = document.getElementById('btn-enviar-cola');
+
+    let cola = [];
+    let colaSeq = 0;
 
     function mostrarAlerta(tipo, mensaje) {
         alerta.className = `alert alert-${tipo}`;
         alerta.textContent = mensaje;
     }
 
-    function plantillaActual() {
-        const campana = campanasData[selectCampana.value];
-        if (!campana) return null;
-        return campana.plantillas.find(p => p.clave === selectPlantilla.value) || null;
+    function campanaActual() {
+        return campanasData[selectCampana.value] || null;
     }
 
-    const LLAVE_ABRE = '{' + '{';
-    const LLAVE_CIERRA = '}' + '}';
+    function plantillasSeleccionadas() {
+        const campana = campanaActual();
+        if (!campana) return [];
+        const claves = Array.from(plantillasChecks.querySelectorAll('input:checked')).map(i => i.value);
+        return campana.plantillas.filter(p => claves.includes(p.clave));
+    }
 
-    function actualizarPreview() {
-        const plantilla = plantillaActual();
-        if (!plantilla) { preview.textContent = ''; return; }
-        let texto = plantillaTextos[plantilla.clave] || '';
-        plantilla.campos.forEach(function (campo, i) {
-            const input = document.getElementById(`campo-${campo}`);
-            const marcador = LLAVE_ABRE + (i + 1) + LLAVE_CIERRA;
-            const valor = input && input.value ? input.value : marcador;
-            texto = texto.split(marcador).join(valor);
+    function camposUnion(plantillas) {
+        const vistos = [];
+        plantillas.forEach(function (p) {
+            p.campos.forEach(function (campo) {
+                if (!vistos.includes(campo)) vistos.push(campo);
+            });
         });
-        preview.textContent = texto;
+        return vistos;
+    }
+
+    function valorCampo(campo) {
+        const input = document.getElementById(`campo-${campo}`);
+        return input ? input.value : '';
     }
 
     function renderCamposDinamicos() {
-        const plantilla = plantillaActual();
+        const campos = camposUnion(plantillasSeleccionadas());
         camposDinamicos.innerHTML = '';
-        if (!plantilla) return;
-        plantilla.campos.forEach(function (campo) {
+        campos.forEach(function (campo) {
             const col = document.createElement('div');
             col.className = 'col-md-4';
             col.innerHTML = `
@@ -158,20 +204,50 @@ document.addEventListener('DOMContentLoaded', function () {
             camposDinamicos.appendChild(col);
         });
         camposDinamicos.querySelectorAll('.campo-plantilla').forEach(function (input) {
-            input.addEventListener('input', actualizarPreview);
+            input.addEventListener('input', renderPreviews);
         });
-        actualizarPreview();
+        renderPreviews();
     }
 
-    function renderPlantillas() {
-        const campana = campanasData[selectCampana.value];
-        selectPlantilla.innerHTML = '';
+    function renderPreviews() {
+        const plantillas = plantillasSeleccionadas();
+        previewsContainer.innerHTML = '';
+        plantillas.forEach(function (plantilla) {
+            let texto = plantillaTextos[plantilla.clave] || '';
+            plantilla.campos.forEach(function (campo, i) {
+                const marcador = LLAVE_ABRE + (i + 1) + LLAVE_CIERRA;
+                const valor = valorCampo(campo) || marcador;
+                texto = texto.split(marcador).join(valor);
+            });
+            const bloque = document.createElement('div');
+            bloque.className = 'mb-2';
+            bloque.innerHTML = `
+                <label class="form-label small text-muted mb-1">${plantilla.titulo}</label>
+                <pre class="border rounded p-3 bg-light small mb-0" style="white-space: pre-wrap; font-family: inherit;"></pre>
+            `;
+            bloque.querySelector('pre').textContent = texto;
+            previewsContainer.appendChild(bloque);
+        });
+    }
+
+    function renderPlantillasChecks() {
+        const campana = campanaActual();
+        plantillasChecks.innerHTML = '';
         if (!campana) return;
-        campana.plantillas.forEach(function (p) {
-            const opt = document.createElement('option');
-            opt.value = p.clave;
-            opt.textContent = p.titulo;
-            selectPlantilla.appendChild(opt);
+        campana.plantillas.forEach(function (p, idx) {
+            const id = `check-plantilla-${idx}`;
+            const wrap = document.createElement('div');
+            wrap.className = 'form-check';
+            wrap.innerHTML = `
+                <input class="form-check-input" type="checkbox" value="${p.clave}" id="${id}" ${idx === 0 ? 'checked' : ''}>
+                <label class="form-check-label small" for="${id}">${p.titulo}</label>
+            `;
+            plantillasChecks.appendChild(wrap);
+        });
+        plantillasChecks.querySelectorAll('input[type=checkbox]').forEach(function (chk) {
+            chk.addEventListener('change', function () {
+                renderCamposDinamicos();
+            });
         });
         renderCamposDinamicos();
     }
@@ -184,39 +260,111 @@ document.addEventListener('DOMContentLoaded', function () {
             opt.textContent = campanasData[clave].nombre;
             selectCampana.appendChild(opt);
         });
-        renderPlantillas();
+        renderPlantillasChecks();
     }
 
-    selectCampana.addEventListener('change', renderPlantillas);
-    selectPlantilla.addEventListener('change', renderCamposDinamicos);
-
+    selectCampana.addEventListener('change', renderPlantillasChecks);
     renderCampanas();
 
-    document.getElementById('form-demo').addEventListener('submit', function (e) {
-        e.preventDefault();
+    function actualizarContadorCola() {
+        const seleccionados = tbodyCola.querySelectorAll('.check-fila-cola:checked').length;
+        contadorCola.textContent = `${cola.length} en cola · ${seleccionados} seleccionados`;
+        btnEnviarCola.disabled = seleccionados === 0;
+    }
 
-        const plantilla = plantillaActual();
+    function renderCola() {
+        tbodyCola.innerHTML = '';
+        if (cola.length === 0) {
+            tbodyCola.innerHTML = `
+                <tr id="fila-cola-vacia">
+                    <td colspan="6" class="text-center text-muted py-4">La cola está vacía. Agrega contactos arriba.</td>
+                </tr>`;
+            actualizarContadorCola();
+            return;
+        }
+        cola.forEach(function (item) {
+            const fila = document.createElement('tr');
+            fila.dataset.id = item.id;
+            fila.innerHTML = `
+                <td><input type="checkbox" class="form-check-input check-fila-cola" checked></td>
+                <td>${item.campanaNombre}</td>
+                <td>${item.plantillaTitulo}</td>
+                <td>${item.telefono}</td>
+                <td>${item.campos.nombre || '—'}</td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger btn-quitar-cola"><i class="bi bi-x-lg"></i></button></td>
+            `;
+            tbodyCola.appendChild(fila);
+        });
+        tbodyCola.querySelectorAll('.check-fila-cola').forEach(function (chk) {
+            chk.addEventListener('change', actualizarContadorCola);
+        });
+        tbodyCola.querySelectorAll('.btn-quitar-cola').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const id = parseInt(btn.closest('tr').dataset.id, 10);
+                cola = cola.filter(i => i.id !== id);
+                renderCola();
+            });
+        });
+        actualizarContadorCola();
+    }
+
+    document.getElementById('check-todos-cola').addEventListener('change', function () {
+        tbodyCola.querySelectorAll('.check-fila-cola').forEach(chk => chk.checked = this.checked);
+        actualizarContadorCola();
+    });
+
+    document.getElementById('btn-vaciar-cola').addEventListener('click', function () {
+        cola = [];
+        renderCola();
+    });
+
+    document.getElementById('btn-agregar-cola').addEventListener('click', function () {
+        const campana = campanaActual();
+        const plantillas = plantillasSeleccionadas();
         const telefono = document.getElementById('campo-telefono').value.trim();
-        if (!plantilla || !telefono) {
-            mostrarAlerta('warning', 'Completa la plantilla y el teléfono antes de enviar.');
+
+        if (!campana || plantillas.length === 0 || !telefono) {
+            mostrarAlerta('warning', 'Elige al menos una plantilla y captura el teléfono antes de agregar a la cola.');
             return;
         }
 
-        const campos = {};
-        plantilla.campos.forEach(function (campo) {
-            const input = document.getElementById(`campo-${campo}`);
-            campos[campo] = input ? input.value : '';
+        plantillas.forEach(function (plantilla) {
+            const campos = {};
+            plantilla.campos.forEach(function (campo) {
+                campos[campo] = valorCampo(campo);
+            });
+            cola.push({
+                id: ++colaSeq,
+                campana: selectCampana.value,
+                campanaNombre: campana.nombre,
+                plantilla: plantilla.clave,
+                plantillaTitulo: plantilla.titulo,
+                telefono: telefono,
+                campos: campos,
+            });
         });
+
+        renderCola();
+        document.getElementById('campo-telefono').value = '';
+        mostrarAlerta('success', `Agregado a la cola: ${telefono} (${plantillas.length} plantilla${plantillas.length > 1 ? 's' : ''}).`);
+    });
+
+    btnEnviarCola.addEventListener('click', function () {
+        const filas = Array.from(tbodyCola.querySelectorAll('tr[data-id]'))
+            .filter(f => f.querySelector('.check-fila-cola').checked);
+        const idsSeleccionados = filas.map(f => parseInt(f.dataset.id, 10));
+        const itemsSeleccionados = cola.filter(i => idsSeleccionados.includes(i.id));
+
+        if (itemsSeleccionados.length === 0) return;
 
         const csrf = document.cookie.split('; ').find(r => r.startsWith('csrftoken='));
         const token = csrf ? csrf.split('=')[1] : '';
 
-        const btn = document.getElementById('btn-enviar-demo');
-        const original = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Enviando...';
+        const original = btnEnviarCola.innerHTML;
+        btnEnviarCola.disabled = true;
+        btnEnviarCola.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Enviando...';
 
-        fetch("{% url 'demos_whatsapp_enviar' %}", {
+        fetch("{% url 'demos_whatsapp_enviar_lote' %}", {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
@@ -224,39 +372,50 @@ document.addEventListener('DOMContentLoaded', function () {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                campana: selectCampana.value,
-                plantilla: plantilla.clave,
-                telefono: telefono,
-                campos: campos,
+                envios: itemsSeleccionados.map(i => ({
+                    campana: i.campana, plantilla: i.plantilla, telefono: i.telefono, campos: i.campos,
+                })),
             }),
         })
             .then(r => r.json())
             .then(data => {
-                if (data.ok) {
-                    mostrarAlerta('success', 'Demo enviada correctamente.');
-                    const tbody = document.getElementById('tbody-historial');
-                    const vacio = tbody.querySelector('td[colspan]');
-                    if (vacio) vacio.closest('tr').remove();
-                    const fila = document.createElement('tr');
-                    fila.innerHTML = `
-                        <td>${selectCampana.value}</td>
-                        <td>${plantilla.clave}</td>
-                        <td>${campos.nombre || '—'}</td>
-                        <td>${telefono}</td>
-                        <td>${new Date().toLocaleString('es-MX')}</td>
-                        <td><span class="badge bg-success">Enviado</span></td>
-                    `;
-                    tbody.prepend(fila);
-                } else {
-                    mostrarAlerta('danger', 'No se pudo enviar la demo: ' + (data.error || JSON.stringify(data.meta_response)));
-                }
+                const resultados = data.resultados || [];
+                const exitosos = resultados.filter(r => r.ok).length;
+                const fallidos = resultados.length - exitosos;
+
+                const filaVaciaHistorial = document.getElementById('fila-historial-vacia');
+                if (filaVaciaHistorial) filaVaciaHistorial.remove();
+
+                resultados.forEach(function (resultado, idx) {
+                    const item = itemsSeleccionados[idx];
+                    if (resultado.ok) {
+                        cola = cola.filter(i => i.id !== item.id);
+                        const fila = document.createElement('tr');
+                        fila.innerHTML = `
+                            <td>${item.campanaNombre}</td>
+                            <td>${item.plantillaTitulo}</td>
+                            <td>${item.campos.nombre || '—'}</td>
+                            <td>${item.telefono}</td>
+                            <td>${new Date().toLocaleString('es-MX')}</td>
+                            <td><span class="badge bg-success">Enviado</span></td>
+                        `;
+                        tbodyHistorial.prepend(fila);
+                    }
+                });
+
+                renderCola();
+
+                const alertType = fallidos === 0 ? 'success' : (exitosos === 0 ? 'danger' : 'warning');
+                mostrarAlerta(alertType, `Enviados ${exitosos}, fallidos ${fallidos}.`);
             })
-            .catch(() => mostrarAlerta('danger', 'Error de conexión al enviar la demo.'))
+            .catch(() => mostrarAlerta('danger', 'Error de conexión al enviar el lote.'))
             .finally(() => {
-                btn.disabled = false;
-                btn.innerHTML = original;
+                btnEnviarCola.disabled = false;
+                btnEnviarCola.innerHTML = original;
             });
     });
+
+    renderCola();
 });
 </script>
 {% endblock %}
