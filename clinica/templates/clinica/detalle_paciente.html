@@ -172,6 +172,29 @@
   }
   .btn-hero-danger:hover { background:rgba(255,255,255,.14); border-color:#fff; color:#fff; }
 
+        .hero-actions .btn-hero-primary,
+      .hero-actions .btn-hero-danger,
+      .hero-actions .btn-hero-warning{
+          width:100%;
+          justify-content:center;}
+
+    .hero-actions .btn-hero-primary,
+    .hero-actions .btn-hero-danger,
+    .hero-actions .btn-hero-warning{
+        width:225px;
+        min-height:62px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:.5rem;
+        font-size:1.1rem;
+        font-weight:700;
+        border-radius:999px;
+    }
+
+    .modal {z-index: 99999 !important;}
+    .modal-backdrop {z-index: 99998 !important;}
+
   /* ── Messages ─────────────────────────────────────────── */
   .msg-wrap { margin-bottom:1rem; animation:slideDown .35s both; }
   .msg-box {
@@ -386,29 +409,6 @@
     .ap-grid { grid-template-columns:1fr; }
     .doc-upload-grid { grid-template-columns:1fr; }
   }
-
-      .hero-actions .btn-hero-primary,
-      .hero-actions .btn-hero-danger,
-      .hero-actions .btn-hero-warning{
-          width:100%;
-          justify-content:center;}
-
-    .hero-actions .btn-hero-primary,
-    .hero-actions .btn-hero-danger,
-    .hero-actions .btn-hero-warning{
-        width:225px;
-        min-height:62px;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        gap:.5rem;
-        font-size:1.1rem;
-        font-weight:700;
-        border-radius:999px;
-    }
-
-    .modal {z-index: 99999 !important;}
-    .modal-backdrop {z-index: 99998 !important;}
 
   </style>
 </head>
