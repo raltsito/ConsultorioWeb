@@ -198,6 +198,17 @@ class CitaForm(forms.ModelForm):
                 'true' if self.instance.tiene_descuento else 'false'
             )
 
+        # Si la cita ya tiene un método de pago histórico que ya no está en las
+        # opciones vigentes (p.ej. "Terminal", reemplazado por Débito/Crédito),
+        # lo agregamos como opción extra para que no se pierda al editar la cita.
+        if self.instance and self.instance.pk and self.instance.metodo_pago:
+            valores_vigentes = dict(Cita.PAGO_CHOICES)
+            if self.instance.metodo_pago not in valores_vigentes:
+                self.fields['metodo_pago'].choices = (
+                    [(self.instance.metodo_pago, self.instance.metodo_pago)]
+                    + list(self.fields['metodo_pago'].choices)
+                )
+
         # Bucle para estilos Bootstrap
         for field_name, field in self.fields.items():
             if 'class' not in field.widget.attrs:

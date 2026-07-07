@@ -156,7 +156,18 @@
       "PowerShell($content = Get-Content \"C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\requirements.txt\" -Encoding Unicode; $content | ForEach-Object { $_ })",
       "PowerShell(git *)",
       "PowerShell(Get-Content \"C:\\\\Users\\\\carlo\\\\.claude\\\\projects\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\728ad522-e9f9-4223-acf5-48086daa61e2\\\\tool-results\\\\b9vsh0f0b.txt\" | ConvertFrom-Json | Where-Object { $_.level -eq \"error\" } | Select-Object -Last 30 -ExpandProperty message)",
-      "Bash(venv/Scripts/python.exe manage.py migrate clinica)"
+      "Bash(venv/Scripts/python.exe manage.py migrate clinica)",
+      "Bash(cat railway.json)",
+      "Bash(cat railway.toml)",
+      "Bash(venv/Scripts/python -c \"import pptx; print\\('ok'\\)\")",
+      "Bash(venv/Scripts/python -)",
+      "Bash(venv/Scripts/python manage.py check)",
+      "Bash(venv/Scripts/python manage.py shell -c ' *)",
+      "Bash(venv/Scripts/python -c \"import docx; print\\('ok'\\)\")",
+      "Bash(venv/Scripts/python -c ' *)",
+      "Bash(venv/Scripts/python \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\51ed9620-5721-4b49-935d-7ac07c183c63\\\\scratchpad\\\\gen_pdf_plantillas.py\")",
+      "Bash(./venv/Scripts/python.exe manage.py migrate clinica 0082)",
+      "Bash(./venv/Scripts/python.exe -c ' *)"
     ]
   }
 }

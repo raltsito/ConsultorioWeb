@@ -989,9 +989,13 @@
                             <div class="pago-icon"><i class="bi bi-cash-stack"></i></div>
                             <span class="pago-label">Efectivo</span>
                         </button>
-                        <button type="button" class="pago-card" data-value="Terminal">
+                        <button type="button" class="pago-card" data-value="Debito">
                             <div class="pago-icon"><i class="bi bi-credit-card-2-front"></i></div>
-                            <span class="pago-label">Terminal</span>
+                            <span class="pago-label">Débito</span>
+                        </button>
+                        <button type="button" class="pago-card" data-value="Credito">
+                            <div class="pago-icon"><i class="bi bi-credit-card"></i></div>
+                            <span class="pago-label">Crédito</span>
                         </button>
                         <button type="button" class="pago-card" data-value="Transferencia">
                             <div class="pago-icon"><i class="bi bi-phone"></i></div>
@@ -1241,7 +1245,7 @@
     /* Tarjetas de método de pago */
     .pago-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 0.75rem;
     }
     @media (max-width: 576px) {

@@ -567,7 +567,8 @@ class Cita(models.Model):
     ]
 
     PAGO_CHOICES = [
-        ('Terminal', 'Terminal'),
+        ('Debito', 'Débito'),
+        ('Credito', 'Crédito'),
         ('Transferencia', 'Transferencia'),
         ('Efectivo', 'Efectivo'),
         ('Pase', 'Pase'),
