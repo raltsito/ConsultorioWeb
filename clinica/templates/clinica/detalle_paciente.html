@@ -484,20 +484,6 @@
           </button>
           {% endif %}
 
-
-          <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
-              <i class="bi bi-pencil-square me-1"></i>
-              Editar
-          </a>
-
-          <button class="btn-hero-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
-              <i class="bi bi-trash3 me-1"></i>
-              Eliminar
-          </button>
-      </div>
-    </div>
-  </div>
-
           <!-- para dar de alta a un paciente-->
           {% if paciente.dado_de_alta %}
             <span class="badge bg-primary">
@@ -518,7 +504,18 @@
               {% endif %}
           </button>
           {% endif %}
+          <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
+              <i class="bi bi-pencil-square me-1"></i>
+              Editar
+          </a>
 
+          <button class="btn-hero-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
+              <i class="bi bi-trash3 me-1"></i>
+              Eliminar
+          </button>
+      </div>
+    </div>
+  </div>
 
         <!-- Mini-form división (oculto por defecto) -->
         <div id="div-form-wrap" style="display:none;margin-top:.75rem;animation:fadeIn .2s both;">
