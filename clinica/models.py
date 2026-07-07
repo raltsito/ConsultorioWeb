@@ -402,12 +402,30 @@ class Paciente(models.Model):
         default = False,
         verbose_name = "Dado de alta"
     )
-
     fecha_alta = models.DateTimeField(
         null = True,
         blank = True
     )
 
+    # Dar suspensión a un paciente
+    estado = models.CharField(
+        max_length=20,
+        default='Activo'
+    )
+    fecha_suspension = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    motivo_suspension = models.TextField(
+        null=True,
+        blank=True
+    )
+    suspendido_por = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL
+    )
 
     # EL CAMPO SECRETO
     nombre_normalizado = models.CharField(max_length=200, blank=True, editable=False)

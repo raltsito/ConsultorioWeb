@@ -530,6 +530,11 @@
                   Dar de alta
             {% endif %}
           </button>
+          <!-- BOTÓN SUSPENDER -->
+        <a href="{% url 'suspender_paciente' paciente.id %}" class="btn-hero-warning">
+          <i class="bi bi-pause-circle me-1"></i>
+            Suspender
+        </a>
         {% endif %}
         <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
           <i class="bi bi-pencil-square me-1"></i>

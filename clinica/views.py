@@ -6587,3 +6587,25 @@ def toggle_alta_paciente(request, paciente_id):
         'detalle_paciente',
         paciente_id=paciente.id
     )
+
+# Vista para suspender a un paciente
+@login_required
+def suspender_paciente(request, id):
+    paciente = get_object_or_404(Paciente, id=id)
+    if request.method == "POST":
+        motivo = request.POST.get("motivo")
+        paciente.estado = "S"
+        paciente.fecha_suspension = timezone.now()
+        paciente.motivo_suspension = motivo
+        paciente.suspendido_por = request.user
+        paciente.save()
+        messages.success(
+            request,
+            "Paciente suspendido correctamente."
+        )
+        return redirect("lista_pacientes")
+    return render(
+        request,
+        "pacientes/suspender_paciente.html",
+        {"paciente": paciente}
+    )
