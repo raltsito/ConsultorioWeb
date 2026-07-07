@@ -482,21 +482,6 @@
           </button>
           {% endif %}
 
-        <!-- Mini-form división (oculto por defecto) -->
-        <div id="div-form-wrap" style="display:none;margin-top:.75rem;animation:fadeIn .2s both;">
-          <form method="post" action="{% url 'asignar_division_paciente' paciente.id %}" class="d-flex align-items-center gap-2">
-            {% csrf_token %}
-            <select name="division" class="form-select form-select-sm rounded-pill" style="max-width:220px;font-size:.82rem;">
-              <option value="">— Sin división —</option>
-              {% for d in divisiones %}
-              <option value="{{ d.id }}" {% if paciente.division.id == d.id %}selected{% endif %}>{{ d.nombre }}</option>
-              {% endfor %}
-            </select>
-            <button type="submit" class="btn-hero-primary" style="padding:.38rem .9rem;font-size:.78rem;">Guardar</button>
-            <button type="button" class="btn-hero-danger" onclick="toggleDivForm()" style="padding:.38rem .9rem;font-size:.78rem;">Cancelar</button>
-          </form>
-        </div>
-      </div>
           <!-- para dar de alta a un paciente-->
           {% if paciente.dado_de_alta %}
             <span class="badge bg-primary">
@@ -529,6 +514,24 @@
       </div>
     </div>
   </div>
+
+
+
+        <!-- Mini-form división (oculto por defecto) -->
+        <div id="div-form-wrap" style="display:none;margin-top:.75rem;animation:fadeIn .2s both;">
+          <form method="post" action="{% url 'asignar_division_paciente' paciente.id %}" class="d-flex align-items-center gap-2">
+            {% csrf_token %}
+            <select name="division" class="form-select form-select-sm rounded-pill" style="max-width:220px;font-size:.82rem;">
+              <option value="">— Sin división —</option>
+              {% for d in divisiones %}
+              <option value="{{ d.id }}" {% if paciente.division.id == d.id %}selected{% endif %}>{{ d.nombre }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn-hero-primary" style="padding:.38rem .9rem;font-size:.78rem;">Guardar</button>
+            <button type="button" class="btn-hero-danger" onclick="toggleDivForm()" style="padding:.38rem .9rem;font-size:.78rem;">Cancelar</button>
+          </form>
+        </div>
+      </div>
 
   <!-- ── Tab nav ──────────────────────────────────────────── -->
   <div class="tab-nav" role="tablist">
