@@ -330,7 +330,6 @@ def _sin_reagendar_stats():
             estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
             paciente__isnull=False,
             paciente__dado_de_alta = False, # dar de alta un paciente
-            paciente__estado='activo', # dar suspension a un paciente
         ).values('paciente_id', 'estatus', 'fecha').order_by('paciente_id', '-fecha')
     )
 
@@ -340,7 +339,6 @@ def _sin_reagendar_stats():
             estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
             paciente__isnull=False,
             paciente__dado_de_alta = False, # dar de alta a un paciente
-            paciente__estado='activo', # dar suspension a un paciente
         ).values('paciente_id', 'estatus', 'fecha').order_by('paciente_id', '-fecha')
     )
 
@@ -6588,23 +6586,4 @@ def toggle_alta_paciente(request, paciente_id):
     return redirect(
         'detalle_paciente',
         paciente_id=paciente.id
-    )
-
-# Vista para la suspensión de un paciente
-@login_required
-def suspender_paciente(request, paciente_id):
-    paciente = get_object_or_404(
-        Paciente,
-        pk=paciente_id
-    )
-    paciente.estado = "suspendido"
-    paciente.fecha_suspension = timezone.now()
-    paciente.save()
-    messages.success(
-        request,
-        "Paciente suspendido correctamente."
-    )
-    return redirect(
-        "detalle_paciente",
-        paciente_id
     )

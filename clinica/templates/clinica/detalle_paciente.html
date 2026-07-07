@@ -478,48 +478,6 @@
               Dado de alta
             </span>
           {% endif %}
-          <! -- Para suspender a un paciente -- >
-          {% if paciente.estado == 'suspendido' %}
-          <span class="badge bg-warning text-dark">
-              <i class="bi bi-pause-circle-fill"></i>
-              Suspendido
-          </span>
-          {% endif %}
-
-        </div>
-        <div class="modal fade" id="modalSuspenderPaciente" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">
-                Suspender seguimiento del paciente
-              </h5>
-            </div>
-            <div class="modal-body">
-              ¿Desea suspender el seguimiento de este paciente?
-              <br><br>
-              El paciente permanecerá registrado en el sistema para conservar su expediente clínico conforme a los requisitos institucionales.
-            </div>
-            <div class="modal-footer">
-                  <button type="button"
-                          class="btn btn-secondary"
-                          data-bs-dismiss="modal">
-                      Cancelar
-                  </button>
-
-                  <form method="post"
-                        action="{% url 'suspender_paciente' paciente.id %}"
-                        style="display:inline;">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-warning">
-                          Confirmar suspensión
-                      </button>
-                  </form>
-              </div>
-          </div>
-        </div>
-      </div>
-
       <div class="hero-actions flex-shrink-0">
           {% if request.user.is_superuser %}
           <button class="btn-hero-primary" data-bs-toggle="modal" data-bs-target="#modalAltaPaciente">
@@ -530,11 +488,6 @@
                   <i class="bi bi-check-circle me-1"></i>
                   Dar de alta
               {% endif %}
-          </button>
-
-          <button class="btn-hero-warning" data-bs-toggle="modal" data-bs-target="#modalSuspenderPaciente">
-              <i class="bi bi-pause-circle me-1"></i>
-              Suspender
           </button>
           {% endif %}
 
