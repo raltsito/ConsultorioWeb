@@ -384,7 +384,7 @@
   /* ── Buttons ──────────────────────────────────────────── */
   .btn-ghost {
     background:transparent; border:1.5px solid #CFD8DC;
-    border-radius:999px; padding:.100rem .100rem;
+    border-radius:999px; padding:.38rem .95rem;
     font-size:.78rem; color:var(--muted); cursor:pointer;
     text-decoration:none; display:inline-flex; align-items:center; gap:.3rem;
     transition:all .15s;
@@ -484,6 +484,20 @@
           </button>
           {% endif %}
 
+
+          <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
+              <i class="bi bi-pencil-square me-1"></i>
+              Editar
+          </a>
+
+          <button class="btn-hero-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
+              <i class="bi bi-trash3 me-1"></i>
+              Eliminar
+          </button>
+      </div>
+    </div>
+  </div>
+
           <!-- para dar de alta a un paciente-->
           {% if paciente.dado_de_alta %}
             <span class="badge bg-primary">
@@ -504,20 +518,6 @@
               {% endif %}
           </button>
           {% endif %}
-
-          <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
-              <i class="bi bi-pencil-square me-1"></i>
-              Editar
-          </a>
-
-          <button class="btn-hero-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
-              <i class="bi bi-trash3 me-1"></i>
-              Eliminar
-          </button>
-      </div>
-    </div>
-  </div>
-
 
 
         <!-- Mini-form división (oculto por defecto) -->
