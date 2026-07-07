@@ -484,27 +484,7 @@
             <div class="sp-val" style="opacity:.7;font-size:.78rem;">+ Asignar</div>
           </button>
           {% endif %}
-<div class="d-flex align-items-start gap-3 position-relative w-100" style="z-index:1;">
 
-  <!-- Avatar -->
-  <div class="hero-avatar">
-    {{ paciente.nombre|slice:":1" }}
-  </div>
-
-
-  <!-- Información paciente -->
-  <div class="hero-info">
-      <div class="hero-name">{{ paciente.nombre }}</div>
-
-      <div class="hero-sub">
-        Exp. #{{ paciente.id }}
-        {% if paciente.sexo %}
-        &nbsp;·&nbsp;{{ paciente.sexo }}
-        {% endif %}
-      </div>
-
-
-      <div class="d-flex flex-wrap gap-2 mt-2">
           <!-- para dar de alta a un paciente-->
           {% if paciente.dado_de_alta %}
             <span class="badge bg-primary">
@@ -513,46 +493,29 @@
             </span>
           {% endif %}
           </div>
-<!-- BOTONES -->
-  <div class="hero-actions">
-
-      {% if request.user.is_superuser %}
-      <button class="btn-hero-primary" 
-              data-bs-toggle="modal" 
-              data-bs-target="#modalAltaPaciente">
-
-          {% if paciente.dado_de_alta %}
-          <i class="bi bi-arrow-clockwise me-1"></i>
-          Reactivar seguimiento
-          {% else %}
-          <i class="bi bi-check-circle me-1"></i>
-          Dar de alta
+      <div class="hero-actions flex-shrink-0 ms-auto" >
+          {% if request.user.is_superuser %}
+          <button class="btn-hero-primary" data-bs-toggle="modal" data-bs-target="#modalAltaPaciente">
+              {% if paciente.dado_de_alta %}
+                  <i class="bi bi-arrow-clockwise me-1"></i>
+                  Reactivar seguimiento
+              {% else %}
+                  <i class="bi bi-check-circle me-1"></i>
+                  Dar de alta
+              {% endif %}
+          </button>
           {% endif %}
 
-      </button>
-      {% endif %}
+          <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
+              <i class="bi bi-pencil-square me-1"></i>
+              Editar
+          </a>
 
-
-      <a href="{% url 'editar_paciente' paciente.id %}" 
-         class="btn-hero-primary">
-
-          <i class="bi bi-pencil-square me-1"></i>
-          Editar
-
-      </a>
-
-
-      <button class="btn-hero-danger" 
-              data-bs-toggle="modal" 
-              data-bs-target="#modalEliminar">
-
-          <i class="bi bi-trash3 me-1"></i>
-          Eliminar
-
-      </button>
-
-  </div>
-
+          <button class="btn-hero-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
+              <i class="bi bi-trash3 me-1"></i>
+              Eliminar
+          </button>
+      </div>
     </div>
   </div>
 
