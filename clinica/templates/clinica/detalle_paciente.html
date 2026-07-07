@@ -444,78 +444,169 @@
   <!-- ── Hero ─────────────────────────────────────────────── -->
   <div class="hero">
     <div class="d-flex align-items-start gap-3 position-relative w-100" style="z-index:1;">
-      <div class="hero-avatar">{{ paciente.nombre|slice:":1" }}</div>
-      <div style="flex:1;min-width:0;">
-        <div class="hero-name">{{ paciente.nombre }}</div>
-        <div class="hero-sub">
-          Exp. #{{ paciente.id }}
-          {% if paciente.sexo %}&nbsp;·&nbsp;{{ paciente.sexo }}{% endif %}
-        </div>
-        <div class="d-flex flex-wrap gap-2 mt-2">
-          <div class="stat-pill">
-            <div class="sp-lbl">Nacimiento</div>
-            <div class="sp-val">{{ paciente.fecha_nacimiento }}</div>
-          </div>
-          <div class="stat-pill">
-            <div class="sp-lbl">Teléfono</div>
-            <div class="sp-val">{{ paciente.telefono }}</div>
-          </div>
-          {% if paciente.servicio_inicial %}
-          <div class="stat-pill">
-            <div class="sp-lbl">Servicio inicial</div>
-            <div class="sp-val">{{ paciente.servicio_inicial }}</div>
-          </div>
-          {% endif %}
-          {% if paciente.identidad_contacto %}
-          <div class="stat-pill">
-            <div class="sp-lbl">Tipo contacto</div>
-            <div class="sp-val">{{ paciente.identidad_contacto }}</div>
-          </div>
-          {% endif %}
-          {% if paciente.division %}
-          <div class="stat-pill" id="div-pill-show" style="cursor:pointer;" title="Cambiar división" onclick="toggleDivForm()">
-            <div class="sp-lbl"><i class="bi bi-diagram-2 me-1"></i>División</div>
-            <div class="sp-val">{{ paciente.division }} <i class="bi bi-pencil" style="font-size:.65rem;opacity:.7;"></i></div>
-          </div>
-          {% else %}
-          <button class="stat-pill" id="div-pill-show" style="background:rgba(255,255,255,.08);border:1.5px dashed rgba(255,255,255,.45);cursor:pointer;" onclick="toggleDivForm()" title="Asignar división">
-            <div class="sp-lbl" style="color:rgba(255,255,255,.6);">División</div>
-            <div class="sp-val" style="opacity:.7;font-size:.78rem;">+ Asignar</div>
-          </button>
-          {% endif %}
-    <div class="d-flex align-items-start gap-3 position-relative w-1000" style="z-index:1;">
-          <!-- para dar de alta a un paciente-->
-          {% if paciente.dado_de_alta %}
-            <span class="badge bg-primary">
-              <i class="bi bi-check-circle-fill"></i>
-              Dado de alta
-            </span>
-          {% endif %}
-          </div>
-      <div class="hero-actions flex-shrink-0 ms-auto" >
-          {% if request.user.is_superuser %}
-          <button class="btn-hero-primary" data-bs-toggle="modal" data-bs-target="#modalAltaPaciente">
-              {% if paciente.dado_de_alta %}
-                  <i class="bi bi-arrow-clockwise me-1"></i>
-                  Reactivar seguimiento
-              {% else %}
-                  <i class="bi bi-check-circle me-1"></i>
-                  Dar de alta
-              {% endif %}
-          </button>
-          {% endif %}
-          <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
-              <i class="bi bi-pencil-square me-1"></i>
-              Editar
-          </a>
 
-          <button class="btn-hero-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
-              <i class="bi bi-trash3 me-1"></i>
-              Eliminar
-          </button>
-      </div>
-    </div>
+  <!-- Avatar -->
+  <div class="hero-avatar">
+    {{ paciente.nombre|slice:":1" }}
   </div>
+
+  <!-- Información del paciente -->
+  <div style="flex:1; min-width:0;">
+
+    <div class="hero-name">
+      {{ paciente.nombre }}
+    </div>
+
+    <div class="hero-sub">
+      Exp. #{{ paciente.id }}
+      {% if paciente.sexo %}
+        &nbsp;·&nbsp;{{ paciente.sexo }}
+      {% endif %}
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="d-flex flex-wrap gap-2 mt-2">
+
+      <div class="stat-pill">
+        <div class="sp-lbl">Nacimiento</div>
+        <div class="sp-val">{{ paciente.fecha_nacimiento }}</div>
+      </div>
+
+      <div class="stat-pill">
+        <div class="sp-lbl">Teléfono</div>
+        <div class="sp-val">{{ paciente.telefono }}</div>
+      </div>
+
+
+      {% if paciente.servicio_inicial %}
+      <div class="stat-pill">
+        <div class="sp-lbl">Servicio inicial</div>
+        <div class="sp-val">{{ paciente.servicio_inicial }}</div>
+      </div>
+      {% endif %}
+
+
+      {% if paciente.identidad_contacto %}
+      <div class="stat-pill">
+        <div class="sp-lbl">Tipo contacto</div>
+        <div class="sp-val">{{ paciente.identidad_contacto }}</div>
+      </div>
+      {% endif %}
+
+
+      {% if paciente.division %}
+      <div class="stat-pill" 
+           id="div-pill-show" 
+           style="cursor:pointer;" 
+           title="Cambiar división" 
+           onclick="toggleDivForm()">
+
+        <div class="sp-lbl">
+          <i class="bi bi-diagram-2 me-1"></i>
+          División
+        </div>
+
+        <div class="sp-val">
+          {{ paciente.division }}
+          <i class="bi bi-pencil" style="font-size:.65rem;opacity:.7;"></i>
+        </div>
+
+      </div>
+
+      {% else %}
+
+      <button class="stat-pill"
+              id="div-pill-show"
+              style="background:rgba(255,255,255,.08);
+                     border:1.5px dashed rgba(255,255,255,.45);
+                     cursor:pointer;"
+              onclick="toggleDivForm()"
+              title="Asignar división">
+
+        <div class="sp-lbl" style="color:rgba(255,255,255,.6);">
+          División
+        </div>
+
+        <div class="sp-val" style="opacity:.7;font-size:.78rem;">
+          + Asignar
+        </div>
+
+      </button>
+
+      {% endif %}
+
+
+      <!-- Estado del paciente -->
+      {% if paciente.dado_de_alta %}
+      <div class="stat-pill">
+        <div class="sp-lbl">
+          Estado
+        </div>
+
+        <div class="sp-val">
+          <span class="badge bg-primary">
+            <i class="bi bi-check-circle-fill"></i>
+            Dado de alta
+          </span>
+        </div>
+      </div>
+      {% endif %}
+
+
+    </div>
+
+  </div>
+
+
+  <!-- Botones de acción -->
+  <div class="hero-actions flex-shrink-0 ms-auto">
+
+    {% if request.user.is_superuser %}
+
+    <button class="btn-hero-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#modalAltaPaciente">
+
+      {% if paciente.dado_de_alta %}
+
+        <i class="bi bi-arrow-clockwise me-1"></i>
+        Reactivar seguimiento
+
+      {% else %}
+
+        <i class="bi bi-check-circle me-1"></i>
+        Dar de alta
+
+      {% endif %}
+
+    </button>
+
+    {% endif %}
+
+
+    <a href="{% url 'editar_paciente' paciente.id %}" 
+       class="btn-hero-primary">
+
+      <i class="bi bi-pencil-square me-1"></i>
+      Editar
+
+    </a>
+
+
+    <button class="btn-hero-danger"
+            data-bs-toggle="modal"
+            data-bs-target="#modalEliminar">
+
+      <i class="bi bi-trash3 me-1"></i>
+      Eliminar
+
+    </button>
+
+
+  </div>
+
+
+</div>
     </div>
 
         <!-- Mini-form división (oculto por defecto) -->
