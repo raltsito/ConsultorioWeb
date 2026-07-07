@@ -364,6 +364,14 @@ def aviso_privacidad(request):
     return render(request, 'clinica/privacidad.html')
 
 
+def politicas_atencion(request):
+    return render(request, 'clinica/politicas_atencion.html')
+
+
+def terminos_condiciones(request):
+    return render(request, 'clinica/terminos_condiciones.html')
+
+
 @login_required
 def home(request):
     # --- EL SEMAFORO INTELIGENTE ---

@@ -30,20 +30,36 @@ SEDE_DIRECCIONES = {
     'externo': 'En la ubicación acordada con su terapeuta.',
 }
 
+# Leyenda legal exigida en todas las plantillas de pacientes reales de INTRA
+# (no aplica a las plantillas DEMO de prospectos, que son de otro negocio).
+# El link apunta a la página pública que muestra Políticas de Atención + Aviso
+# de Privacidad Integral (ver clinica/views.py:terminos_condiciones).
+AVISO_LEGAL = (
+    'Al continuar acepta los Términos y condiciones del servicio y política de '
+    'privacidad, puede consultarlas en: https://agenda.intra.org.mx/terminos/'
+)
+
 # Cuerpo literal de cada template aprobado en Meta (ver planwhfinal.md secciones 3-5).
 # Meta no devuelve el texto renderizado en la respuesta del API, así que se
 # reconstruye aquí para poder mostrarlo en el panel de chat (MensajeWhatsApp.texto).
 # Si se edita un template en Meta Business Manager, hay que actualizar esto también.
+#
+# IMPORTANTE: agregar AVISO_LEGAL aquí NO cambia lo que WhatsApp envía de verdad.
+# Meta solo entrega el texto exacto que fue aprobado en WhatsApp Manager, así que
+# cada uno de estos 5 templates (los de pacientes reales) debe editarse ahí con el
+# texto de abajo y reenviarse a aprobación antes de que el cambio surta efecto.
 TEMPLATE_BODIES = {
     'recordatorio_cita_5_dias':
         'Hola {{1}}, te recordamos que tienes una cita programada el {{2}} a las {{3}} '
         'en el consultorio de {{4}}.\n\n'
         'Tu cita es con: {{5}}\nServicio: {{6}}\n\n'
-        'Ante cualquier cambio o duda, no dudes en contactarnos. ¡Te esperamos!',
+        'Ante cualquier cambio o duda, no dudes en contactarnos. ¡Te esperamos!\n\n'
+        + AVISO_LEGAL,
     'recordatorio_cita_3_dias':
         'Hola {{1}}, te recordamos que en 3 días tienes una cita con nosotros.\n\n'
         '📅 {{2}} a las {{3}}\n📍 Consultorio {{4}}\n👨‍⚕️ {{5}}\n🏥 Servicio: {{6}}\n\n'
-        '¡Te esperamos puntualmente!',
+        '¡Te esperamos puntualmente!\n\n'
+        + AVISO_LEGAL,
     'confirmacion_cita_1_dia':
         'Buenas tardes, confirmamos su cita el {{1}} a las {{2}}, consultorio {{3}}.\n\n'
         'Profesional: {{4}}\nPaciente: {{5}}\nServicio: {{6}}\n\n'
@@ -51,17 +67,20 @@ TEMPLATE_BODIES = {
         'Costo: ${{7}}. ¿Pagará por transferencia, efectivo o tarjeta?\n\n'
         'Transferencia:\n🏦 Banco: BBVA\n💳 Tarjeta: 4555 1130 1572 4679\n👤 Titular: Miriam Rubí Iracheta\n\n'
         '{{8}}\n\nResponda *CONFIRMO* a este mensaje para confirmar su cita.\n\n'
-        'Para cambios o dudas, escríbanos al 844 443 9987.',
+        'Para cambios o dudas, escríbanos al 844 443 9987.\n\n'
+        + AVISO_LEGAL,
     'encuesta_conformidad':
         'Hola {{1}}, esperamos que tu sesión de {{2}} con {{3}} haya sido de gran beneficio para ti.\n\n'
         'Nos gustaría conocer tu experiencia. ¿Cómo calificarías tu atención del 1 al 5?\n\n'
         '1️⃣ Muy mala\n2️⃣ Mala\n3️⃣ Regular\n4️⃣ Buena\n5️⃣ Excelente\n\n'
-        'Tu opinión nos ayuda a mejorar. ¡Gracias!',
+        'Tu opinión nos ayuda a mejorar. ¡Gracias!\n\n'
+        + AVISO_LEGAL,
     'reactivacion_paciente':
         'Hola {{1}}, hace un tiempo que no nos visitas y queremos saber cómo estás.\n\n'
         'En {{2}} seguimos disponibles para apoyarte en tu bienestar. Si deseas retomar tu '
         'proceso o agendar una nueva cita, con gusto te atendemos.\n\n'
-        'Comunícate con nosotros o escríbenos aquí. ¡Te esperamos! 🌿',
+        'Comunícate con nosotros o escríbenos aquí. ¡Te esperamos! 🌿\n\n'
+        + AVISO_LEGAL,
 
     # --- Plantillas de DEMO para prospectos (panel exclusivo SUPERADMIN) ---
     'recordatorio_pago_3_dias':
