@@ -384,9 +384,48 @@
     .modal {z-index: 99999 !important;}
     .modal-backdrop {z-index: 99998 !important;}
 
+
+    .patient-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    width:100%;
+}
+
+.patient-info{
+    flex:1;
+}
+
+.patient-actions{
+    width:250px;
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+    align-items:flex-end;
+}
+
+.patient-actions .btn{
+    width:220px;
+}
   </style>
 </head>
 <body>
+
+  <div class="patient-header">
+  +
+    <div class="patient-info">
+        <!-- Avatar -->
+        <!-- Nombre -->
+        <!-- Datos -->
+    </div>
+
+    <div class="patient-actions">
+        <button class="btn-alta">Dar de alta</button>
+        <button class="btn-editar">Editar</button>
+        <button class="btn-eliminar">Eliminar</button>
+    </div>
+
+</div>
 
 <!-- ── Navbar ───────────────────────────────────────────────── -->
 <nav class="top-nav">
