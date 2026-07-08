@@ -6639,7 +6639,7 @@ def suspender_paciente(request, id):
             request,
             "Paciente suspendido correctamente."
         )
-        return redirect("lista_pacientes")
+        return redirect("detalle_paciente")
     return render(
         request,
         "pacientes/suspender_paciente.html",
