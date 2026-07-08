@@ -842,11 +842,7 @@
             {% endif %}
           </div>
         </div>
-          <p>Estado del paciente: {{ paciente.estado }}</p>
-      </div>
-    </div>
-  </div>
-  {% if paciente.estado == "Suspendido" %}
+            {% if paciente.estado == "Suspendido" %}
 
 <div class="xcard mt-3">
 
@@ -890,6 +886,9 @@
 </div>
 
 {% endif %}
+      </div>
+    </div>
+  </div>
 
   <!-- ════════════ TAB: CLÍNICO ════════════ -->
   <div id="tab-clinico" class="tab-panel">
