@@ -849,6 +849,43 @@
     </div>
   </div>
 
+{% if paciente.estado == "S" %}
+<div class="xcard mt-3">
+    <div class="xcard-hd">
+        <div class="d-flex align-items-center gap-2">
+            <div class="xcard-icon">
+                <i class="bi bi-pause-circle-fill text-warning"></i>
+            </div>
+            <span class="xcard-title">Paciente suspendido</span>
+        </div>
+    </div>
+
+    <div class="p-4">
+
+        <div class="alert alert-warning mb-3">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            Este paciente se encuentra suspendido y permanecerá en archivo.
+        </div>
+
+        <div class="mb-2">
+            <strong>Fecha de suspensión:</strong><br>
+            {{ paciente.fecha_suspension|date:"d/m/Y H:i" }}
+        </div>
+
+        <div class="mb-2">
+            <strong>Suspendido por:</strong><br>
+            {{ paciente.suspendido_por }}
+        </div>
+
+        <div>
+            <strong>Motivo:</strong><br>
+            {{ paciente.motivo_suspension|default:"Sin motivo registrado." }}
+        </div>
+
+    </div>
+</div>
+{% endif %}
+
   <!-- ════════════ TAB: CLÍNICO ════════════ -->
   <div id="tab-clinico" class="tab-panel">
     <div class="row g-4">
@@ -1069,7 +1106,6 @@ function toggleDivForm() {
 <div class="modal fade" id="modalAltaPaciente" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-
             <div class="modal-header">
                 <h5 class="modal-title">
                     {% if paciente.dado_de_alta %}
@@ -1078,12 +1114,8 @@ function toggleDivForm() {
                         Dar de alta paciente
                     {% endif %}
                 </h5>
-
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-
             <div class="modal-body">
                 {% if paciente.dado_de_alta %}
                     El paciente volverá a aparecer en seguimiento.
@@ -1091,25 +1123,17 @@ function toggleDivForm() {
                     El paciente dejará de aparecer en el widget "Sin Reagendar".
                 {% endif %}
             </div>
-
             <div class="modal-footer">
-
-                <button type="button"
-                        class="btn btn-secondary"
-                        data-bs-dismiss="modal">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     Cancelar
                 </button>
-
-                <form method="post"
-                      action="{% url 'toggle_alta_paciente' paciente.id %}">
+                <form method="post" action="{% url 'toggle_alta_paciente' paciente.id %}">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-primary">
                         Confirmar
                     </button>
                 </form>
-
             </div>
-
         </div>
     </div>
 </div>
@@ -1117,64 +1141,35 @@ function toggleDivForm() {
 <div class="modal fade" id="modalSuspender" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-
             <div class="modal-header">
                 <h5 class="modal-title">
                     Suspender paciente
                 </h5>
-
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal">
+                <button type="button" class="btn-close" data-bs-dismiss="modal">
                 </button>
             </div>
-
-            <form method="post"
-                  action="{% url 'suspender_paciente' paciente.id %}">
+            <form method="post" action="{% url 'suspender_paciente' paciente.id %}">
                 {% csrf_token %}
-
                 <div class="modal-body">
-
                     <p>
                         ¿Deseas suspender el tratamiento de
                         <strong>{{ paciente.nombre }}</strong>?
                     </p>
-
                     <label class="form-label">
                         Motivo de suspensión
                     </label>
-
-                    <textarea
-                        name="motivo"
-                        class="form-control"
-                        rows="4"
-                        required></textarea>
-
+                    <textarea name="motivo" class="form-control" rows="4" required></textarea>
                 </div>
-
                 <div class="modal-footer">
-
-                    <button
-                        type="button"
-                        class="btn btn-secondary"
-                        data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         Cancelar
                     </button>
-
-                    <button
-                        type="button"
-                        class="btn-hero-warning"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalSuspender">
-
+                    <button type="button" class="btn-hero-warning" data-bs-toggle="modal" data-bs-target="#modalSuspender">
                         <i class="bi bi-pause-circle me-1"></i>
                         Suspender
                     </button>
-
                 </div>
-
             </form>
-
         </div>
     </div>
 </div>
