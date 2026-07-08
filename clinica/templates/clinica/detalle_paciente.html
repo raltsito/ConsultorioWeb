@@ -551,10 +551,18 @@
           Dar de alta
         {% endif %}
       </button>
-      <a href="{% url 'suspender_paciente' paciente.id %}" class="btn-hero-warning">
+      <!--<a href="{% url 'suspender_paciente' paciente.id %}" class="btn-hero-warning">
         <i class="bi bi-pause-circle me-1"></i>
         Suspender
-      </a>
+      </a>-->
+      <button
+          class="btn-hero-warning"
+          data-bs-toggle="modal"
+          data-bs-target="#modalSuspender">
+
+          <i class="bi bi-pause-circle me-1"></i>
+          Suspender
+      </button>
       {% endif %}
       <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
         <i class="bi bi-pencil-square me-1"></i>
@@ -1101,6 +1109,71 @@ function toggleDivForm() {
                 </form>
 
             </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalSuspender" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Suspender paciente
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <form method="post"
+                  action="{% url 'suspender_paciente' paciente.id %}">
+                {% csrf_token %}
+
+                <div class="modal-body">
+
+                    <p>
+                        ¿Deseas suspender el tratamiento de
+                        <strong>{{ paciente.nombre }}</strong>?
+                    </p>
+
+                    <label class="form-label">
+                        Motivo de suspensión
+                    </label>
+
+                    <textarea
+                        name="motivo"
+                        class="form-control"
+                        rows="4"
+                        required></textarea>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-hero-warning"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalSuspender">
+
+                        <i class="bi bi-pause-circle me-1"></i>
+                        Suspender
+                    </button>
+
+                </div>
+
+            </form>
 
         </div>
     </div>
