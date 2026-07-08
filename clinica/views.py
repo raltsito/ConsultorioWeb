@@ -6630,7 +6630,7 @@ def suspender_paciente(request, id):
     paciente = get_object_or_404(Paciente, id=id)
     if request.method == "POST":
         motivo = request.POST.get("motivo")
-        paciente.estado = "S"
+        paciente.estado = "Activo"
         paciente.fecha_suspension = timezone.now()
         paciente.motivo_suspension = motivo
         paciente.suspendido_por = request.user
