@@ -410,7 +410,7 @@ class Paciente(models.Model):
     # Dar suspensión a un paciente
     estado = models.CharField(
         max_length=20,
-        default='Suspendido'
+        default="Activo"
     )
     fecha_suspension = models.DateTimeField(
         null=True,
