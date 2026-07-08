@@ -849,7 +849,7 @@
     </div>
   </div>
 
-{% if paciente.estado == "S" %}
+{% if paciente.estado == "S" or paciente.estado == "Suspendido" %}
 <div class="xcard mt-3">
     <div class="xcard-hd">
         <div class="d-flex align-items-center gap-2">
@@ -862,25 +862,24 @@
 
     <div class="p-4">
 
-        <div class="alert alert-warning mb-3">
-            <i class="bi bi-exclamation-triangle-fill"></i>
-            Este paciente se encuentra suspendido y permanecerá en archivo.
+        <div class="alert alert-warning">
+            <strong>Este paciente se encuentra suspendido.</strong>
         </div>
 
-        <div class="mb-2">
-            <strong>Fecha de suspensión:</strong><br>
+        <p>
+            <strong>Fecha:</strong><br>
             {{ paciente.fecha_suspension|date:"d/m/Y H:i" }}
-        </div>
+        </p>
 
-        <div class="mb-2">
+        <p>
             <strong>Suspendido por:</strong><br>
             {{ paciente.suspendido_por }}
-        </div>
+        </p>
 
-        <div>
+        <p>
             <strong>Motivo:</strong><br>
-            {{ paciente.motivo_suspension|default:"Sin motivo registrado." }}
-        </div>
+            {{ paciente.motivo_suspension }}
+        </p>
 
     </div>
 </div>

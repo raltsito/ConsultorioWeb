@@ -397,9 +397,6 @@ class Paciente(models.Model):
     nombre = models.CharField(max_length=200, verbose_name="Nombre Completo")
     fecha_nacimiento = models.DateField(verbose_name="Fecha de Nacimiento")
 
-        # Dar de alta un paciente
-
-
     # Dar de alta un paciente
 
     dado_de_alta = models.BooleanField(
