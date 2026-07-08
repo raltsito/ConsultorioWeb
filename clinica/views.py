@@ -694,6 +694,7 @@ def api_sin_reagendar(request):
         estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
         paciente__isnull=False,
         paciente__dado_de_alta=False, # dar de alta a un paciente
+        paciente__estado='activo', # dar suspension a un paciente
     )
     if fecha_inicio is not None:
         citas_qs = citas_qs.filter(fecha__range=(fecha_inicio, fecha_fin))
@@ -6623,4 +6624,24 @@ def toggle_alta_paciente(request, paciente_id):
     )
 
 from django.http import HttpResponse
-
+# Vista para suspender a un paciente
+@login_required
+def suspender_paciente(request, id):
+    paciente = get_object_or_404(Paciente, id=id)
+    if request.method == "POST":
+        motivo = request.POST.get("motivo")
+        paciente.estado = "S"
+        paciente.fecha_suspension = timezone.now()
+        paciente.motivo_suspension = motivo
+        paciente.suspendido_por = request.user
+        paciente.save()
+        messages.success(
+            request,
+            "Paciente suspendido correctamente."
+        )
+        return redirect("lista_pacientes")
+    return render(
+        request,
+        "pacientes/suspender_paciente.html",
+        {"paciente": paciente}
+    )
