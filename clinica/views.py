@@ -6648,15 +6648,3 @@ def suspender_paciente(request, id):
         "pacientes/suspender_paciente.html",
         {"paciente": paciente}
     )
-from django.shortcuts import get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-
-@login_required
-def suspender_paciente(request, pk):
-    paciente = get_object_or_404(Paciente, pk=pk)
-
-    if request.method == "POST":
-        paciente.suspendido = not paciente.suspendido
-        paciente.save()
-
-    return redirect("detalle_paciente", pk=paciente.pk)
