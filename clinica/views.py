@@ -6699,3 +6699,27 @@ def demo_pago_dorothea(request):
     })
 
 from django.http import HttpResponse
+# Vista para suspender a un paciente
+@login_required
+def suspender_paciente(request, id):
+    paciente = get_object_or_404(Paciente, id=id)
+    if request.method == "POST":
+        motivo = request.POST.get("motivo")
+        paciente.estado = "Suspendido"
+        paciente.fecha_suspension = timezone.now()
+        paciente.motivo_suspension = motivo
+        paciente.suspendido_por = request.user
+        paciente.save()
+        messages.success(
+            request,
+            "Paciente suspendido correctamente."
+        )
+        return redirect(
+            "detalle_paciente",
+            paciente_id=paciente.id
+        )
+    return render(
+        request,
+        "pacientes/suspender_paciente.html",
+        {"paciente": paciente}
+    )
