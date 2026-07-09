@@ -175,6 +175,8 @@ urlpatterns = [
      # URL para suspender a un paciente
      path('paciente/suspender/<int:id>/',
           clinica_views.suspender_paciente, name='suspender_paciente'),
+     path("paciente/<int:pk>/suspender/",
+          clinica_views.suspender_paciente,name="suspender_paciente",),
 
 ]
 

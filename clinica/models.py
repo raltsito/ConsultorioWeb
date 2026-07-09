@@ -426,6 +426,9 @@ class Paciente(models.Model):
         blank=True,
         on_delete=models.SET_NULL
     )
+    suspendido = models.BooleanField(
+            default=False
+    )
 
     # EL CAMPO SECRETO
     nombre_normalizado = models.CharField(max_length=200, blank=True, editable=False)
