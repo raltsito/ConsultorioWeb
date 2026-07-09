@@ -701,7 +701,41 @@
             {% endif %}
           </div>
         </div>
+<<<<<<< ours
 
+=======
+            {% if paciente.estado == "Suspendido" %}
+            <div class="xcard mt-3">
+                <div class="xcard-hd">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="xcard-icon">
+                            <i class="bi bi-pause-circle-fill text-warning"></i>
+                        </div>
+                        <span class="xcard-title">
+                            Paciente suspendido
+                        </span>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div class="alert alert-warning">
+                        Este paciente se encuentra suspendido.
+                    </div>
+                    <p>
+                        <strong>Fecha:</strong><br>
+                        {{ paciente.fecha_suspension }}
+                    </p>
+                    <p>
+                        <strong>Motivo:</strong><br>
+                        {{ paciente.motivo_suspension }}
+                    </p>
+                    <p>
+                        <strong>Suspendido por:</strong><br>
+                        {{ paciente.suspendido_por }}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+>>>>>>> theirs
       </div>
     </div>
   </div>
@@ -959,9 +993,8 @@ function toggleDivForm() {
         </div>
     </div>
 </div>
-
-
 <!-- Modal Suspender paciente -->
+<!-- Suspender al paciente -->
 <div class="modal fade" id="modalSuspender" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
