@@ -554,11 +554,14 @@
         <i class="bi bi-pause-circle me-1"></i>
         Suspender
       </a>-->
-      <button class="btn-hero-warning"
-              data-bs-toggle="modal"
-              data-bs-target="#modalSuspender">
-          <i class="bi bi-pause-circle me-1"></i>
-          Suspender
+      <button class="btn-hero-warning" data-bs-toggle="modal" data-bs-target="#modalSuspender">
+          {% if paciente.estado == "Suspendido" %}
+              <i class="bi bi-play-circle me-1"></i>
+              Reanudar tratamiento
+          {% else %}
+              <i class="bi bi-pause-circle me-1"></i>
+              Suspender tratamiento
+          {% endif %}
       </button>
       {% endif %}
       <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
