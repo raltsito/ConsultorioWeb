@@ -420,8 +420,51 @@
             <div class="sp-lbl" style="color:rgba(255,255,255,.6);">División</div>
             <div class="sp-val" style="opacity:.7;font-size:.78rem;">+ Asignar</div>
           </button>
+<<<<<<< ours
           {% endif %}
         </div>
+=======
+        </form>
+      </div>
+    </div>
+    <!-- Botones -->
+    <div class="hero-actions">
+      {% if request.user.is_superuser %}
+      <button class="btn-hero-primary" data-bs-toggle="modal" data-bs-target="#modalAltaPaciente">
+        {% if paciente.dado_de_alta %}
+          <i class="bi bi-arrow-clockwise me-1"></i>
+          Reactivar seguimiento
+        {% else %}
+          <i class="bi bi-check-circle me-1"></i>
+          Dar de alta
+        {% endif %}
+      </button>
+      <!--<a href="{% url 'suspender_paciente' paciente.id %}" class="btn-hero-warning">
+        <i class="bi bi-pause-circle me-1"></i>
+        Suspender
+      </a>-->
+      <button class="btn-hero-warning" data-bs-toggle="modal" data-bs-target="#modalSuspender">
+          {% if paciente.estado == "Suspendido" %}
+              <i class="bi bi-play-circle me-1"></i>
+              Reanudar tratamiento
+          {% else %}
+              <i class="bi bi-pause-circle me-1"></i>
+              Suspender tratamiento
+          {% endif %}
+      </button>
+      {% endif %}
+      <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
+        <i class="bi bi-pencil-square me-1"></i>
+        Editar
+      </a>
+      <button class="btn-hero-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
+        <i class="bi bi-trash3 me-1"></i>
+        Eliminar
+      </button>
+    </div>
+  </div>
+</div>
+>>>>>>> theirs
         <!-- Mini-form división (oculto por defecto) -->
         <div id="div-form-wrap" style="display:none;margin-top:.75rem;animation:fadeIn .2s both;">
           <form method="post" action="{% url 'asignar_division_paciente' paciente.id %}" class="d-flex align-items-center gap-2">
@@ -701,9 +744,6 @@
             {% endif %}
           </div>
         </div>
-<<<<<<< ours
-
-=======
             {% if paciente.estado == "Suspendido" %}
             <div class="xcard mt-3">
                 <div class="xcard-hd">
@@ -735,7 +775,6 @@
                 </div>
             </div>
             {% endif %}
->>>>>>> theirs
       </div>
     </div>
   </div>
