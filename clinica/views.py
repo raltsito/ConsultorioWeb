@@ -6629,16 +6629,28 @@ from django.http import HttpResponse
 def suspender_paciente(request, id):
     paciente = get_object_or_404(Paciente, id=id)
     if request.method == "POST":
-        motivo = request.POST.get("motivo")
-        paciente.estado = "Suspendido"
-        paciente.fecha_suspension = timezone.now()
-        paciente.motivo_suspension = motivo
-        paciente.suspendido_por = request.user
+        # Si ya estaba suspendido, se reactiva
+        if paciente.estado == "Suspendido":
+            paciente.estado = "Activo"
+            paciente.fecha_suspension = None
+            paciente.motivo_suspension = None
+            paciente.suspendido_por = None
+            messages.success(
+                request,
+                "El tratamiento del paciente fue reanudado correctamente."
+            )
+        # Si estaba activo, se suspende
+        else:
+            motivo = request.POST.get("motivo")
+            paciente.estado = "Suspendido"
+            paciente.fecha_suspension = timezone.now()
+            paciente.motivo_suspension = motivo
+            paciente.suspendido_por = request.user
+            messages.success(
+                request,
+                "Paciente suspendido correctamente."
+            )
         paciente.save()
-        messages.success(
-            request,
-            "Paciente suspendido correctamente."
-        )
         return redirect(
             "detalle_paciente",
             paciente_id=paciente.id
