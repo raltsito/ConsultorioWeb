@@ -429,7 +429,6 @@ class Paciente(models.Model):
 
     # EL CAMPO SECRETO
     nombre_normalizado = models.CharField(max_length=200, blank=True, editable=False)
-    
     sexo = models.CharField(
         max_length=20, 
         choices=SEXO_CHOICES, 

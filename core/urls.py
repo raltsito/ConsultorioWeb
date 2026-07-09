@@ -180,14 +180,12 @@ urlpatterns = [
 
 
      # URL para dar de alta al paciente
-     path(
-     'pacientes/<int:paciente_id>/toggle-alta/',
-     clinica_views.toggle_alta_paciente, name='toggle_alta_paciente'),
+     path('pacientes/<int:paciente_id>/toggle-alta/',
+          clinica_views.toggle_alta_paciente, name='toggle_alta_paciente'),
 
      # URL para suspender a un paciente
-     path(
-     'paciente/suspender/<int:id>/',
-     clinica_views.suspender_paciente, name='suspender_paciente'),
+     path('paciente/suspender/<int:id>/',
+          clinica_views.suspender_paciente, name='suspender_paciente'),
 ]
 
 if settings.DEBUG:
