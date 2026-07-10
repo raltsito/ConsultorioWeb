@@ -396,7 +396,38 @@ class Paciente(models.Model):
     usuario = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='perfil_paciente')
     nombre = models.CharField(max_length=200, verbose_name="Nombre Completo")
     fecha_nacimiento = models.DateField(verbose_name="Fecha de Nacimiento")
-    
+
+    # Dar de alta un paciente
+
+    dado_de_alta = models.BooleanField(
+        default = False,
+        verbose_name = "Dado de alta"
+    )
+    fecha_alta = models.DateTimeField(
+        null = True,
+        blank = True
+    )
+    # Dar suspensión a un paciente
+    estado = models.CharField(
+        max_length=20,
+        default="Activo"
+    )
+    fecha_suspension = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+    motivo_suspension = models.TextField(
+        null=True,
+        blank=True
+    )
+    suspendido_por = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL
+    )
+
+
     # EL CAMPO SECRETO
     nombre_normalizado = models.CharField(max_length=200, blank=True, editable=False)
     
@@ -1817,14 +1848,3 @@ class RespuestaInstrumento(models.Model):
 
     def __str__(self):
         return f"{self.envio} — {self.pregunta}: {self.valor[:40]}"
-
-
-    # Dar de alta un paciente
-    dado_de_alta = models.BooleanField(
-        default = False,
-        verbose_name = "Dado de alta"
-    )
-    fecha_alta = models.DateTimeField(
-        null = True,
-        blank = True
-    )
