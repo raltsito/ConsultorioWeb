@@ -94,4 +94,13 @@ class Command(BaseCommand):
                 f'  {clave} [{accion}]: {len(definicion["preguntas"])} preguntas cargadas.'
             ))
 
+        # Los instrumentos de vista previa (demos de junio 2026) duplican nombres
+        # del catálogo real; se desactivan para que no aparezcan en la UI.
+        demos = Instrumento.objects.filter(clave__startswith='vista_previa', activo=True)
+        n_demos = demos.update(activo=False)
+        if n_demos:
+            self.stdout.write(self.style.WARNING(
+                f'  {n_demos} instrumentos de vista previa desactivados.'
+            ))
+
         self.stdout.write(self.style.SUCCESS(f'Listo: {len(definiciones)} instrumentos procesados.'))
