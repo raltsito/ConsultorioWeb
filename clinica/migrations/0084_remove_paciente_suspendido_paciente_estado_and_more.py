@@ -5,6 +5,25 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+class AddFieldIfNotExists(migrations.AddField):
+    """En produccion estas columnas ya existen en clinica_paciente (se crearon
+    con SQL manual), asi que solo se agrega la columna si aun no existe."""
+
+    def database_forwards(self, app_label, schema_editor, from_state, to_state):
+        model = to_state.apps.get_model(app_label, self.model_name)
+        column = model._meta.get_field(self.name).column
+        with schema_editor.connection.cursor() as cursor:
+            existing = {
+                col.name
+                for col in schema_editor.connection.introspection.get_table_description(
+                    cursor, model._meta.db_table
+                )
+            }
+        if column in existing:
+            return
+        super().database_forwards(app_label, schema_editor, from_state, to_state)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -17,22 +36,22 @@ class Migration(migrations.Migration):
             model_name='paciente',
             name='suspendido',
         ),
-        migrations.AddField(
+        AddFieldIfNotExists(
             model_name='paciente',
             name='estado',
             field=models.CharField(default='Activo', max_length=20),
         ),
-        migrations.AddField(
+        AddFieldIfNotExists(
             model_name='paciente',
             name='fecha_suspension',
             field=models.DateTimeField(blank=True, null=True),
         ),
-        migrations.AddField(
+        AddFieldIfNotExists(
             model_name='paciente',
             name='motivo_suspension',
             field=models.TextField(blank=True, null=True),
         ),
-        migrations.AddField(
+        AddFieldIfNotExists(
             model_name='paciente',
             name='suspendido_por',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL),
