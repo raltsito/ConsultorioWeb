@@ -6697,5 +6697,64 @@ def demo_pago_dorothea(request):
         'monto': request.GET.get('monto', '850'),
         'referencia': request.GET.get('referencia', 'DEMO-12345'),
     })
+# Vista para dar de alta a un paciente 
+@login_required
+def toggle_alta_paciente(request, paciente_id):
+    paciente = get_object_or_404(Paciente, id=paciente_id)
+    if request.method == "POST":
+        paciente.dado_de_alta = not paciente.dado_de_alta
+        if paciente.dado_de_alta:
+            paciente.fecha_alta = timezone.now()
+            messages.success(
+                request,
+                "Paciente dado de alta correctamente."
+            )
+        else:
+            paciente.fecha_alta = None
+            messages.success(
+                request,
+                "Paciente reactivado correctamente."
+            )
+        paciente.save()
+    return redirect(
+        "detalle_paciente",
+        paciente_id=paciente.id
+    )
 
 from django.http import HttpResponse
+# Vista para suspender a un paciente
+@login_required
+def suspender_paciente(request, id):
+    paciente = get_object_or_404(Paciente, id=id)
+    if request.method == "POST":
+        # Si ya estaba suspendido, se reactiva
+        if paciente.estado == "Suspendido":
+            paciente.estado = "Activo"
+            paciente.fecha_suspension = None
+            paciente.motivo_suspension = None
+            paciente.suspendido_por = None
+            messages.success(
+                request,
+                "El tratamiento del paciente fue reanudado correctamente."
+            )
+        # Si estaba activo, se suspende
+        else:
+            motivo = request.POST.get("motivo")
+            paciente.estado = "Suspendido"
+            paciente.fecha_suspension = timezone.now()
+            paciente.motivo_suspension = motivo
+            paciente.suspendido_por = request.user
+            messages.success(
+                request,
+                "Paciente suspendido correctamente."
+            )
+        paciente.save()
+        return redirect(
+            "detalle_paciente",
+            paciente_id=paciente.id
+        )
+    return render(
+        request,
+        "pacientes/suspender_paciente.html",
+        {"paciente": paciente}
+    )

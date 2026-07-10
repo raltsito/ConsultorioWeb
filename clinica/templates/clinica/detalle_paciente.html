@@ -87,6 +87,9 @@
     border-radius: var(--r);
     padding: 2.35rem 2.6rem;
     margin-bottom: 2.35rem;
+    min-height: 0.01px;
+    padding: 2.35rem 2.6rem;
+    margin-bottom: 2.35rem;
     position: relative; overflow: hidden;
     animation: slideDown .45s both;
     box-shadow: 0 18px 40px rgba(37, 105, 220, .18);
@@ -419,6 +422,46 @@
           </button>
           {% endif %}
         </div>
+        </form>
+      </div>
+    </div>
+    <!-- Botones -->
+    <div class="hero-actions">
+      {% if request.user.is_superuser %}
+      <button class="btn-hero-primary" data-bs-toggle="modal" data-bs-target="#modalAltaPaciente">
+        {% if paciente.dado_de_alta %}
+          <i class="bi bi-arrow-clockwise me-1"></i>
+          Reactivar seguimiento
+        {% else %}
+          <i class="bi bi-check-circle me-1"></i>
+          Dar de alta
+        {% endif %}
+      </button>
+      <!--<a href="{% url 'suspender_paciente' paciente.id %}" class="btn-hero-warning">
+        <i class="bi bi-pause-circle me-1"></i>
+        Suspender
+      </a>-->
+      <button class="btn-hero-warning" data-bs-toggle="modal" data-bs-target="#modalSuspender">
+          {% if paciente.estado == "Suspendido" %}
+              <i class="bi bi-play-circle me-1"></i>
+              Reanudar tratamiento
+          {% else %}
+              <i class="bi bi-pause-circle me-1"></i>
+              Suspender tratamiento
+          {% endif %}
+      </button>
+      {% endif %}
+      <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
+        <i class="bi bi-pencil-square me-1"></i>
+        Editar
+      </a>
+      <button class="btn-hero-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
+        <i class="bi bi-trash3 me-1"></i>
+        Eliminar
+      </button>
+    </div>
+  </div>
+</div>
         <!-- Mini-form división (oculto por defecto) -->
         <div id="div-form-wrap" style="display:none;margin-top:.75rem;animation:fadeIn .2s both;">
           <form method="post" action="{% url 'asignar_division_paciente' paciente.id %}" class="d-flex align-items-center gap-2">
@@ -698,7 +741,37 @@
             {% endif %}
           </div>
         </div>
-
+            {% if paciente.estado == "Suspendido" %}
+            <div class="xcard mt-3">
+                <div class="xcard-hd">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="xcard-icon">
+                            <i class="bi bi-pause-circle-fill text-warning"></i>
+                        </div>
+                        <span class="xcard-title">
+                            Paciente suspendido
+                        </span>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div class="alert alert-warning">
+                        Este paciente se encuentra suspendido.
+                    </div>
+                    <p>
+                        <strong>Fecha:</strong><br>
+                        {{ paciente.fecha_suspension }}
+                    </p>
+                    <p>
+                        <strong>Motivo:</strong><br>
+                        {{ paciente.motivo_suspension }}
+                    </p>
+                    <p>
+                        <strong>Suspendido por:</strong><br>
+                        {{ paciente.suspendido_por }}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
       </div>
     </div>
   </div>
@@ -919,5 +992,121 @@ function toggleDivForm() {
   wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
 }
 </script>
+
+<!-- Dar de alta el paciente -->
+<div class="modal fade" id="modalAltaPaciente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    {% if paciente.dado_de_alta %}
+                        Reactivar seguimiento
+                    {% else %}
+                        Dar de alta paciente
+                    {% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% if paciente.dado_de_alta %}
+                    El paciente volverá a aparecer en seguimiento.
+                {% else %}
+                    El paciente dejará de aparecer en el widget "Sin Reagendar".
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <form method="post"
+                      action="{% url 'toggle_alta_paciente' paciente.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">
+                        Confirmar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal Suspender paciente -->
+<!-- Suspender al paciente -->
+<div class="modal fade" id="modalSuspender" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    {% if paciente.estado == "Suspendido" %}
+                        Reactivar tratamiento
+                    {% else %}
+                        Suspender paciente
+                    {% endif %}
+                    {% if paciente.estado == "Suspendido" %}
+                        Reanudar tratamiento
+                    {% else %}
+                        Suspender paciente
+                    {% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal">
+                </button>
+            </div>
+            <form method="post" action="{% url 'suspender_paciente' paciente.id %}">
+            <form method="post" action="{% url 'suspender_paciente' paciente.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    {% if paciente.estado == "Suspendido" %}
+                        <p>
+                            ¿Deseas reactivar el tratamiento de
+                            <strong>{{ paciente.nombre }}</strong>?
+                        </p>
+                    {% else %}
+                    {% if paciente.estado == "Suspendido" %}
+                        <p>
+                            ¿Deseas reanudar el tratamiento de
+                            <strong>{{ paciente.nombre }}</strong>?
+                        </p>
+                    {% else %}
+                        <p>
+                            ¿Deseas suspender el tratamiento de
+                            <strong>{{ paciente.nombre }}</strong>?
+                        </p>
+                        <label class="form-label">
+                            Motivo de suspensión
+                        </label>
+                        <textarea name="motivo" class="form-control" rows="4" required></textarea>
+                    {% endif %}
+                        <label class="form-label">
+                            Motivo de suspensión
+                        </label>
+                        <textarea name="motivo" class="form-control" rows="4" required></textarea>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn {% if paciente.estado == 'Suspendido' %}btn-success{% else %}btn-warning{% endif %}">
+                        {% if paciente.estado == "Suspendido" %}
+                            <i class="bi bi-play-circle me-1"></i>
+                            Reactivar tratamiento
+                        {% else %}
+                            <i class="bi bi-pause-circle me-1"></i>
+                            Confirmar suspensión
+                        {% endif %}
+                    <button type="submit" class="btn btn-warning">
+                        {% if paciente.estado == "Suspendido" %}
+                            <i class="bi bi-play-circle me-1"></i>
+                            Reanudar tratamiento
+                        {% else %}
+                            <i class="bi bi-pause-circle me-1"></i>
+                            Confirmar suspensión
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
 </body>
 </html>
