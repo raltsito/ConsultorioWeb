@@ -167,7 +167,13 @@
       "Bash(venv/Scripts/python -c ' *)",
       "Bash(venv/Scripts/python \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\51ed9620-5721-4b49-935d-7ac07c183c63\\\\scratchpad\\\\gen_pdf_plantillas.py\")",
       "Bash(./venv/Scripts/python.exe manage.py migrate clinica 0082)",
-      "Bash(./venv/Scripts/python.exe -c ' *)"
+      "Bash(./venv/Scripts/python.exe -c ' *)",
+      "PowerShell(python manage.py makemigrations --check --dry-run; python manage.py showmigrations clinica | Select-Object -Last 4)",
+      "Bash(cd \"/c/Users/carlo/Documents/Freelancer/ConsultorioWeb\")",
+      "Bash(cp db.sqlite3 __TRACKED_VAR__/prodsim.sqlite3)",
+      "Bash(venv/Scripts/python.exe -)",
+      "Bash(DATABASE_URL=\"sqlite:///C:/Users/carlo/AppData/Local/Temp/claude/C--Users-carlo-Documents-Freelancer-ConsultorioWeb/91bf1e82-1a30-4531-bc35-c5e31997fe43/scratchpad/prodsim.sqlite3\" venv/Scripts/python.exe manage.py migrate clinica --noinput)",
+      "Bash(venv/Scripts/python.exe manage.py migrate --noinput)"
     ]
   }
 }
