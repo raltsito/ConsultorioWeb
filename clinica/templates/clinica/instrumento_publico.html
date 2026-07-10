@@ -468,7 +468,7 @@ textarea.form-control:focus {
                         {% elif pregunta.tipo_respuesta == 'imagen_unica' %}
                             {% if pregunta.imagen %}
                             <div class="raven-matrix">
-                                <img src="/media/{{ pregunta.imagen }}"
+                                <img src="{% static pregunta.imagen %}"
                                      alt="Lámina {{ pregunta.orden }}"
                                      class="raven-img">
                             </div>

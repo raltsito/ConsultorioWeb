@@ -1793,7 +1793,7 @@ class PreguntaInstrumento(models.Model):
     )
     imagen = models.CharField(
         max_length=400, blank=True, default='',
-        help_text="Ruta relativa a MEDIA_ROOT para la imagen de la pregunta (e.g. 'instrumentos/raven/1.png')."
+        help_text="Ruta relativa a static para la imagen de la pregunta (e.g. 'instrumentos/raven/1.png')."
     )
     titulo_grupo = models.CharField(
         max_length=600, blank=True, default='',

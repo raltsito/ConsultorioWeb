@@ -1,8 +1,11 @@
+import os
+
 import openpyxl
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from clinica.models import Instrumento, PreguntaInstrumento
 
-RUTA_DEFAULT = r"C:\Users\RocioMc\PROYECTOINTRA\DASS-21.xlsx"
+RUTA_DEFAULT = os.path.join(settings.BASE_DIR, 'docs_xslx_instrumentos', 'DASS-21.xlsx')
 class Command(BaseCommand):
     help = 'Carga el instrumento DASS-21 desde su archivo Excel'
 
