@@ -500,6 +500,331 @@ def calcular_raven(puntaje_raw: int, edad: int = None) -> dict:
     }
 
 
+# ── DASS-21 ───────────────────────────────────────────────────────────────────
+
+# (subescala, items, [(límite_superior, nivel), ...]) — cortes del Excel DASS-21
+# (hoja 'DASS-21'); si supera el último corte el nivel es 'Extremadamente severa'.
+_DASS21_SUBESCALAS = [
+    ('Depresión', [3, 5, 10, 13, 16, 17, 21],
+     [(4, 'Normal'), (6, 'Leve'), (10, 'Moderada'), (13, 'Severa')]),
+    ('Ansiedad', [2, 4, 7, 9, 15, 19, 20],
+     [(3, 'Normal'), (4, 'Leve'), (7, 'Moderada'), (9, 'Severa')]),
+    ('Estrés', [1, 6, 8, 11, 12, 14, 18],
+     [(7, 'Normal'), (9, 'Leve'), (12, 'Moderada'), (16, 'Severa')]),
+]
+
+
+def _calcular_dass21(respuestas, **kwargs):
+    mapa = {r.pregunta.orden: (r.valor_numerico or Decimal('0')) for r in respuestas}
+    detalle = {}
+    resumen = []
+    elevadas = []
+    total = Decimal('0')
+
+    for nombre, items, cortes in _DASS21_SUBESCALAS:
+        suma = sum(mapa.get(i, Decimal('0')) for i in items)
+        nivel = 'Extremadamente severa'
+        for limite, n in cortes:
+            if suma <= limite:
+                nivel = n
+                break
+        total += suma
+        detalle[nombre] = f'{suma} / 21 — {nivel}'
+        resumen.append(f'{nombre}: {suma} ({nivel})')
+        if nivel != 'Normal':
+            elevadas.append(nombre)
+
+    if elevadas:
+        cierre = f'Subescalas por encima del rango normal: {", ".join(elevadas)}.'
+    else:
+        cierre = 'Las tres subescalas se encuentran en rango normal.'
+    return {
+        'puntaje_total': total,
+        'interpretacion': ' · '.join(resumen) + f'. {cierre}',
+        'detalle': detalle,
+    }
+
+
+# ── TDS (Trastornos del Sueño) ────────────────────────────────────────────────
+
+# Factores e ítems según los encabezados de cálculo del Excel TDS (el ítem 8 no
+# pertenece a ningún factor, así está definido en el instrumento original).
+_TDS_FACTORES = [
+    ('Somnolencia excesiva diurna', [1, 2, 3, 4, 5]),
+    ('Insomnio inicial', [10, 11, 12]),
+    ('Insomnio intermedio', [9, 13]),
+    ('Insomnio terminal', [6, 7]),
+    ('Apnea obstructiva', [14, 15, 16]),
+    ('Parálisis del dormir', [17, 30]),
+    ('Enuresis', [18]),
+    ('Bruxismo', [19]),
+    ('Sonambulismo', [20, 21]),
+    ('Somniloquio', [22]),
+    ('Ronquido', [23, 24]),
+    ('Piernas inquietas', [25, 26]),
+    ('Pesadillas', [27]),
+    ('Uso de medicamentos hipnóticos', [28]),
+    ('Uso de medicamentos estimulantes', [29]),
+]
+
+
+def _tds_nivel(proporcion):
+    if proporcion == 0:
+        return 'Nulo'
+    if proporcion <= 0.25:
+        return 'Bajo'
+    if proporcion <= 0.5:
+        return 'Medio'
+    if proporcion <= 0.75:
+        return 'Alto'
+    return 'Muy alto'
+
+
+def _calcular_tds(respuestas, **kwargs):
+    mapa = {r.pregunta.orden: (r.valor_numerico or Decimal('0')) for r in respuestas}
+    detalle = {}
+    conteo = {'Nulo': 0, 'Bajo': 0, 'Medio': 0, 'Alto': 0, 'Muy alto': 0}
+    destacados = []
+
+    for nombre, items in _TDS_FACTORES:
+        maximo = 4 * len(items)
+        suma = sum(mapa.get(i, Decimal('0')) for i in items)
+        nivel = _tds_nivel(float(suma) / maximo)
+        conteo[nivel] += 1
+        detalle[nombre] = f'{suma} / {maximo} — {nivel}'
+        if nivel in ('Alto', 'Muy alto'):
+            destacados.append(f'{nombre} ({nivel.lower()})')
+
+    positivos = sum(n for nivel, n in conteo.items() if nivel != 'Nulo')
+    detalle['Factores positivos'] = (
+        f'{positivos} de {len(_TDS_FACTORES)} '
+        f'(bajo: {conteo["Bajo"]}, medio: {conteo["Medio"]}, '
+        f'alto: {conteo["Alto"]}, muy alto: {conteo["Muy alto"]})'
+    )
+
+    if destacados:
+        interpretacion = (
+            f'{positivos} factores de alteración del sueño positivos. '
+            f'En nivel alto o muy alto: {", ".join(destacados)}.'
+        )
+    elif positivos:
+        interpretacion = (
+            f'{positivos} factores de alteración del sueño positivos, '
+            'todos en nivel bajo o medio.'
+        )
+    else:
+        interpretacion = 'Sin factores de alteración del sueño positivos.'
+
+    total = sum(mapa.get(i, Decimal('0')) for i in range(1, 31))
+    return {'puntaje_total': total, 'interpretacion': interpretacion, 'detalle': detalle}
+
+
+# ── TCI (Registro de Opiniones — ideas autolimitadoras) ──────────────────────
+
+# Cada idea se mide con los ítems k, k+10, ..., k+90. Los ítems 'invertidos'
+# puntúan al responder NO. Clave de corrección deducida y verificada contra las
+# 314 aplicaciones resueltas del Excel TCI (hoja DTCI, columnas Cálculos 1-10).
+_TCI_IDEAS = [
+    ('Necesidad de aprobación de los demás', [31, 41, 61, 91]),
+    ('Perfeccionismo y autoexigencia', [22, 32, 52, 92]),
+    ('Condena de los demás por sus errores', [43, 83, 93]),
+    ('Catastrofismo ante la frustración', [4, 14, 44, 54, 64, 74, 94]),
+    ('Atribución externa del malestar', [5, 15, 25, 35, 45, 65, 85, 95]),
+    ('Ansiedad ante lo desconocido o incierto', [16, 36, 56, 86]),
+    ('Evitación de problemas y responsabilidades', [17, 37, 57, 77, 87, 97]),
+    ('Dependencia de algo más fuerte que uno mismo', [48, 58, 68, 88, 98]),
+    ('Influencia determinante del pasado', [29, 39, 59, 99]),
+    ('Felicidad por inactividad y ocio indefinido', [20, 30, 40, 60]),
+]
+
+
+def _calcular_tci(respuestas, **kwargs):
+    mapa = {r.pregunta.orden: int(r.valor_numerico or 0) for r in respuestas}
+    detalle = {}
+    limitantes = []
+    total = 0
+
+    for k, (nombre, invertidos) in enumerate(_TCI_IDEAS, start=1):
+        items = [k + 10 * j for j in range(10)]
+        suma = sum(1 - mapa.get(i, 0) if i in invertidos else mapa.get(i, 0)
+                   for i in items)
+        if suma >= 7:
+            nivel = 'Limitante en muchas áreas de su vida'
+        elif suma >= 5:
+            nivel = 'Limitante en determinadas circunstancias'
+        else:
+            nivel = 'No significativa'
+        total += suma
+        detalle[f'Idea {k}: {nombre}'] = f'{suma} / 10 — {nivel}'
+        if suma >= 5:
+            limitantes.append(f'{nombre.lower()} ({suma})')
+
+    if limitantes:
+        interpretacion = (
+            'Ideas autolimitadoras con puntuación significativa (≥5): '
+            f'{", ".join(limitantes)}.'
+        )
+    else:
+        interpretacion = (
+            'Ninguna idea autolimitadora alcanza puntuación significativa (≥5).'
+        )
+    return {
+        'puntaje_total': Decimal(total),
+        'interpretacion': interpretacion,
+        'detalle': detalle,
+    }
+
+
+# ── ISRA (Inventario de Situaciones y Respuestas de Ansiedad) ────────────────
+
+# Estructura del cuestionario aplicado (251 reactivos en el orden del Excel):
+#   1-64    respuestas cognitivas (C)
+#   65-187  respuestas fisiológicas (F) — la PD fisiológica es la suma / 2
+#   188-251 respuestas motoras (M)
+# Las áreas situacionales F1-F4 suman los reactivos crudos de sus situaciones.
+# Mapeos y baremos extraídos de las fórmulas del Excel ISRA (hojas RESPUESTAS y
+# BAREMOS) y validados contra el caso resuelto de la hoja ISRA.
+
+_ISRA_BLOQUES = {'C': (1, 64), 'F': (65, 187), 'M': (188, 251)}
+
+_ISRA_AREAS = {
+    'Evaluación':    {1, 4, 8, 10, 11, 13},
+    'Interpersonal': {7, 15, 18},
+    'Fóbica':        {12, 14, 17, 19},
+    'Cotidiana':     {5, 21, 22},
+}
+
+# Situación (1-23) por número de reactivo. Los reactivos 57, 177 y 244 no
+# participan en las áreas F1-F4 (así están definidos en el Excel).
+_ISRA_SITUACION_POR_ORDEN = {
+    1: 1, 2: 1, 3: 2, 4: 3, 5: 3, 6: 4, 7: 4, 8: 5, 9: 5, 10: 6,
+    11: 6, 12: 6, 13: 6, 14: 7, 15: 8, 16: 8, 17: 9, 18: 9, 19: 10, 20: 10,
+    21: 10, 22: 10, 23: 11, 24: 12, 25: 12, 26: 12, 27: 13, 28: 13, 29: 13, 30: 13,
+    31: 14, 32: 15, 33: 16, 34: 17, 35: 17, 36: 17, 37: 17, 38: 17, 39: 18, 40: 18,
+    41: 19, 42: 19, 43: 19, 44: 19, 45: 19, 46: 20, 47: 20, 48: 20, 49: 21, 50: 21,
+    51: 21, 52: 21, 53: 21, 54: 22, 55: 22, 56: 22, 58: 23, 59: 23, 60: 23,
+    61: 23, 62: 23, 63: 23, 64: 23, 65: 1, 66: 1, 67: 1, 68: 1, 69: 1, 70: 1,
+    71: 1, 72: 2, 73: 2, 74: 2, 75: 2, 76: 2, 77: 2, 78: 2, 79: 3, 80: 3,
+    81: 3, 82: 3, 83: 3, 84: 3, 85: 3, 86: 3, 87: 4, 88: 5, 89: 5, 90: 5,
+    91: 5, 92: 6, 93: 6, 94: 6, 95: 6, 96: 7, 97: 7, 98: 7, 99: 7, 100: 7,
+    101: 8, 102: 8, 103: 8, 104: 8, 105: 8, 106: 8, 107: 8, 108: 9, 109: 9, 110: 9,
+    111: 9, 112: 10, 113: 10, 114: 10, 115: 10, 116: 10, 117: 10, 118: 10, 119: 10, 120: 11,
+    121: 11, 122: 11, 123: 11, 124: 12, 125: 12, 126: 12, 127: 12, 128: 12, 129: 12, 130: 12,
+    131: 13, 132: 13, 133: 13, 134: 13, 135: 13, 136: 14, 137: 14, 138: 14, 139: 15, 140: 15,
+    141: 15, 142: 15, 143: 16, 144: 16, 145: 16, 146: 16, 147: 16, 148: 16, 149: 17, 150: 17,
+    151: 17, 152: 17, 153: 17, 154: 18, 155: 18, 156: 18, 157: 18, 158: 18, 159: 19, 160: 19,
+    161: 19, 162: 19, 163: 19, 164: 19, 165: 20, 166: 20, 167: 20, 168: 20, 169: 21, 170: 21,
+    171: 21, 172: 21, 173: 21, 174: 21, 175: 21, 176: 22, 178: 23, 179: 23, 180: 23,
+    181: 23, 182: 23, 183: 23, 184: 23, 185: 23, 186: 23, 187: 23, 188: 1, 189: 1, 190: 1,
+    191: 2, 192: 2, 193: 3, 194: 3, 195: 3, 196: 3, 197: 3, 198: 3, 199: 4, 200: 4,
+    201: 4, 202: 5, 203: 5, 204: 5, 205: 6, 206: 6, 207: 7, 208: 8, 209: 8, 210: 8,
+    211: 9, 212: 9, 213: 9, 214: 10, 215: 11, 216: 11, 217: 11, 218: 12, 219: 12, 220: 12,
+    221: 12, 222: 13, 223: 13, 224: 14, 225: 14, 226: 15, 227: 16, 228: 16, 229: 17, 230: 17,
+    231: 17, 232: 17, 233: 17, 234: 18, 235: 18, 236: 18, 237: 18, 238: 18, 239: 19, 240: 20,
+    241: 20, 242: 21, 243: 22, 245: 23, 246: 23, 247: 23, 248: 23, 249: 23, 250: 23,
+    251: 23,
+}
+
+_INF = float('inf')
+
+# (sexo, escala) -> [(lo_exclusivo, hi_exclusivo, percentil), ...]
+_ISRA_BAREMOS = {
+    ('Hombre', 'Cognitiva'): [(-_INF, 23.0, 5), (22.0, 29.0, 10), (28.0, 35.0, 15), (34.0, 38.0, 20), (37.0, 42.0, 25), (41.0, 44.0, 30), (43.0, 47.0, 35), (46.0, 52.0, 40), (51.0, 55.0, 45), (54.0, 60.0, 50), (59.0, 67.0, 55), (66.0, 71.0, 60), (70.0, 76.0, 65), (75.0, 80.0, 70), (79.0, 85.0, 75), (84.0, 91.0, 80), (90.0, 96.0, 85), (95.0, 109.0, 90), (108.0, 124.0, 95), (123.0, _INF, 99)],
+    ('Hombre', 'Cotidiana'): [(-0.5, 0.5, 5), (0.5, 1.5, 10), (1.5, 2.5, 20), (2.5, 3.5, 30), (3.5, 4.5, 35), (4.5, 5.5, 40), (5.5, 6.5, 45), (6.5, 7.5, 50), (7.5, 8.5, 55), (8.5, 9.5, 60), (9.0, 12.0, 65), (11.0, 13.0, 70), (12.0, 15.0, 75), (14.0, 18.0, 80), (17.0, 25.0, 85), (24.0, 35.0, 90), (34.0, 42.0, 95), (41.0, _INF, 99)],
+    ('Hombre', 'Evaluación'): [(-_INF, 22.0, 5), (21.0, 28.0, 10), (27.0, 31.0, 15), (30.0, 33.0, 20), (32.0, 38.0, 25), (37.0, 45.0, 30), (44.0, 49.0, 35), (48.0, 53.0, 40), (52.0, 58.0, 45), (57.0, 64.0, 50), (63.0, 67.0, 55), (66.0, 72.0, 60), (71.0, 77.0, 65), (76.0, 82.0, 70), (81.0, 88.0, 75), (87.0, 92.0, 80), (91.0, 99.0, 85), (98.0, 108.0, 90), (107.0, 137.0, 95), (136.0, _INF, 99)],
+    ('Hombre', 'Fisiológica'): [(-_INF, 7.0, 5), (6.0, 9.0, 10), (8.0, 11.0, 15), (10.0, 15.0, 20), (14.0, 16.0, 25), (15.0, 19.0, 30), (18.0, 20.0, 35), (19.0, 23.0, 40), (22.0, 26.0, 45), (25.0, 29.0, 50), (28.0, 30.0, 55), (29.0, 32.0, 60), (31.0, 36.0, 65), (35.0, 40.0, 70), (39.0, 45.0, 75), (44.0, 48.0, 80), (47.0, 53.0, 85), (52.0, 68.0, 90), (67.0, 84.0, 95), (83.0, _INF, 99)],
+    ('Hombre', 'Fóbica'): [(-_INF, 3.0, 5), (2.0, 5.0, 10), (4.0, 8.0, 15), (7.0, 10.0, 20), (9.0, 14.0, 25), (13.0, 17.0, 30), (16.0, 19.0, 35), (18.0, 21.0, 40), (20.0, 23.0, 45), (22.0, 25.0, 50), (24.0, 28.0, 55), (27.0, 34.0, 60), (33.0, 37.0, 65), (36.0, 41.0, 70), (40.0, 45.0, 75), (44.0, 50.0, 80), (49.0, 60.0, 85), (59.0, 71.0, 90), (70.0, 90.0, 95), (89.0, _INF, 99)],
+    ('Hombre', 'Interpersonal'): [(-_INF, 3.0, 5), (2.0, 4.0, 10), (3.0, 6.0, 15), (5.0, 7.0, 20), (6.0, 8.0, 25), (7.0, 9.0, 30), (8.0, 10.0, 35), (9.0, 12.0, 40), (11.0, 13.0, 45), (12.0, 14.0, 50), (13.0, 16.0, 55), (15.0, 17.0, 60), (16.0, 19.0, 65), (18.0, 21.0, 70), (20.0, 23.0, 75), (22.0, 25.0, 80), (24.0, 28.0, 85), (27.0, 34.0, 90), (33.0, 45.0, 95), (44.0, _INF, 99)],
+    ('Hombre', 'Motora'): [(-_INF, 7.0, 5), (6.0, 12.0, 10), (11.0, 16.0, 15), (15.0, 20.0, 20), (19.0, 22.0, 25), (21.0, 24.0, 30), (23.0, 27.0, 35), (26.0, 29.0, 40), (28.0, 31.0, 45), (30.0, 35.0, 50), (34.0, 41.0, 55), (40.0, 46.0, 60), (45.0, 51.0, 65), (50.0, 59.0, 70), (58.0, 63.0, 75), (62.0, 69.0, 80), (68.0, 80.0, 85), (79.0, 94.0, 90), (93.0, 108.0, 95), (107.0, _INF, 99)],
+    ('Hombre', 'Total'): [(-_INF, 55.0, 5), (54.0, 64.0, 10), (63.0, 67.0, 15), (66.0, 73.0, 20), (72.0, 83.0, 25), (82.0, 88.0, 30), (87.0, 97.0, 35), (96.0, 106.0, 40), (105.0, 115.0, 45), (114.0, 129.0, 50), (128.0, 140.0, 55), (139.0, 152.0, 60), (151.0, 165.0, 65), (164.0, 176.0, 70), (175.0, 186.0, 75), (185.0, 197.0, 80), (196.0, 211.0, 85), (210.0, 260.0, 90), (259.0, 296.0, 95), (295.0, _INF, 99)],
+    ('Mujer', 'Cognitiva'): [(-_INF, 33.0, 5), (32.0, 37.0, 10), (36.0, 40.0, 15), (39.0, 44.0, 20), (43.0, 48.0, 25), (47.0, 52.0, 30), (51.0, 55.0, 35), (54.0, 59.0, 40), (58.0, 64.0, 45), (63.0, 67.0, 50), (66.0, 73.0, 55), (72.0, 78.0, 60), (77.0, 84.0, 65), (83.0, 90.0, 70), (89.0, 94.0, 75), (93.0, 102.0, 80), (101.0, 117.0, 85), (116.0, 129.0, 90), (128.0, 164.0, 95), (163.0, _INF, 99)],
+    ('Mujer', 'Cotidiana'): [(-_INF, 2.0, 5), (1.5, 2.5, 10), (2.5, 3.5, 15), (3.5, 4.5, 25), (4.5, 5.5, 30), (5.5, 6.5, 35), (6.5, 7.5, 40), (7.0, 10.0, 45), (9.5, 10.5, 50), (10.0, 13.0, 55), (12.5, 13.5, 60), (13.0, 17.0, 65), (16.0, 19.0, 70), (18.0, 21.0, 75), (20.0, 24.0, 80), (23.0, 31.0, 85), (30.0, 41.0, 90), (40.0, 58.0, 95), (57.0, _INF, 99)],
+    ('Mujer', 'Evaluación'): [(-_INF, 31.0, 5), (30.0, 36.0, 10), (35.0, 40.0, 15), (39.0, 44.0, 20), (43.0, 49.0, 25), (48.0, 53.0, 30), (52.0, 57.0, 35), (56.0, 60.0, 40), (59.0, 65.0, 45), (64.0, 69.0, 50), (68.0, 74.0, 55), (73.0, 78.0, 60), (77.0, 84.0, 65), (83.0, 89.0, 70), (88.0, 94.0, 75), (93.0, 102.0, 80), (101.0, 113.0, 85), (112.0, 135.0, 90), (134.0, 155.0, 95), (154.0, _INF, 99)],
+    ('Mujer', 'Fisiológica'): [(-_INF, 11.0, 5), (10.0, 13.0, 10), (12.0, 14.0, 15), (13.0, 16.0, 20), (15.0, 20.0, 25), (19.0, 23.0, 30), (22.0, 25.0, 35), (24.0, 28.0, 40), (27.0, 30.0, 45), (29.0, 33.0, 50), (32.0, 37.0, 55), (36.0, 41.0, 60), (40.0, 45.0, 65), (44.0, 49.0, 70), (48.0, 54.0, 75), (53.0, 64.0, 80), (63.0, 71.0, 85), (70.0, 94.0, 90), (93.0, 124.0, 95), (123.0, _INF, 99)],
+    ('Mujer', 'Fóbica'): [(-_INF, 6.0, 5), (5.0, 9.0, 10), (8.0, 12.0, 15), (11.0, 14.0, 20), (13.0, 16.0, 25), (15.0, 20.0, 30), (19.0, 22.0, 35), (21.0, 25.0, 40), (24.0, 28.0, 45), (27.0, 31.0, 50), (30.0, 35.0, 55), (34.0, 40.0, 60), (39.0, 43.0, 65), (42.0, 48.0, 70), (47.0, 53.0, 75), (52.0, 62.0, 80), (61.0, 72.0, 85), (71.0, 86.0, 90), (85.0, 124.0, 95), (123.0, _INF, 99)],
+    ('Mujer', 'Interpersonal'): [(-_INF, 4.0, 5), (3.0, 6.0, 10), (5.0, 7.0, 15), (6.0, 8.0, 20), (7.0, 9.0, 25), (8.0, 10.0, 30), (9.0, 11.0, 35), (10.0, 13.0, 40), (12.0, 14.0, 45), (13.0, 15.0, 50), (14.0, 17.0, 55), (16.0, 18.0, 60), (17.0, 21.0, 65), (20.0, 23.0, 70), (22.0, 25.0, 75), (24.0, 29.0, 80), (28.0, 33.0, 85), (32.0, 42.0, 90), (41.0, 55.0, 95), (54.0, _INF, 99)],
+    ('Mujer', 'Motora'): [(-_INF, 14.0, 5), (13.0, 17.0, 10), (16.0, 21.0, 15), (20.0, 24.0, 20), (23.0, 27.0, 25), (26.0, 30.0, 30), (29.0, 33.0, 35), (32.0, 36.0, 40), (35.0, 39.0, 45), (38.0, 43.0, 50), (42.0, 47.0, 55), (46.0, 50.0, 60), (49.0, 55.0, 65), (54.0, 60.0, 70), (59.0, 65.0, 75), (64.0, 73.0, 80), (72.0, 82.0, 85), (81.0, 94.0, 90), (93.0, 121.0, 95), (120.0, _INF, 99)],
+    ('Mujer', 'Total'): [(-_INF, 69.0, 5), (68.0, 80.0, 10), (79.0, 88.0, 15), (87.0, 96.0, 20), (95.0, 105.0, 25), (104.0, 112.0, 30), (111.0, 122.0, 35), (121.0, 129.0, 40), (128.0, 139.0, 45), (138.0, 148.0, 50), (147.0, 154.0, 55), (153.0, 167.0, 60), (166.0, 181.0, 65), (180.0, 194.0, 70), (193.0, 207.0, 75), (206.0, 223.0, 80), (222.0, 245.0, 85), (244.0, 299.0, 90), (298.0, 376.0, 95), (375.0, _INF, 99)],
+}
+
+
+def _isra_percentil(sexo, escala, pd):
+    bandas = _ISRA_BAREMOS[(sexo, escala)]
+    candidatos = [pct for lo, hi, pct in bandas if lo < pd < hi]
+    if candidatos:
+        return max(candidatos)
+    # fuera de toda banda (solo posible en valores frontera): usar la más cercana
+    return 99 if pd >= max(hi for _, hi, _ in bandas if hi != _INF) else 5
+
+
+def _isra_apreciacion(percentil):
+    if percentil < 25:
+        return 'Ansiedad Mínima'
+    if percentil < 80:
+        return 'Ansiedad Moderada'
+    if percentil < 99:
+        return 'Ansiedad Severa'
+    return 'Ansiedad Extrema'
+
+
+def _calcular_isra(respuestas, envio=None, **kwargs):
+    mapa = {r.pregunta.orden: float(r.valor_numerico or 0) for r in respuestas}
+
+    sexo = 'Mujer'
+    if envio is not None:
+        try:
+            if envio.paciente.sexo == 'Masculino':
+                sexo = 'Hombre'
+        except Exception:
+            pass
+
+    def _suma_bloque(bloque):
+        ini, fin = _ISRA_BLOQUES[bloque]
+        return sum(mapa.get(o, 0) for o in range(ini, fin + 1))
+
+    pd_c = _suma_bloque('C')
+    pd_f = _suma_bloque('F') / 2
+    pd_m = _suma_bloque('M')
+    pd_total = pd_c + pd_f + pd_m
+
+    detalle = {}
+    resumen = []
+    escalas = [
+        ('Cognitiva', pd_c), ('Fisiológica', pd_f),
+        ('Motora', pd_m), ('Total', pd_total),
+    ]
+    for escala, pd in escalas:
+        pct = _isra_percentil(sexo, escala, pd)
+        apre = _isra_apreciacion(pct)
+        pd_str = f'{pd:g}'
+        detalle[f'Ansiedad {escala}' if escala != 'Total' else 'Ansiedad TOTAL'] = (
+            f'PD {pd_str} — Percentil {pct} — {apre}'
+        )
+        resumen.append(f'{escala}: percentil {pct} ({apre})')
+
+    for area, situaciones in _ISRA_AREAS.items():
+        pd_area = sum(
+            v for o, v in mapa.items()
+            if _ISRA_SITUACION_POR_ORDEN.get(o) in situaciones
+        )
+        pct = _isra_percentil(sexo, area, pd_area)
+        apre = _isra_apreciacion(pct)
+        detalle[f'Área {area}'] = f'PD {pd_area:g} — Percentil {pct} — {apre}'
+
+    detalle['Baremo aplicado'] = f'{sexo}es (según sexo registrado del paciente)'
+
+    pct_total = _isra_percentil(sexo, 'Total', pd_total)
+    interpretacion = (
+        f'Ansiedad total: PD {pd_total:g}, percentil {pct_total} '
+        f'({_isra_apreciacion(pct_total)}). ' + ' · '.join(resumen[:3]) + '.'
+    )
+    return {
+        'puntaje_total': Decimal(str(round(pd_total, 2))),
+        'interpretacion': interpretacion,
+        'detalle': detalle,
+    }
+
+
 # ── Registro de calculadoras ──────────────────────────────────────────────────
 
 _CALCULADORAS = {
@@ -507,4 +832,8 @@ _CALCULADORAS = {
     'scl90':   _calcular_scl90,
     'allport': _calcular_allport,
     'raven':   _calcular_raven_nativo,
+    'dass-21': _calcular_dass21,
+    'isra':    _calcular_isra,
+    'tci':     _calcular_tci,
+    'tds':     _calcular_tds,
 }

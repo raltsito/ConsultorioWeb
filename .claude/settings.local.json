@@ -173,7 +173,32 @@
       "Bash(cp db.sqlite3 __TRACKED_VAR__/prodsim.sqlite3)",
       "Bash(venv/Scripts/python.exe -)",
       "Bash(DATABASE_URL=\"sqlite:///C:/Users/carlo/AppData/Local/Temp/claude/C--Users-carlo-Documents-Freelancer-ConsultorioWeb/91bf1e82-1a30-4531-bc35-c5e31997fe43/scratchpad/prodsim.sqlite3\" venv/Scripts/python.exe manage.py migrate clinica --noinput)",
-      "Bash(venv/Scripts/python.exe manage.py migrate --noinput)"
+      "Bash(venv/Scripts/python.exe manage.py migrate --noinput)",
+      "PowerShell(& .\\\\venv\\\\Scripts\\\\python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\7dc0c823-9bed-41aa-8e38-084dd159b317\\\\scratchpad\\\\verificar_dass21.py\")",
+      "PowerShell(& .\\\\venv\\\\Scripts\\\\python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\7dc0c823-9bed-41aa-8e38-084dd159b317\\\\scratchpad\\\\dump_tds_tci.py\")",
+      "PowerShell(& .\\\\venv\\\\Scripts\\\\python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\7dc0c823-9bed-41aa-8e38-084dd159b317\\\\scratchpad\\\\verificar_tds.py\")",
+      "PowerShell(& .\\\\venv\\\\Scripts\\\\python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\7dc0c823-9bed-41aa-8e38-084dd159b317\\\\scratchpad\\\\verificar_tci.py\")",
+      "PowerShell(& .\\\\venv\\\\Scripts\\\\python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\7dc0c823-9bed-41aa-8e38-084dd159b317\\\\scratchpad\\\\dump_isra.py\")",
+      "PowerShell(& .\\\\venv\\\\Scripts\\\\python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\7dc0c823-9bed-41aa-8e38-084dd159b317\\\\scratchpad\\\\dump_isra2.py\")",
+      "Bash(C:\\\\Users\\\\carlo\\\\Documents\\\\Freelancer\\\\ConsultorioWeb\\\\venv\\\\Scripts\\\\python.exe *)",
+      "Bash(venv/Scripts/python.exe manage.py shell -c \"from clinica.models import Instrumento; [print\\(i.clave, '|', i.nombre, '|', i.preguntas.count\\(\\), 'preguntas |', 'activo' if i.activo else 'inactivo'\\) for i in Instrumento.objects.all\\(\\)]\")",
+      "Bash(mkdir -p clinica/static/instrumentos/raven)",
+      "Bash(cp media/instrumentos/raven/*.png clinica/static/instrumentos/raven/)",
+      "Bash(venv/Scripts/python.exe manage.py makemigrations clinica)",
+      "Bash(venv/Scripts/python.exe manage.py cargar_dass21)",
+      "Bash(venv/Scripts/python.exe manage.py cargar_isra)",
+      "Bash(venv/Scripts/python.exe manage.py cargar_tci)",
+      "Bash(venv/Scripts/python.exe manage.py cargar_tds)",
+      "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\exportar_instrumentos.py\")",
+      "Bash(venv/Scripts/python.exe manage.py cargar_instrumentos)",
+      "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\verificar_render.py\")",
+      "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\verificar_submit.py\")",
+      "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\extraer_formulas.py\")",
+      "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\extraer_todo.py\")",
+      "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\verificar_formulas.py\")",
+      "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\debug_tds_tci.py\")",
+      "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\extraer_isra.py\")",
+      "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\generar_isra.py\")"
     ]
   }
 }
