@@ -332,6 +332,7 @@ def _sin_reagendar_stats():
             fecha__range=(fecha_inicio_query, hoy),
             estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
             paciente__isnull=False,
+            paciente__dado_de_alta = False, # dar de alta un paciente
         ).values('paciente_id', 'estatus', 'fecha').order_by('paciente_id', '-fecha')
     )
 
@@ -340,6 +341,7 @@ def _sin_reagendar_stats():
             fecha__lte=hoy,
             estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
             paciente__isnull=False,
+            paciente__dado_de_alta = False, # dar de alta a un paciente
         ).values('paciente_id', 'estatus', 'fecha').order_by('paciente_id', '-fecha')
     )
 
@@ -700,6 +702,8 @@ def api_sin_reagendar(request):
     citas_qs = Cita.objects.filter(
         estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
         paciente__isnull=False,
+        paciente__dado_de_alta = False, # dar de alta a un paciente
+        paciente__estado='activo', # dar suspension a un paciente
     )
     if fecha_inicio is not None:
         citas_qs = citas_qs.filter(fecha__range=(fecha_inicio, fecha_fin))
@@ -6599,6 +6603,75 @@ def whatsapp_enviar_lote(request):
 
     return JsonResponse({'resultados': resultados})
 
+# Vista para dar de alta el paciente
+@login_required
+@require_POST
+def toggle_alta_paciente(request, paciente_id):
+    if not request.user.is_superuser:
+        messages.error(
+            request,
+            "No tienes permisos para realizar esta acción."
+        )
+        return redirect('detalle_paciente', paciente_id=paciente_id)
+    paciente = get_object_or_404(
+        Paciente,
+        pk=paciente_id
+    )
+    paciente.dado_de_alta = not paciente.dado_de_alta
+    if paciente.dado_de_alta:
+        paciente.fecha_alta = timezone.now()
+        messages.success(
+            request,
+            "Paciente dado de alta correctamente."
+        )
+    else:
+        paciente.fecha_alta = None
+        messages.success(
+            request,
+            "Seguimiento reactivado correctamente."
+        )
+    paciente.save()
+    return redirect(
+        'detalle_paciente',
+        paciente_id=paciente.id
+    )
+
+# Vista para suspender a un paciente
+@login_required
+def suspender_paciente(request, id):
+    paciente = get_object_or_404(Paciente, id=id)
+    if request.method == "POST":
+        # Si está suspendido, lo reactiva
+        if paciente.estado == "Suspendido":
+            paciente.estado = "Activo"
+            paciente.fecha_suspension = None
+            paciente.motivo_suspension = None
+            paciente.suspendido_por = None
+            messages.success(
+                request,
+                "Seguimiento del paciente reactivado correctamente."
+            )
+
+        # Si está activo, lo suspende
+        else:
+            motivo = request.POST.get("motivo")
+            paciente.estado = "Suspendido"
+            paciente.fecha_suspension = timezone.now()
+            paciente.motivo_suspension = motivo
+            paciente.suspendido_por = request.user
+            messages.success(
+                request,
+                "Paciente suspendido correctamente."
+            )
+        paciente.save()
+        return redirect(
+            "detalle_paciente",
+            paciente_id=paciente.id
+        )
+    return redirect(
+        "detalle_paciente",
+        paciente_id=paciente.id
+    )
 
 @login_required
 def demos_whatsapp(request):
