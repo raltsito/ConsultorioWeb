@@ -398,6 +398,9 @@ class Paciente(models.Model):
     fecha_nacimiento = models.DateField(verbose_name="Fecha de Nacimiento")
 
     # Dar de alta un paciente
+
+
+
     dado_de_alta = models.BooleanField(
         default = False,
         verbose_name = "Dado de alta"
@@ -426,6 +429,7 @@ class Paciente(models.Model):
         blank=True,
         on_delete=models.SET_NULL
     )
+
 
     # EL CAMPO SECRETO
     nombre_normalizado = models.CharField(max_length=200, blank=True, editable=False)

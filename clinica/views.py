@@ -318,7 +318,7 @@ def _sin_reagendar_stats():
         Cita.objects.filter(
             fecha__gte=hoy,
             estatus__in=Cita.ESTATUS_ACTIVOS,
-            paciente__isnull=False,
+            paciente__isnull=False, # dar de alta a un paciente
         ).values_list('paciente_id', flat=True)
     ) | set(
         SolicitudCita.objects.filter(
@@ -332,6 +332,7 @@ def _sin_reagendar_stats():
             fecha__range=(fecha_inicio_query, hoy),
             estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
             paciente__isnull=False,
+            paciente__dado_de_alta=False, # agregar a un paciente
         ).values('paciente_id', 'estatus', 'fecha').order_by('paciente_id', '-fecha')
     )
 
@@ -340,6 +341,7 @@ def _sin_reagendar_stats():
             fecha__lte=hoy,
             estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
             paciente__isnull=False,
+            paciente__dado_de_alta=False, # agregar un paciente
         ).values('paciente_id', 'estatus', 'fecha').order_by('paciente_id', '-fecha')
     )
 
@@ -700,6 +702,8 @@ def api_sin_reagendar(request):
     citas_qs = Cita.objects.filter(
         estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
         paciente__isnull=False,
+        paciente__dado_de_alta=False, # dar de alta a un paciente
+        paciente__estado='activo', # dar suspension a un paciente
     )
     if fecha_inicio is not None:
         citas_qs = citas_qs.filter(fecha__range=(fecha_inicio, fecha_fin))
@@ -2334,11 +2338,29 @@ def eliminar_paciente(request, paciente_id):
 
 @api_key_required
 def api_citas_calendario(request):
+    start_str = request.GET.get('start', "")
+    end_str = request.GET.get('end', "")
+
     citas = Cita.objects.select_related(
         'division', 'servicio', 'terapeuta', 'consultorio', 'paciente'
     ).prefetch_related(
         'pacientes_adicionales'
-    ).all()
+    )
+
+    #Filtrar por las fechas que pide FullCalendar
+    if start_str:
+        try:
+            start_date = datetime.fromisoformat(start_str).date()
+            citas = citas.filter(fecha__gte=start_date)
+        except ValueError:
+            pass
+    if end_str:
+        try:
+            end_date = datetime.fromisoformat(end_str).date()
+            citas = citas.filter(fecha__lte=end_date)
+        except ValueError:
+            pass
+
     eventos = []
     
     for cita in citas:
@@ -6600,6 +6622,7 @@ def whatsapp_enviar_lote(request):
     return JsonResponse({'resultados': resultados})
 
 
+
 @login_required
 def demos_whatsapp(request):
     """
@@ -6718,6 +6741,39 @@ def toggle_alta_paciente(request, paciente_id):
         paciente.save()
     return redirect(
         "detalle_paciente",
+        )
+
+# Vista para dar de alta el paciente
+@login_required
+@require_POST
+def toggle_alta_paciente(request, paciente_id):
+    if not request.user.is_superuser:
+        messages.error(
+            request,
+            "No tienes permisos para realizar esta acción."
+        )
+        return redirect('detalle_paciente', paciente_id=paciente_id)
+    paciente = get_object_or_404(
+        Paciente,
+        pk=paciente_id
+    )
+    paciente.dado_de_alta = not paciente.dado_de_alta
+    if paciente.dado_de_alta:
+        paciente.fecha_alta = timezone.now()
+        messages.success(
+            request,
+            "Paciente dado de alta correctamente."
+        )
+    else:
+        paciente.fecha_alta = None
+        messages.success(
+            request,
+            "Seguimiento reactivado correctamente."
+        )
+    paciente.save()
+    return redirect(
+        'detalle_paciente',
+
         paciente_id=paciente.id
     )
 

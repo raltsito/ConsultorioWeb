@@ -85,16 +85,45 @@
   .hero {
     background: linear-gradient(135deg, var(--hero-start) 0%, var(--hero-end) 100%);
     border-radius: var(--r);
+
     padding: 2.35rem 2.6rem;
     margin-bottom: 2.35rem;
     min-height: 0.01px;
     padding: 2.35rem 2.6rem;
     margin-bottom: 2.35rem;
+    min-height: 0.01px;
+    padding: 2.5rem;
+    margin-bottom: 0.5rem;
     position: relative; overflow: hidden;
     animation: slideDown .45s both;
     box-shadow: 0 18px 40px rgba(37, 105, 220, .18);
     border: 1px solid rgba(255,255,255,.14);
   }
+.historial-wrapper{
+    margin-top:30px;
+    position:relative;
+    z-index:1;
+}
+
+.historial-table{
+    background:#fff;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 10px 25px rgba(0,0,0,.12);
+}
+
+.historial-table .citas-table{margin:0;
+}
+
+.historial-table .citas-table th{
+    background:#F7F9FC;
+}
+
+.historial-table .citas-table td{
+    background:#fff;
+}
+
+
   .hero::before {
     content:''; position:absolute; top:-60px; right:-40px;
     width:200px; height:200px; border-radius:50%;
@@ -122,12 +151,26 @@
   }
   .stat-pill .sp-lbl { font-size:.58rem; text-transform:uppercase; letter-spacing:.09em; color:rgba(255,255,255,.68); }
   .stat-pill .sp-val { font-size:.85rem; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .hero-actions { display:flex; flex-direction:column; gap:.5rem; align-items:flex-end; }
+  /*.hero-actions { display:flex; flex-direction:column; gap:12px; width:auto; align-items:220; }*/
+  .hero-actions { display:flex; flex-direction:column; gap:12px; margin-left: auto; margin-right: 20px; align-self:flex-start;margin-top: -15px;}
   .btn-hero-primary {
     background:#fff; color:var(--teal-dk); border:none;
     border-radius:999px; padding:.55rem 1.15rem; font-size:.82rem; font-weight:700;
     text-decoration:none; white-space:nowrap; transition:all .2s;
   }
+  .btn-hero-warning{
+    background:#FACC15;
+    color:#000;
+    border:none;
+    border-radius:999px;
+    padding:.8rem 1.25rem;
+    font-weight:700;
+    text-decoration:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:.35rem;
+}
   .btn-hero-primary:hover { background:#fff; color:var(--teal-dk); transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,0,0,.12); }
   .btn-hero-danger {
     border:1.5px solid rgba(255,255,255,.4); color:#fff;
@@ -135,6 +178,29 @@
     font-size:.78rem; font-weight:700; cursor:pointer; transition:all .2s;
   }
   .btn-hero-danger:hover { background:rgba(255,255,255,.14); border-color:#fff; color:#fff; }
+
+      .hero-actions .btn-hero-primary,
+      .hero-actions .btn-hero-danger,
+      .hero-actions .btn-hero-warning{
+          width:100%;
+          justify-content:center;}
+
+    .hero-actions .btn-hero-primary,
+    .hero-actions .btn-hero-danger,
+    .hero-actions .btn-hero-warning{
+        width:225px;
+        min-height:62px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:.5rem;
+        font-size:1.1rem;
+        font-weight:700;
+        border-radius:999px;
+    }
+
+    .modal {z-index: 99999 !important;}
+    .modal-backdrop {z-index: 99998 !important;}
 
   /* ── Messages ─────────────────────────────────────────── */
   .msg-wrap { margin-bottom:1rem; animation:slideDown .35s both; }
@@ -350,6 +416,7 @@
     .ap-grid { grid-template-columns:1fr; }
     .doc-upload-grid { grid-template-columns:1fr; }
   }
+
   </style>
 </head>
 <body>
@@ -379,47 +446,127 @@
   </div>
   {% endif %}
 
-  <!-- ── Hero ─────────────────────────────────────────────── -->
-  <div class="hero">
-    <div class="d-flex align-items-start gap-3 position-relative" style="z-index:1;">
-      <div class="hero-avatar">{{ paciente.nombre|slice:":1" }}</div>
-      <div style="flex:1;min-width:0;">
-        <div class="hero-name">{{ paciente.nombre }}</div>
-        <div class="hero-sub">
-          Exp. #{{ paciente.id }}
-          {% if paciente.sexo %}&nbsp;·&nbsp;{{ paciente.sexo }}{% endif %}
+<!-- ── Hero ─────────────────────────────────────────────── -->
+<div class="hero">
+  <div class="d-flex align-items-start gap-3 position-relative w-100" style="z-index:1;">
+    <!-- Avatar -->
+    <div class="hero-avatar">
+      {{ paciente.nombre|slice:":1" }}
+    </div>
+    <!-- Información -->
+    <div style="flex:1; min-width:0;">
+      <div class="hero-name">
+        {{ paciente.nombre }}
+      </div>
+      <div class="hero-sub">
+        Exp. #{{ paciente.id }}
+        {% if paciente.sexo %}
+          &nbsp;·&nbsp;{{ paciente.sexo }}
+        {% endif %}
+      </div>
+      <!-- Estadísticas -->
+      <div class="d-flex flex-wrap gap-2 mt-2">
+        <div class="stat-pill">
+          <div class="sp-lbl">Nacimiento</div>
+          <div class="sp-val">{{ paciente.fecha_nacimiento }}</div>
         </div>
-        <div class="d-flex flex-wrap gap-2 mt-2">
-          <div class="stat-pill">
-            <div class="sp-lbl">Nacimiento</div>
-            <div class="sp-val">{{ paciente.fecha_nacimiento }}</div>
+        <div class="stat-pill">
+          <div class="sp-lbl">Teléfono</div>
+          <div class="sp-val">{{ paciente.telefono }}</div>
+        </div>
+        {% if paciente.servicio_inicial %}
+        <div class="stat-pill">
+          <div class="sp-lbl">Servicio inicial</div>
+          <div class="sp-val">{{ paciente.servicio_inicial }}</div>
+        </div>
+        {% endif %}
+        {% if paciente.identidad_contacto %}
+        <div class="stat-pill">
+          <div class="sp-lbl">Tipo contacto</div>
+          <div class="sp-val">{{ paciente.identidad_contacto }}</div>
+        </div>
+        {% endif %}
+        {% if paciente.division %}
+        <div class="stat-pill" id="div-pill-show" style="cursor:pointer;" title="Cambiar división" onclick="toggleDivForm()">
+          <div class="sp-lbl">
+            <i class="bi bi-diagram-2 me-1"></i>
+            División
           </div>
-          <div class="stat-pill">
-            <div class="sp-lbl">Teléfono</div>
-            <div class="sp-val">{{ paciente.telefono }}</div>
+          <div class="sp-val">
+            {{ paciente.division }}
+            <i class="bi bi-pencil" style="font-size:.65rem;opacity:.7;"></i>
           </div>
-          {% if paciente.servicio_inicial %}
-          <div class="stat-pill">
-            <div class="sp-lbl">Servicio inicial</div>
-            <div class="sp-val">{{ paciente.servicio_inicial }}</div>
+        </div>
+        {% else %}
+        <button class="stat-pill" id="div-pill-show" onclick="toggleDivForm()" title="Asignar división" style="background:rgba(255,255,255,.08); border:1.5px dashed rgba(255,255,255,.45); cursor:pointer;">
+            <div class="sp-lbl" style="color:rgba(255,255,255,.6)">
+                División
+            </div>
+            <div class="sp-val" style="opacity:.7;font-size:.78rem;">
+                + Asignar
+            </div>
+        </button>
+        {% endif %}
+        {% if paciente.dado_de_alta %}
+        <div class="stat-pill">
+          <div class="sp-lbl">
+            Estado
           </div>
-          {% endif %}
-          {% if paciente.identidad_contacto %}
-          <div class="stat-pill">
-            <div class="sp-lbl">Tipo contacto</div>
-            <div class="sp-val">{{ paciente.identidad_contacto }}</div>
+          <div class="sp-val">
+            <span bg-primary">
+              <i class="bi bi-check-circle-fill"></i>
+              Dado de alta
+            </span>
           </div>
-          {% endif %}
-          {% if paciente.division %}
-          <div class="stat-pill" id="div-pill-show" style="cursor:pointer;" title="Cambiar división" onclick="toggleDivForm()">
-            <div class="sp-lbl"><i class="bi bi-diagram-2 me-1"></i>División</div>
-            <div class="sp-val">{{ paciente.division }} <i class="bi bi-pencil" style="font-size:.65rem;opacity:.7;"></i></div>
-          </div>
-          {% else %}
-          <button class="stat-pill" id="div-pill-show" style="background:rgba(255,255,255,.08);border:1.5px dashed rgba(255,255,255,.45);cursor:pointer;" onclick="toggleDivForm()" title="Asignar división">
-            <div class="sp-lbl" style="color:rgba(255,255,255,.6);">División</div>
-            <div class="sp-val" style="opacity:.7;font-size:.78rem;">+ Asignar</div>
+        </div>
+        {% endif %}
+      </div>
+      <!-- Formulario División -->
+      <div id="div-form-wrap" style="display:none;margin-top:.75rem;animation:fadeIn .2s both;">
+        <form method="post"
+              action="{% url 'asignar_division_paciente' paciente.id %}"
+              class="d-flex align-items-center gap-2">
+          {% csrf_token %}
+          <select name="division" class="form-select form-select-sm rounded-pill" style="max-width:220px;font-size:.82rem;">
+              <option value="">— Sin división —</option>
+              {% for d in divisiones %}
+              <option value="{{ d.id }}" {% if paciente.division.id == d.id %}selected{% endif %}>
+                  {{ d.nombre }}
+              </option>
+              {% endfor %}
+          </select>
+          <button type="submit" class="btn-hero-primary" style="padding:.38rem .9rem;font-size:.78rem;">
+              Guardar
           </button>
+          <button type="button" class="btn-hero-danger" onclick="toggleDivForm()" style="padding:.38rem .9rem;font-size:.78rem;">
+              Cancelar
+          </button>
+        </form>
+      </div>
+    </div>
+    <!-- Botones -->
+    <div class="hero-actions">
+      {% if request.user.is_superuser %}
+      <button class="btn-hero-primary" data-bs-toggle="modal" data-bs-target="#modalAltaPaciente">
+        {% if paciente.dado_de_alta %}
+          <i class="bi bi-arrow-clockwise me-1"></i>
+          Reactivar seguimiento
+        {% else %}
+          <i class="bi bi-check-circle me-1"></i>
+          Dar de alta
+        {% endif %}
+      </button>
+      <!--<a href="{% url 'suspender_paciente' paciente.id %}" class="btn-hero-warning">
+        <i class="bi bi-pause-circle me-1"></i>
+        Suspender
+      </a>-->
+      <button class="btn-hero-warning" data-bs-toggle="modal" data-bs-target="#modalSuspender">
+          {% if paciente.estado == "Suspendido" %}
+              <i class="bi bi-play-circle me-1"></i>
+              Reanudar tratamiento
+          {% else %}
+              <i class="bi bi-pause-circle me-1"></i>
+              Suspender tratamiento
           {% endif %}
         </div>
         </form>
@@ -449,6 +596,7 @@
               <i class="bi bi-pause-circle me-1"></i>
               Suspender tratamiento
           {% endif %}
+
       </button>
       {% endif %}
       <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
@@ -477,16 +625,6 @@
           </form>
         </div>
       </div>
-      <div class="hero-actions flex-shrink-0">
-        <a href="{% url 'editar_paciente' paciente.id %}" class="btn-hero-primary">
-          <i class="bi bi-pencil-square me-1"></i>Editar
-        </a>
-        <button class="btn-hero-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
-          <i class="bi bi-trash3 me-1"></i>Eliminar
-        </button>
-      </div>
-    </div>
-  </div>
 
   <!-- ── Tab nav ──────────────────────────────────────────── -->
   <div class="tab-nav" role="tablist">
@@ -993,6 +1131,8 @@ function toggleDivForm() {
 }
 </script>
 
+
+
 <!-- Dar de alta el paciente -->
 <div class="modal fade" id="modalAltaPaciente" tabindex="-1">
     <div class="modal-dialog">
@@ -1018,8 +1158,12 @@ function toggleDivForm() {
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     Cancelar
                 </button>
+
                 <form method="post"
                       action="{% url 'toggle_alta_paciente' paciente.id %}">
+
+                <form method="post" action="{% url 'toggle_alta_paciente' paciente.id %}">
+
                     {% csrf_token %}
                     <button type="submit" class="btn btn-primary">
                         Confirmar
@@ -1029,11 +1173,15 @@ function toggleDivForm() {
         </div>
     </div>
 </div>
+
 <!-- Modal Suspender paciente -->
+
+
 <!-- Suspender al paciente -->
 <div class="modal fade" id="modalSuspender" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
+
             <div class="modal-header">
                 <h5 class="modal-title">
                     {% if paciente.estado == "Suspendido" %}
@@ -1041,11 +1189,18 @@ function toggleDivForm() {
                     {% else %}
                         Suspender paciente
                     {% endif %}
+
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+
+
                     {% if paciente.estado == "Suspendido" %}
                         Reanudar tratamiento
                     {% else %}
                         Suspender paciente
                     {% endif %}
+
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal">
                 </button>
@@ -1061,15 +1216,43 @@ function toggleDivForm() {
                         </p>
                     {% else %}
                     {% if paciente.estado == "Suspendido" %}
+
+
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <form method="post"
+                  action="{% url 'suspender_paciente' paciente.id %}">
+
+                {% csrf_token %}
+
+                <div class="modal-body">
+
+                    {% if paciente.estado == "Suspendido" %}
+
+
                         <p>
                             ¿Deseas reanudar el tratamiento de
                             <strong>{{ paciente.nombre }}</strong>?
                         </p>
+
                     {% else %}
+
+
+                    {% else %}
+
+
                         <p>
                             ¿Deseas suspender el tratamiento de
                             <strong>{{ paciente.nombre }}</strong>?
                         </p>
+
                         <label class="form-label">
                             Motivo de suspensión
                         </label>
@@ -1104,6 +1287,53 @@ function toggleDivForm() {
                     </button>
                 </div>
             </form>
+
+
+                        <label class="form-label">
+                            Motivo de suspensión
+                        </label>
+
+                        <textarea name="motivo"
+                                  class="form-control"
+                                  rows="4"
+                                  required></textarea>
+
+                    {% endif %}
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Cancelar
+
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-warning">
+
+                        {% if paciente.estado == "Suspendido" %}
+
+                            <i class="bi bi-play-circle me-1"></i>
+                            Reanudar tratamiento
+
+                        {% else %}
+
+                            <i class="bi bi-pause-circle me-1"></i>
+                            Confirmar suspensión
+
+                        {% endif %}
+
+                    </button>
+
+                </div>
+
+            </form>
+
+
         </div>
     </div>
 </div>

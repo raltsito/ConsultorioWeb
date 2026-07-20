@@ -6,7 +6,11 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
+
     ('clinica', '0082_alter_cita_metodo_pago'),
+
+        ('clinica', '0082_merge_20260708_0955'),
+
     ]
 
     operations = [
