@@ -568,34 +568,6 @@
               <i class="bi bi-pause-circle me-1"></i>
               Suspender tratamiento
           {% endif %}
-        </div>
-        </form>
-      </div>
-    </div>
-    <!-- Botones -->
-    <div class="hero-actions">
-      {% if request.user.is_superuser %}
-      <button class="btn-hero-primary" data-bs-toggle="modal" data-bs-target="#modalAltaPaciente">
-        {% if paciente.dado_de_alta %}
-          <i class="bi bi-arrow-clockwise me-1"></i>
-          Reactivar seguimiento
-        {% else %}
-          <i class="bi bi-check-circle me-1"></i>
-          Dar de alta
-        {% endif %}
-      </button>
-      <!--<a href="{% url 'suspender_paciente' paciente.id %}" class="btn-hero-warning">
-        <i class="bi bi-pause-circle me-1"></i>
-        Suspender
-      </a>-->
-      <button class="btn-hero-warning" data-bs-toggle="modal" data-bs-target="#modalSuspender">
-          {% if paciente.estado == "Suspendido" %}
-              <i class="bi bi-play-circle me-1"></i>
-              Reanudar tratamiento
-          {% else %}
-              <i class="bi bi-pause-circle me-1"></i>
-              Suspender tratamiento
-          {% endif %}
 
       </button>
       {% endif %}
@@ -1175,13 +1147,9 @@ function toggleDivForm() {
 </div>
 
 <!-- Modal Suspender paciente -->
-
-
-<!-- Suspender al paciente -->
 <div class="modal fade" id="modalSuspender" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-
             <div class="modal-header">
                 <h5 class="modal-title">
                     {% if paciente.estado == "Suspendido" %}
@@ -1189,23 +1157,10 @@ function toggleDivForm() {
                     {% else %}
                         Suspender paciente
                     {% endif %}
-
-
-            <div class="modal-header">
-                <h5 class="modal-title">
-
-
-                    {% if paciente.estado == "Suspendido" %}
-                        Reanudar tratamiento
-                    {% else %}
-                        Suspender paciente
-                    {% endif %}
-
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal">
                 </button>
             </div>
-            <form method="post" action="{% url 'suspender_paciente' paciente.id %}">
             <form method="post" action="{% url 'suspender_paciente' paciente.id %}">
                 {% csrf_token %}
                 <div class="modal-body">
@@ -1215,49 +1170,10 @@ function toggleDivForm() {
                             <strong>{{ paciente.nombre }}</strong>?
                         </p>
                     {% else %}
-                    {% if paciente.estado == "Suspendido" %}
-
-
-                </h5>
-
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal">
-                </button>
-
-            </div>
-
-            <form method="post"
-                  action="{% url 'suspender_paciente' paciente.id %}">
-
-                {% csrf_token %}
-
-                <div class="modal-body">
-
-                    {% if paciente.estado == "Suspendido" %}
-
-
-                        <p>
-                            ¿Deseas reanudar el tratamiento de
-                            <strong>{{ paciente.nombre }}</strong>?
-                        </p>
-
-                    {% else %}
-
-
-                    {% else %}
-
-
                         <p>
                             ¿Deseas suspender el tratamiento de
                             <strong>{{ paciente.nombre }}</strong>?
                         </p>
-
-                        <label class="form-label">
-                            Motivo de suspensión
-                        </label>
-                        <textarea name="motivo" class="form-control" rows="4" required></textarea>
-                    {% endif %}
                         <label class="form-label">
                             Motivo de suspensión
                         </label>
@@ -1276,64 +1192,9 @@ function toggleDivForm() {
                             <i class="bi bi-pause-circle me-1"></i>
                             Confirmar suspensión
                         {% endif %}
-                    <button type="submit" class="btn btn-warning">
-                        {% if paciente.estado == "Suspendido" %}
-                            <i class="bi bi-play-circle me-1"></i>
-                            Reanudar tratamiento
-                        {% else %}
-                            <i class="bi bi-pause-circle me-1"></i>
-                            Confirmar suspensión
-                        {% endif %}
                     </button>
                 </div>
             </form>
-
-
-                        <label class="form-label">
-                            Motivo de suspensión
-                        </label>
-
-                        <textarea name="motivo"
-                                  class="form-control"
-                                  rows="4"
-                                  required></textarea>
-
-                    {% endif %}
-
-                </div>
-
-                <div class="modal-footer">
-
-                    <button type="button"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal">
-
-                        Cancelar
-
-                    </button>
-
-                    <button type="submit"
-                            class="btn btn-warning">
-
-                        {% if paciente.estado == "Suspendido" %}
-
-                            <i class="bi bi-play-circle me-1"></i>
-                            Reanudar tratamiento
-
-                        {% else %}
-
-                            <i class="bi bi-pause-circle me-1"></i>
-                            Confirmar suspensión
-
-                        {% endif %}
-
-                    </button>
-
-                </div>
-
-            </form>
-
-
         </div>
     </div>
 </div>
