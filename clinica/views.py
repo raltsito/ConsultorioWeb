@@ -5960,14 +5960,14 @@ def api_nomina_semanal(request):
     from django.utils.dateparse import parse_date
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
-    cortes = CorteSemanal.objects.all()
+    cortes = CorteSemanal.objects.select_related('terapeuta').all()
     if fecha_inicio:
         cortes = cortes.filter(fecha_inicio__gte=parse_date(fecha_inicio))
     if fecha_fin:
         cortes = cortes.filter(fecha_fin__lte=parse_date(fecha_fin))
     data = []
     for c in cortes:
-        lineas = LineaNomina.objects.filter(corte=c)
+        lineas = LineaNomina.objects.filter(corte=c).select_related('cita__paciente', 'cita__servicio')
         detalles = [{
             'paciente': l.cita.paciente.nombre if l.cita and l.cita.paciente else '',
             'fecha': l.cita.fecha.isoformat() if l.cita else '',
