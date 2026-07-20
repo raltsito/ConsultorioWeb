@@ -2325,11 +2325,29 @@ def eliminar_paciente(request, paciente_id):
 
 @api_key_required
 def api_citas_calendario(request):
+    start_str = request.GET.get('start', "")
+    end_str = request.GET.get('end', "")
+
     citas = Cita.objects.select_related(
         'division', 'servicio', 'terapeuta', 'consultorio', 'paciente'
     ).prefetch_related(
         'pacientes_adicionales'
-    ).all()
+    )
+
+    #Filtrar por las fechas que pide FullCalendar
+    if start_str:
+        try:
+            start_date = datetime.fromisoformat(start_str).date()
+            citas = citas.filter(fecha__gte=start_date)
+        except ValueError:
+            pass
+    if end_str:
+        try:
+            end_date = datetime.fromisoformat(end_str).date()
+            citas = citas.filter(fecha__lte=end_date)
+        except ValueError:
+            pass
+
     eventos = []
     
     for cita in citas:
