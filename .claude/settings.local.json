@@ -199,7 +199,8 @@
       "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\debug_tds_tci.py\")",
       "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\extraer_isra.py\")",
       "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\generar_isra.py\")",
-      "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\validar_calculadoras.py\")"
+      "Bash(venv/Scripts/python.exe \"C:\\\\Users\\\\carlo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-carlo-Documents-Freelancer-ConsultorioWeb\\\\cc960f1c-b8cc-4c11-8dd3-7cc350c3fe0b\\\\scratchpad\\\\validar_calculadoras.py\")",
+      "WebSearch"
     ]
   }
 }
