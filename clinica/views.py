@@ -5992,6 +5992,38 @@ def api_nomina_semanal(request):
 
 
 @api_key_required
+def api_reporte_general(request):
+    """Igual que la pantalla /reporte-general/ pero en JSON, para que
+    portal_grupointra (Finanzas) sincronice el Reporte General de Recepción
+    sin depender del Excel exportado a mano. Regresa las citas del rango tal
+    cual (sin aplicar la regla de qué cuenta como ingreso: eso es
+    responsabilidad de quien consume la API)."""
+    from django.utils.dateparse import parse_date
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+    citas = Cita.objects.select_related('paciente', 'terapeuta', 'servicio', 'consultorio', 'division').all()
+    if fecha_inicio:
+        citas = citas.filter(fecha__gte=parse_date(fecha_inicio))
+    if fecha_fin:
+        citas = citas.filter(fecha__lte=parse_date(fecha_fin))
+    data = [{
+        'id': c.id,
+        'fecha': c.fecha.isoformat(),
+        'hora': c.hora.strftime('%H:%M'),
+        'tipo_cita': c.get_tipo_paciente_display(),
+        'paciente': c.paciente.nombre if c.paciente_id else '',
+        'terapeuta': str(c.terapeuta) if c.terapeuta_id else '',
+        'servicio': str(c.servicio) if c.servicio_id else '',
+        'division': str(c.division) if c.division_id else '',
+        'consultorio': str(c.consultorio) if c.consultorio_id else '',
+        'estatus': c.estatus,
+        'metodo_pago': c.metodo_pago or '',
+        'costo': float(c.costo) if c.costo is not None else 0.0,
+    } for c in citas]
+    return JsonResponse(data, safe=False)
+
+
+@api_key_required
 def api_disponibilidad_semanal(request):
     from .models import Terapeuta, Horario
     terapeutas = Terapeuta.objects.filter(activo=True)

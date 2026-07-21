@@ -143,6 +143,7 @@ urlpatterns = [
     path('api/notas-recepcion/', clinica_views.api_notas_recepcion, name='api_notas_recepcion'),
     path('api/notas-recepcion/<int:nota_id>/', clinica_views.api_nota_recepcion_detail, name='api_nota_recepcion_detail'),
     path('api/nomina-semanal/', clinica_views.api_nomina_semanal, name='api_nomina_semanal'),
+    path('api/reporte-general/', clinica_views.api_reporte_general, name='api_reporte_general'),
     path('api/disponibilidad-semanal/', clinica_views.api_disponibilidad_semanal, name='api_disponibilidad_semanal'),
 
     # Trazabilidad
