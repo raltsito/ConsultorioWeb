@@ -69,6 +69,13 @@
     .dc-badge-estado { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; }
     .dc-badge-estado.ok { background: #EAF7F1; color: #2E7D32; }
     .dc-badge-estado.warn { background: #FEF1F1; color: #EF5350; }
+
+    .dc-nombre-toggle { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .dc-nombre-toggle .bi-chevron-right { font-size: .7rem; color: #90A4AE; transition: transform .2s ease; }
+    .dc-nombre-toggle:not(.collapsed) .bi-chevron-right { transform: rotate(90deg); }
+    .dc-historial-tabla { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    .dc-historial-tabla th { text-align: left; padding: 4px 8px; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: #90A4AE; }
+    .dc-historial-tabla td { padding: 5px 8px; color: #546E7A; }
 </style>
 
 <div class="dc-hero">
@@ -98,8 +105,9 @@
                 <div class="dc-label">Ingresos esperado vs real</div>
                 <div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:1.9rem; color:#37474F;">${{ ingreso_real|floatformat:0 }}</div>
             </div>
-            <div style="padding:6px 12px; border-radius:999px; font-size:.8rem; font-weight:700; {% if ingreso_delta_pct >= 0 %}background:#EAF7F1;color:#2E7D32;{% else %}background:#FEF1F1;color:#EF5350;{% endif %}">
-                {% if ingreso_delta_pct >= 0 %}+{% endif %}{{ ingreso_delta_pct }}%
+            <div style="padding:6px 12px; border-radius:999px; font-size:.8rem; font-weight:700; {% if ingreso_delta_pct is None %}background:#ECEFF1;color:#78909C;{% elif ingreso_delta_pct >= 0 %}background:#EAF7F1;color:#2E7D32;{% else %}background:#FEF1F1;color:#EF5350;{% endif %}"
+                 {% if ingreso_delta_pct is None %}title="No hay ingreso registrado en {{ mes_label|slice:':3' }} {{ anio_anterior }} para comparar"{% endif %}>
+                {% if ingreso_delta_pct is None %}Sin dato {{ anio_anterior }}{% else %}{% if ingreso_delta_pct >= 0 %}+{% endif %}{{ ingreso_delta_pct }}%{% endif %}
             </div>
         </div>
         <div style="margin-bottom:10px;">
@@ -113,7 +121,7 @@
     </div>
 
     <div class="dc-card" style="display:flex; flex-direction:column; align-items:center;">
-        <div class="dc-label" style="align-self:flex-start; margin-bottom:10px;">Pacientes esperados</div>
+        <div class="dc-label" style="align-self:flex-start; margin-bottom:10px;">Pacientes nuevos esperados</div>
         <div class="dc-ring-wrap">
             <svg width="132" height="132" viewBox="0 0 132 132" style="transform: rotate(-90deg);">
                 <circle cx="66" cy="66" r="54" fill="none" stroke="#ECEFF1" stroke-width="14"></circle>
@@ -184,6 +192,11 @@
             <option value="al_dia" {% if filtros_actuales.estado == 'al_dia' %}selected{% endif %}>Al día</option>
             <option value="sin_seguimiento" {% if filtros_actuales.estado == 'sin_seguimiento' %}selected{% endif %}>Sin seguimiento</option>
         </select>
+        <select name="orden" onchange="this.form.submit()">
+            <option value="nombre" {% if filtros_actuales.orden == 'nombre' %}selected{% endif %}>Ordenar: Nombre A-Z</option>
+            <option value="sin_seguimiento" {% if filtros_actuales.orden == 'sin_seguimiento' %}selected{% endif %}>Ordenar: Sin seguimiento primero</option>
+            <option value="ingreso" {% if filtros_actuales.orden == 'ingreso' %}selected{% endif %}>Ordenar: Mayor ingreso</option>
+        </select>
     </div>
 </form>
 
@@ -205,7 +218,10 @@
                 {% for p in pacientes %}
                 <tr>
                     <td>
-                        <div style="font-weight:700; color:#37474F; font-size:.94rem;">{{ p.nombre }}</div>
+                        <div class="dc-nombre-toggle collapsed" style="font-weight:700; color:#37474F; font-size:.94rem;"
+                             data-bs-toggle="collapse" data-bs-target="#dc-hist-{{ p.id }}" aria-expanded="false" role="button">
+                            <i class="bi bi-chevron-right"></i>{{ p.nombre }}
+                        </div>
                         <div style="color:#90A4AE; font-size:.8rem; margin-top:2px;"><i class="bi bi-telephone-fill me-1"></i>{{ p.telefono }}</div>
                     </td>
                     <td>
@@ -227,6 +243,37 @@
                         {% endif %}
                     </td>
                     <td style="text-align:right; font-weight:700; color:#37474F; font-family:'Poppins',sans-serif;">${{ p.ingreso|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td colspan="7" style="padding:0;">
+                        <div class="collapse" id="dc-hist-{{ p.id }}">
+                            <div style="padding:16px 26px; background:#F7F9FC;">
+                                {% if p.historial %}
+                                <table class="dc-historial-tabla">
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha</th><th>Terapeuta</th><th>Servicio</th>
+                                            <th>Estatus</th><th style="text-align:right;">Costo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for c in p.historial %}
+                                        <tr>
+                                            <td>{{ c.fecha|date:"d/m/Y" }}</td>
+                                            <td>{{ c.terapeuta|default:"—" }}</td>
+                                            <td>{{ c.servicio|default:"—" }}</td>
+                                            <td>{{ c.get_estatus_display }}</td>
+                                            <td style="text-align:right;">${{ c.costo|default:0|floatformat:2 }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div style="color:#90A4AE;">Este paciente no tiene citas registradas.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr><td colspan="7" style="padding:50px; text-align:center; color:#90A4AE;">No hay pacientes que coincidan con estos filtros.</td></tr>

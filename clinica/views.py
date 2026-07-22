@@ -3186,6 +3186,7 @@ def portal_direccion_comercial(request):
     sede_filtro = request.GET.get('sede') or ''
     terapeuta_filtro = request.GET.get('terapeuta') or ''
     estado_filtro = request.GET.get('estado') or ''
+    orden_filtro = request.GET.get('orden') or 'nombre'
 
     divisiones_qs = mi_perfil.divisiones.all().order_by('nombre')
     division_ids = list(divisiones_qs.values_list('id', flat=True))
@@ -3207,7 +3208,9 @@ def portal_direccion_comercial(request):
     if ingreso_real_anterior:
         ingreso_delta_pct = round((float(ingreso_real) - float(ingreso_real_anterior)) / float(ingreso_real_anterior) * 100, 1)
     else:
-        ingreso_delta_pct = 100.0 if ingreso_real else 0.0
+        # Sin ingreso real registrado en el mismo mes del año anterior no hay
+        # base de comparación válida (None en vez de un % inventado).
+        ingreso_delta_pct = None
 
     # --- Pacientes esperados ---
     pacientes_base = Paciente.objects.filter(division_id__in=division_ids)
@@ -3295,6 +3298,7 @@ def portal_direccion_comercial(request):
             continue
 
         pacientes.append({
+            'id': p.id,
             'nombre': p.nombre,
             'telefono': p.telefono,
             'division': p.division.nombre if p.division else '—',
@@ -3306,7 +3310,14 @@ def portal_direccion_comercial(request):
             'no_asistidas': no_asistidas_p,
             'sin_seguimiento': sin_seguimiento_p,
             'ingreso': ingreso_p,
+            'historial': todas_citas,
         })
+
+    if orden_filtro == 'sin_seguimiento':
+        pacientes.sort(key=lambda p: (not p['sin_seguimiento'], p['nombre']))
+    elif orden_filtro == 'ingreso':
+        pacientes.sort(key=lambda p: p['ingreso'], reverse=True)
+    # 'nombre' ya queda ordenado alfabeticamente desde pacientes_qs.order_by('nombre')
 
     filtros_actuales = {
         'mes': mes_actual,
@@ -3315,6 +3326,7 @@ def portal_direccion_comercial(request):
         'sede': sede_filtro,
         'terapeuta': terapeuta_filtro,
         'estado': estado_filtro,
+        'orden': orden_filtro,
     }
     query_string = urlencode({k: v for k, v in filtros_actuales.items() if v})
 
