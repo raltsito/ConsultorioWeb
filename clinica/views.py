@@ -7,13 +7,14 @@ import io
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
+from urllib.parse import urlencode
 
 #Herramientas base de Django
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.db import transaction
-from django.db.models import Q, Sum, Count, Max
+from django.db.models import Q, Sum, Count, Max, Prefetch
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
@@ -37,6 +38,7 @@ from .models import (
     BloqueoAgendaTerapeuta,
     Consultoria,
     Consultorio,
+    DireccionComercial,
     SolicitudHorasExpositor,
     Division,
     DocumentoPaciente,
@@ -391,6 +393,9 @@ def home(request):
 
     if hasattr(request.user, 'perfil_consultoria'):
         return redirect('portal_consultoria')
+
+    if hasattr(request.user, 'perfil_direccion_comercial'):
+        return redirect('portal_direccion_comercial')
 
     hoy = timezone.now().date()
     mes_actual = timezone.now().month
@@ -3119,11 +3124,246 @@ def expediente_consultoria_detalle(request, paciente_id):
     messages.info(request, 'El detalle de expediente de Consultoria usara una vista propia.')
     return redirect('portal_consultoria')
 
+_DC_MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+_DC_MESES_COMPLETOS = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+]
+_DC_PALETA_DIVISION = [
+    '#26C6DA', '#7C4DFF', '#FFA726', '#66BB6A', '#EC407A',
+    '#42A5F5', '#8D6E63', '#AB47BC', '#26A69A', '#5C6BC0',
+]
+
+
+def _dc_fin_de_mes(anio, mes):
+    if mes == 12:
+        return date(anio + 1, 1, 1) - timedelta(days=1)
+    return date(anio, mes + 1, 1) - timedelta(days=1)
+
+
+def _dc_meses_disponibles(hoy, cantidad=6):
+    meses = []
+    indice_base = hoy.year * 12 + (hoy.month - 1)
+    for offset in range(cantidad - 1, -1, -1):
+        indice = indice_base - offset
+        anio, mes = divmod(indice, 12)
+        mes += 1
+        meses.append({
+            'value': f"{anio:04d}-{mes:02d}",
+            'short': f"{_DC_MESES_CORTOS[mes - 1]} {str(anio)[2:]}",
+        })
+    return meses
+
+
+@login_required
+def portal_direccion_comercial(request):
+    if not hasattr(request.user, 'perfil_direccion_comercial'):
+        return redirect('home')
+
+    mi_perfil = request.user.perfil_direccion_comercial
+    hoy = date.today()
+
+    mes_get = request.GET.get('mes', '')
+    try:
+        anio_sel_str, mes_sel_str = mes_get.split('-')
+        anio_sel, mes_sel = int(anio_sel_str), int(mes_sel_str)
+        if not (1 <= mes_sel <= 12):
+            raise ValueError
+    except (ValueError, AttributeError):
+        anio_sel, mes_sel = hoy.year, hoy.month
+
+    mes_actual = f"{anio_sel:04d}-{mes_sel:02d}"
+    mes_label = f"{_DC_MESES_COMPLETOS[mes_sel - 1]} {anio_sel}"
+    anio_anterior = anio_sel - 1
+
+    mes_inicio = date(anio_sel, mes_sel, 1)
+    mes_fin = _dc_fin_de_mes(anio_sel, mes_sel)
+    mes_inicio_anterior = date(anio_anterior, mes_sel, 1)
+    mes_fin_anterior = _dc_fin_de_mes(anio_anterior, mes_sel)
+
+    q_filtro = (request.GET.get('q') or '').strip()
+    division_filtro = request.GET.get('division') or ''
+    sede_filtro = request.GET.get('sede') or ''
+    terapeuta_filtro = request.GET.get('terapeuta') or ''
+    estado_filtro = request.GET.get('estado') or ''
+
+    divisiones_qs = mi_perfil.divisiones.all().order_by('nombre')
+    division_ids = list(divisiones_qs.values_list('id', flat=True))
+
+    # Alcance por paciente (no por Cita.division), para que los KPIs cuadren
+    # siempre con la tabla de pacientes de abajo (que también filtra por
+    # Paciente.division).
+    citas_base = Cita.objects.filter(paciente__division_id__in=division_ids)
+
+    citas_mes = citas_base.filter(fecha__gte=mes_inicio, fecha__lte=mes_fin)
+    citas_mes_anterior = citas_base.filter(fecha__gte=mes_inicio_anterior, fecha__lte=mes_fin_anterior)
+
+    # --- Ingresos ---
+    ingreso_esperado = citas_mes.exclude(estatus=Cita.ESTATUS_CANCELO).aggregate(t=Sum('costo'))['t'] or Decimal('0')
+    ingreso_real = citas_mes.filter(estatus=Cita.ESTATUS_SI_ASISTIO).aggregate(t=Sum('costo'))['t'] or Decimal('0')
+    ingreso_real_anterior = citas_mes_anterior.filter(estatus=Cita.ESTATUS_SI_ASISTIO).aggregate(t=Sum('costo'))['t'] or Decimal('0')
+
+    ingreso_pct = round(float(ingreso_real) / float(ingreso_esperado) * 100, 1) if ingreso_esperado else 0.0
+    if ingreso_real_anterior:
+        ingreso_delta_pct = round((float(ingreso_real) - float(ingreso_real_anterior)) / float(ingreso_real_anterior) * 100, 1)
+    else:
+        ingreso_delta_pct = 100.0 if ingreso_real else 0.0
+
+    # --- Pacientes esperados ---
+    pacientes_base = Paciente.objects.filter(division_id__in=division_ids)
+    pacientes_actuales = pacientes_base.filter(
+        fecha_registro__date__gte=mes_inicio, fecha_registro__date__lte=mes_fin
+    ).count()
+    pacientes_mismo_mes_anterior = pacientes_base.filter(
+        fecha_registro__date__gte=mes_inicio_anterior, fecha_registro__date__lte=mes_fin_anterior
+    ).count()
+    meta_pacientes = round(pacientes_mismo_mes_anterior * 1.15)
+
+    if meta_pacientes:
+        pacientes_pct = round(pacientes_actuales / meta_pacientes * 100, 1)
+    else:
+        pacientes_pct = 100.0 if pacientes_actuales else 0.0
+    ring_offset = round(339.3 * (1 - pacientes_pct / 100), 2)
+
+    # --- Citas ---
+    citas_tomadas = citas_mes.count()
+    citas_acumuladas = citas_base.count()
+    pct_tomadas_vs_acum = round(citas_tomadas / citas_acumuladas * 100, 1) if citas_acumuladas else 0.0
+
+    pacientes_con_cita_ids = set(citas_base.values_list('paciente_id', flat=True))
+    pacientes_con_proxima_activa_ids = set(
+        citas_base.filter(fecha__gte=hoy, estatus__in=Cita.ESTATUS_ACTIVOS).values_list('paciente_id', flat=True)
+    )
+    pacientes_sin_seguimiento_ids = pacientes_con_cita_ids - pacientes_con_proxima_activa_ids
+    citas_sin_seguimiento = len(pacientes_sin_seguimiento_ids)
+    pct_sin_seguimiento = (
+        round(citas_sin_seguimiento / len(pacientes_con_cita_ids) * 100, 1) if pacientes_con_cita_ids else 0.0
+    )
+
+    # --- Opciones de filtro ---
+    divisiones_disponibles = list(divisiones_qs.values_list('nombre', flat=True))
+    sedes_disponibles = sorted({
+        dict(Consultorio.SEDE_CHOICES).get(codigo, codigo)
+        for codigo in citas_base.exclude(consultorio__isnull=True)
+                                 .values_list('consultorio__sede', flat=True)
+                                 .distinct()
+        if codigo
+    })
+    terapeutas_disponibles = (
+        Terapeuta.objects.filter(cita__in=citas_base).distinct().order_by('nombre')
+    )
+
+    # --- Tabla de pacientes ---
+    pacientes_qs = pacientes_base.select_related('division')
+    if division_filtro:
+        pacientes_qs = pacientes_qs.filter(division__nombre=division_filtro)
+    if q_filtro:
+        pacientes_qs = pacientes_qs.filter(Q(nombre__icontains=q_filtro) | Q(telefono__icontains=q_filtro))
+    pacientes_qs = pacientes_qs.prefetch_related(
+        Prefetch(
+            'citas',
+            queryset=Cita.objects.select_related('consultorio', 'terapeuta').order_by('-fecha', '-hora'),
+        )
+    ).order_by('nombre')
+
+    pacientes = []
+    for p in pacientes_qs:
+        todas_citas = list(p.citas.all())
+        citas_mes_p = [c for c in todas_citas if mes_inicio <= c.fecha <= mes_fin]
+        asistidas_p = sum(1 for c in citas_mes_p if c.estatus == Cita.ESTATUS_SI_ASISTIO)
+        no_asistidas_p = sum(1 for c in citas_mes_p if c.estatus == Cita.ESTATUS_NO_ASISTIO)
+        ingreso_p = sum(
+            (c.costo or Decimal('0')) for c in citas_mes_p if c.estatus == Cita.ESTATUS_SI_ASISTIO
+        )
+        ultima_cita = todas_citas[0] if todas_citas else None
+        sede_p = (
+            ultima_cita.consultorio.get_sede_display()
+            if ultima_cita and ultima_cita.consultorio and ultima_cita.consultorio.sede
+            else '—'
+        )
+        terapeuta_p = str(ultima_cita.terapeuta) if ultima_cita and ultima_cita.terapeuta else '—'
+        terapeuta_id_p = ultima_cita.terapeuta_id if ultima_cita and ultima_cita.terapeuta_id else None
+        sin_seguimiento_p = bool(todas_citas) and p.id not in pacientes_con_proxima_activa_ids
+
+        if sede_filtro and sede_p != sede_filtro:
+            continue
+        if terapeuta_filtro and str(terapeuta_id_p or '') != terapeuta_filtro:
+            continue
+        if estado_filtro == 'al_dia' and sin_seguimiento_p:
+            continue
+        if estado_filtro == 'sin_seguimiento' and not sin_seguimiento_p:
+            continue
+
+        pacientes.append({
+            'nombre': p.nombre,
+            'telefono': p.telefono,
+            'division': p.division.nombre if p.division else '—',
+            'division_color': _DC_PALETA_DIVISION[p.division_id % len(_DC_PALETA_DIVISION)] if p.division_id else '#90A4AE',
+            'sede': sede_p,
+            'terapeuta': terapeuta_p,
+            'citas_tomadas': len(citas_mes_p),
+            'asistidas': asistidas_p,
+            'no_asistidas': no_asistidas_p,
+            'sin_seguimiento': sin_seguimiento_p,
+            'ingreso': ingreso_p,
+        })
+
+    filtros_actuales = {
+        'mes': mes_actual,
+        'q': q_filtro,
+        'division': division_filtro,
+        'sede': sede_filtro,
+        'terapeuta': terapeuta_filtro,
+        'estado': estado_filtro,
+    }
+    query_string = urlencode({k: v for k, v in filtros_actuales.items() if v})
+
+    if request.GET.get('export') == 'csv':
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = f'attachment; filename="direccion_comercial_{mes_actual}.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Paciente', 'Telefono', 'Division', 'Sede', 'Terapeuta', 'Citas', 'Asistio', 'No asistio', 'Sin seguimiento', 'Ingreso'])
+        for p in pacientes:
+            writer.writerow([
+                p['nombre'], p['telefono'], p['division'], p['sede'], p['terapeuta'],
+                p['citas_tomadas'], p['asistidas'], p['no_asistidas'],
+                'Si' if p['sin_seguimiento'] else 'No', p['ingreso'],
+            ])
+        return response
+
+    context = {
+        'mes_actual': mes_actual,
+        'mes_label': mes_label,
+        'meses_disponibles': _dc_meses_disponibles(hoy),
+        'ingreso_esperado': ingreso_esperado,
+        'ingreso_real': ingreso_real,
+        'ingreso_pct': ingreso_pct,
+        'ingreso_delta_pct': ingreso_delta_pct,
+        'pacientes_actuales': pacientes_actuales,
+        'meta_pacientes': meta_pacientes,
+        'pacientes_pct': pacientes_pct,
+        'ring_offset': ring_offset,
+        'anio_anterior': anio_anterior,
+        'citas_tomadas': citas_tomadas,
+        'citas_sin_seguimiento': citas_sin_seguimiento,
+        'citas_acumuladas': citas_acumuladas,
+        'pct_tomadas_vs_acum': pct_tomadas_vs_acum,
+        'pct_sin_seguimiento': pct_sin_seguimiento,
+        'divisiones_disponibles': divisiones_disponibles,
+        'sedes_disponibles': sedes_disponibles,
+        'terapeutas_disponibles': terapeutas_disponibles,
+        'filtros_actuales': filtros_actuales,
+        'query_string': query_string,
+        'pacientes': pacientes,
+    }
+    return render(request, 'clinica/portal_direccion_comercial.html', context)
+
+
 @login_required
 def portal_paciente(request):
     # 1. Verificamos si el usuario actual tiene un perfil de paciente
     if not hasattr(request.user, 'perfil_paciente'):
-        return redirect('home') 
+        return redirect('home')
     
     # 2. Identificamos al paciente exacto
     mi_perfil = request.user.perfil_paciente

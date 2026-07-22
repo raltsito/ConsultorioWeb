@@ -123,6 +123,9 @@ urlpatterns = [
     path('consultoria/expositor/solicitar/', clinica_views.solicitar_horas_expositor_consultoria, name='solicitar_horas_expositor_consultoria'),
     path('consultoria/incidentes/reportar/', clinica_views.reportar_incidente_consultoria, name='reportar_incidente_consultoria'),
 
+    # Portal Direccion Comercial
+    path('portal-direccion-comercial/', clinica_views.portal_direccion_comercial, name='portal_direccion_comercial'),
+
     # Catálogo de Terapeutas
     path('catalogo-terapeutas/', clinica_views.catalogo_terapeutas, name='catalogo_terapeutas'),
     path('api/catalogo/', clinica_views.api_catalogo_list, name='api_catalogo_list'),

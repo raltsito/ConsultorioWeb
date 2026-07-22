@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib import admin
-from .models import AccesoDirectoPortal, Consultoria, Empresa, Host, HostChecklistTask, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta, RecursoPropio, MensajeWhatsApp, ConfiguracionWhatsApp, MensajeWhatsAppDemo
+from .models import AccesoDirectoPortal, Consultoria, DireccionComercial, Empresa, Host, HostChecklistTask, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta, RecursoPropio, MensajeWhatsApp, ConfiguracionWhatsApp, MensajeWhatsAppDemo
 from .models import Horario
 from .models import Instrumento, PreguntaInstrumento, EnvioInstrumento, RespuestaInstrumento
 
@@ -29,6 +29,14 @@ class ConsultoriaAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'usuario', 'activo')
     list_filter = ('activo',)
     search_fields = ('nombre', 'usuario__username')
+
+
+@admin.register(DireccionComercial)
+class DireccionComercialAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'usuario', 'activo')
+    list_filter = ('activo',)
+    search_fields = ('nombre', 'usuario__username')
+    filter_horizontal = ('divisiones',)
 
 
 @admin.register(HostChecklistTask)

@@ -105,6 +105,28 @@ class Consultoria(models.Model):
         verbose_name_plural = "Consultorias"
 
 
+class DireccionComercial(models.Model):
+    usuario = models.OneToOneField(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='perfil_direccion_comercial'
+    )
+    nombre = models.CharField(max_length=100)
+    divisiones = models.ManyToManyField(
+        'Division',
+        blank=True,
+        related_name='direcciones_comerciales',
+        help_text='Divisiones a las que este perfil de dirección comercial tiene acceso.',
+    )
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
+
+    class Meta:
+        verbose_name = "Dirección Comercial"
+        verbose_name_plural = "Dirección Comercial"
+
+
 class HostChecklistTask(models.Model):
     titulo = models.CharField(max_length=140)
     subtitulo = models.CharField(max_length=180, blank=True)
