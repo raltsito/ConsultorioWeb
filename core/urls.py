@@ -126,6 +126,9 @@ urlpatterns = [
     # Portal Direccion Comercial
     path('portal-direccion-comercial/', clinica_views.portal_direccion_comercial, name='portal_direccion_comercial'),
 
+    # Portal Lider de Operaciones Clinicas
+    path('portal-operaciones-clinicas/', clinica_views.portal_lider_operaciones_clinicas, name='portal_lider_operaciones_clinicas'),
+
     # Catálogo de Terapeutas
     path('catalogo-terapeutas/', clinica_views.catalogo_terapeutas, name='catalogo_terapeutas'),
     path('api/catalogo/', clinica_views.api_catalogo_list, name='api_catalogo_list'),

@@ -1,0 +1,227 @@
+{% extends 'clinica/base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .loc-hero {
+        background: #0d6efd;
+        border-radius: 24px;
+        padding: 30px 34px;
+        box-shadow: 0 20px 45px rgba(13,110,253,.28);
+        color: #fff;
+        margin-bottom: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    .loc-hero-icon {
+        width: 64px; height: 64px; border-radius: 18px;
+        background: rgba(255,255,255,.18);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.8rem; flex-shrink: 0;
+    }
+    .loc-btn-exportar {
+        display: inline-flex; align-items: center; gap: 8px; background: #fff; color: #0d6efd;
+        border: none; padding: 11px 20px; border-radius: 999px; font-weight: 700; font-size: .9rem;
+        cursor: pointer; box-shadow: 0 10px 22px rgba(0,0,0,.14); transition: transform .18s ease; text-decoration: none;
+    }
+    .loc-btn-exportar:hover { transform: translateY(-2px); color: #0d6efd; }
+
+    .loc-filtros { background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.05); padding: 22px 26px; margin-bottom: 20px; }
+    .loc-filtros .row-flex { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .loc-filtros input[type="text"], .loc-filtros select {
+        padding: 10px 14px; border-radius: 12px; border: 1px solid #E0E6EC; font-size: .86rem; color: #37474F; background: #fff; font-weight: 600;
+    }
+    .loc-filtros input[type="text"] { flex: 1 1 220px; min-width: 200px; padding-left: 38px; }
+    .loc-search-wrap { position: relative; flex: 1 1 220px; min-width: 200px; }
+    .loc-search-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #90A4AE; }
+
+    .loc-tabla-card { background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.05); overflow: hidden; }
+    .loc-tabla-head { display: flex; justify-content: space-between; align-items: center; padding: 22px 26px; border-bottom: 1px solid #F0F4F8; }
+    .loc-tabla { width: 100%; border-collapse: collapse; min-width: 1400px; }
+    .loc-tabla thead tr { background: #F7F9FC; }
+    .loc-tabla th { text-align: left; padding: 12px 14px; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: #90A4AE; font-weight: 700; white-space: nowrap; }
+    .loc-tabla td { padding: 14px; border-top: 1px solid #F0F4F8; font-size: .86rem; white-space: nowrap; }
+    .loc-tabla tbody tr:hover { background: #F7FBFC; }
+    .loc-badge-division { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: .76rem; font-weight: 700; color: #fff; }
+    .loc-badge-estado { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; }
+    .loc-badge-estado.ok { background: #EAF7F1; color: #2E7D32; }
+    .loc-badge-estado.warn { background: #FEF1F1; color: #EF5350; }
+    .loc-badge-estado.neutral { background: #ECEFF1; color: #78909C; }
+
+    .loc-nombre-toggle { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: normal; }
+    .loc-nombre-toggle .bi-chevron-right { font-size: .7rem; color: #90A4AE; transition: transform .2s ease; }
+    .loc-nombre-toggle:not(.collapsed) .bi-chevron-right { transform: rotate(90deg); }
+    .loc-historial-tabla { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    .loc-historial-tabla th { text-align: left; padding: 4px 8px; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: #90A4AE; }
+    .loc-historial-tabla td { padding: 5px 8px; color: #546E7A; }
+</style>
+
+<div class="loc-hero">
+    <div style="display:flex; align-items:center; gap:18px; min-width:280px;">
+        <div class="loc-hero-icon"><i class="bi bi-people-fill"></i></div>
+        <div>
+            <h2 style="font-family:'Poppins',sans-serif; font-weight:700; margin:0 0 4px; font-size:1.5rem;">Relación de Pacientes</h2>
+            <p style="margin:0; opacity:.9; font-size:1rem;">Operaciones clínicas · vista completa de la base de pacientes</p>
+        </div>
+    </div>
+    <a href="?{{ query_string }}&export=csv" class="loc-btn-exportar"><i class="bi bi-file-earmark-arrow-down"></i> Exportar reporte</a>
+</div>
+
+<form method="get" class="loc-filtros">
+    <div class="row-flex">
+        <div class="loc-search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" name="q" value="{{ filtros_actuales.q }}" placeholder="Buscar paciente o teléfono..." onchange="this.form.submit()" style="width:100%; box-sizing:border-box;">
+        </div>
+        <select name="division" onchange="this.form.submit()">
+            <option value="">Toda división</option>
+            {% for d in divisiones_disponibles %}<option value="{{ d }}" {% if filtros_actuales.division == d %}selected{% endif %}>{{ d }}</option>{% endfor %}
+        </select>
+        <select name="empresa" onchange="this.form.submit()">
+            <option value="">Toda empresa</option>
+            {% for e in empresas_disponibles %}<option value="{{ e }}" {% if filtros_actuales.empresa == e %}selected{% endif %}>{{ e }}</option>{% endfor %}
+        </select>
+        <select name="servicio" onchange="this.form.submit()">
+            <option value="">Todo servicio</option>
+            {% for s in servicios_disponibles %}<option value="{{ s }}" {% if filtros_actuales.servicio == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+        <select name="sede" onchange="this.form.submit()">
+            <option value="">Toda sede</option>
+            {% for s in sedes_disponibles %}<option value="{{ s }}" {% if filtros_actuales.sede == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+        <select name="terapeuta" onchange="this.form.submit()">
+            <option value="">Todo terapeuta</option>
+            {% for t in terapeutas_disponibles %}<option value="{{ t.id }}" {% if filtros_actuales.terapeuta == t.id|stringformat:"s" %}selected{% endif %}>{{ t.nombre }}</option>{% endfor %}
+        </select>
+        <select name="sexo" onchange="this.form.submit()">
+            <option value="">Todo sexo</option>
+            <option value="Femenino" {% if filtros_actuales.sexo == 'Femenino' %}selected{% endif %}>Femenino</option>
+            <option value="Masculino" {% if filtros_actuales.sexo == 'Masculino' %}selected{% endif %}>Masculino</option>
+        </select>
+        <select name="contacto" onchange="this.form.submit()">
+            <option value="">Todo contacto</option>
+            <option value="propio" {% if filtros_actuales.contacto == 'propio' %}selected{% endif %}>Propio</option>
+            <option value="madre" {% if filtros_actuales.contacto == 'madre' %}selected{% endif %}>Madre</option>
+            <option value="padre" {% if filtros_actuales.contacto == 'padre' %}selected{% endif %}>Padre</option>
+            <option value="pareja" {% if filtros_actuales.contacto == 'pareja' %}selected{% endif %}>Pareja</option>
+            <option value="otro" {% if filtros_actuales.contacto == 'otro' %}selected{% endif %}>Otro</option>
+        </select>
+        <select name="estado" onchange="this.form.submit()">
+            <option value="">Todo estado</option>
+            <option value="Activo" {% if filtros_actuales.estado == 'Activo' %}selected{% endif %}>Activo</option>
+            <option value="Suspendido" {% if filtros_actuales.estado == 'Suspendido' %}selected{% endif %}>Suspendido</option>
+        </select>
+        <select name="alta" onchange="this.form.submit()">
+            <option value="">Alta: todos</option>
+            <option value="si" {% if filtros_actuales.alta == 'si' %}selected{% endif %}>Dado de alta</option>
+            <option value="no" {% if filtros_actuales.alta == 'no' %}selected{% endif %}>No dado de alta</option>
+        </select>
+        <select name="desercion" onchange="this.form.submit()">
+            <option value="">Deserción: todos</option>
+            <option value="si" {% if filtros_actuales.desercion == 'si' %}selected{% endif %}>En deserción</option>
+            <option value="no" {% if filtros_actuales.desercion == 'no' %}selected{% endif %}>Al día (sin deserción)</option>
+        </select>
+        <select name="orden" onchange="this.form.submit()">
+            <option value="nombre" {% if filtros_actuales.orden == 'nombre' %}selected{% endif %}>Ordenar: Nombre A-Z</option>
+            <option value="desercion" {% if filtros_actuales.orden == 'desercion' %}selected{% endif %}>Ordenar: Deserción primero</option>
+            <option value="ultima_cita" {% if filtros_actuales.orden == 'ultima_cita' %}selected{% endif %}>Ordenar: Última cita más antigua</option>
+        </select>
+    </div>
+</form>
+
+<div class="loc-tabla-card">
+    <div class="loc-tabla-head">
+        <h5 style="font-family:'Poppins',sans-serif; font-weight:700; color:#37474F; margin:0;"><i class="bi bi-people-fill me-2" style="color:#26C6DA;"></i>Pacientes</h5>
+        <span style="color:#90A4AE; font-size:.86rem; font-weight:600;">{{ pacientes|length }} paciente{{ pacientes|length|pluralize }} · deserción = sin cita agendada en {{ dias_desercion }} días</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="loc-tabla">
+            <thead>
+                <tr>
+                    <th>Paciente</th><th>Estado</th><th>Deserción</th><th>División</th>
+                    {% if columnas_extra.sexo %}<th>Sexo</th>{% endif %}
+                    {% if columnas_extra.empresa %}<th>Empresa</th>{% endif %}
+                    {% if columnas_extra.servicio %}<th>Servicio</th>{% endif %}
+                    {% if columnas_extra.contacto %}<th>Contacto</th>{% endif %}
+                    {% if columnas_extra.alta %}<th>Dado de alta</th>{% endif %}
+                    {% if columnas_extra.sede %}<th>Sede</th>{% endif %}
+                    {% if columnas_extra.terapeuta %}<th>Terapeuta</th>{% endif %}
+                    {% if columnas_extra.ultima_cita %}<th>Última cita</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in pacientes %}
+                <tr>
+                    <td>
+                        <div class="loc-nombre-toggle collapsed" style="font-weight:700; color:#37474F;"
+                             data-bs-toggle="collapse" data-bs-target="#loc-hist-{{ p.id }}" aria-expanded="false" role="button">
+                            <i class="bi bi-chevron-right"></i>{{ p.nombre }}
+                        </div>
+                        <div style="color:#90A4AE; font-size:.8rem; margin-top:2px;"><i class="bi bi-telephone-fill me-1"></i>{{ p.telefono }}</div>
+                    </td>
+                    <td>
+                        {% if p.estado == 'Suspendido' %}
+                        <span class="loc-badge-estado warn">Suspendido</span>
+                        {% else %}
+                        <span class="loc-badge-estado ok">Activo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if p.desercion %}
+                        <span class="loc-badge-estado warn">Deserción</span>
+                        {% else %}
+                        <span class="loc-badge-estado ok">Al día</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="loc-badge-division" style="background:{{ p.division_color }};">{{ p.division }}</span></td>
+                    {% if columnas_extra.sexo %}<td>{{ p.sexo }}</td>{% endif %}
+                    {% if columnas_extra.empresa %}<td>{{ p.empresa }}</td>{% endif %}
+                    {% if columnas_extra.servicio %}<td>{{ p.servicio }}</td>{% endif %}
+                    {% if columnas_extra.contacto %}<td>{{ p.contacto }}</td>{% endif %}
+                    {% if columnas_extra.alta %}<td>{% if p.dado_de_alta %}Sí{% else %}No{% endif %}</td>{% endif %}
+                    {% if columnas_extra.sede %}<td>{{ p.sede }}</td>{% endif %}
+                    {% if columnas_extra.terapeuta %}<td>{{ p.terapeuta }}</td>{% endif %}
+                    {% if columnas_extra.ultima_cita %}<td>{% if p.ultima_cita %}{{ p.ultima_cita|date:"d/m/Y" }}{% else %}Nunca{% endif %}</td>{% endif %}
+                </tr>
+                <tr>
+                    <td colspan="{{ total_columnas }}" style="padding:0;">
+                        <div class="collapse" id="loc-hist-{{ p.id }}">
+                            <div style="padding:16px 26px; background:#F7F9FC;">
+                                {% if p.historial %}
+                                <table class="loc-historial-tabla">
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha</th><th>Terapeuta</th><th>Servicio</th>
+                                            <th>Estatus</th><th style="text-align:right;">Costo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for c in p.historial %}
+                                        <tr>
+                                            <td>{{ c.fecha|date:"d/m/Y" }}</td>
+                                            <td>{{ c.terapeuta|default:"—" }}</td>
+                                            <td>{{ c.servicio|default:"—" }}</td>
+                                            <td>{{ c.get_estatus_display }}</td>
+                                            <td style="text-align:right;">${{ c.costo|default:0|floatformat:2 }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div style="color:#90A4AE;">Este paciente no tiene citas registradas.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="{{ total_columnas }}" style="padding:50px; text-align:center; color:#90A4AE;">No hay pacientes que coincidan con estos filtros.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

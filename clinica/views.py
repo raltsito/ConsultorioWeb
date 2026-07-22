@@ -39,6 +39,7 @@ from .models import (
     Consultoria,
     Consultorio,
     DireccionComercial,
+    LiderOperacionesClinicas,
     SolicitudHorasExpositor,
     Division,
     DocumentoPaciente,
@@ -396,6 +397,9 @@ def home(request):
 
     if hasattr(request.user, 'perfil_direccion_comercial'):
         return redirect('portal_direccion_comercial')
+
+    if hasattr(request.user, 'perfil_lider_operaciones_clinicas'):
+        return redirect('portal_lider_operaciones_clinicas')
 
     hoy = timezone.now().date()
     mes_actual = timezone.now().month
@@ -3369,6 +3373,172 @@ def portal_direccion_comercial(request):
         'pacientes': pacientes,
     }
     return render(request, 'clinica/portal_direccion_comercial.html', context)
+
+
+_LOC_DIAS_DESERCION = 60
+
+
+@login_required
+def portal_lider_operaciones_clinicas(request):
+    if not hasattr(request.user, 'perfil_lider_operaciones_clinicas'):
+        return redirect('home')
+
+    hoy = date.today()
+    corte_desercion = hoy - timedelta(days=_LOC_DIAS_DESERCION)
+
+    q_filtro = (request.GET.get('q') or '').strip()
+    division_filtro = request.GET.get('division') or ''
+    empresa_filtro = request.GET.get('empresa') or ''
+    servicio_filtro = request.GET.get('servicio') or ''
+    sede_filtro = request.GET.get('sede') or ''
+    terapeuta_filtro = request.GET.get('terapeuta') or ''
+    sexo_filtro = request.GET.get('sexo') or ''
+    contacto_filtro = request.GET.get('contacto') or ''
+    estado_filtro = request.GET.get('estado') or ''
+    alta_filtro = request.GET.get('alta') or ''
+    desercion_filtro = request.GET.get('desercion') or ''
+    orden_filtro = request.GET.get('orden') or 'nombre'
+
+    pacientes_qs = Paciente.objects.select_related('division', 'empresa', 'servicio_inicial')
+    if division_filtro:
+        pacientes_qs = pacientes_qs.filter(division__nombre=division_filtro)
+    if empresa_filtro:
+        pacientes_qs = pacientes_qs.filter(empresa__nombre=empresa_filtro)
+    if servicio_filtro:
+        pacientes_qs = pacientes_qs.filter(servicio_inicial__nombre=servicio_filtro)
+    if sexo_filtro:
+        pacientes_qs = pacientes_qs.filter(sexo=sexo_filtro)
+    if contacto_filtro:
+        pacientes_qs = pacientes_qs.filter(identidad_contacto=contacto_filtro)
+    if estado_filtro:
+        pacientes_qs = pacientes_qs.filter(estado=estado_filtro)
+    if alta_filtro:
+        pacientes_qs = pacientes_qs.filter(dado_de_alta=(alta_filtro == 'si'))
+    if q_filtro:
+        pacientes_qs = pacientes_qs.filter(Q(nombre__icontains=q_filtro) | Q(telefono__icontains=q_filtro))
+    pacientes_qs = pacientes_qs.prefetch_related(
+        Prefetch(
+            'citas',
+            queryset=Cita.objects.select_related('consultorio', 'terapeuta').order_by('-fecha', '-hora'),
+        )
+    ).order_by('nombre')
+
+    divisiones_disponibles = list(Division.objects.order_by('nombre').values_list('nombre', flat=True))
+    empresas_disponibles = list(Empresa.objects.order_by('nombre').values_list('nombre', flat=True))
+    servicios_disponibles = list(Servicio.objects.order_by('nombre').values_list('nombre', flat=True))
+    sedes_disponibles = sorted(dict(Consultorio.SEDE_CHOICES).values())
+    terapeutas_disponibles = Terapeuta.objects.order_by('nombre')
+
+    pacientes = []
+    for p in pacientes_qs:
+        todas_citas = list(p.citas.all())
+        ultima_cita = todas_citas[0] if todas_citas else None
+        sede_p = (
+            ultima_cita.consultorio.get_sede_display()
+            if ultima_cita and ultima_cita.consultorio and ultima_cita.consultorio.sede
+            else '—'
+        )
+        terapeuta_p = str(ultima_cita.terapeuta) if ultima_cita and ultima_cita.terapeuta else '—'
+        terapeuta_id_p = ultima_cita.terapeuta_id if ultima_cita and ultima_cita.terapeuta_id else None
+        desercion_p = (ultima_cita is None) or (ultima_cita.fecha < corte_desercion)
+
+        if sede_filtro and sede_p != sede_filtro:
+            continue
+        if terapeuta_filtro and str(terapeuta_id_p or '') != terapeuta_filtro:
+            continue
+        if desercion_filtro == 'si' and not desercion_p:
+            continue
+        if desercion_filtro == 'no' and desercion_p:
+            continue
+
+        pacientes.append({
+            'id': p.id,
+            'nombre': p.nombre,
+            'telefono': p.telefono,
+            'sexo': p.get_sexo_display(),
+            'division': p.division.nombre if p.division else '—',
+            'division_color': _DC_PALETA_DIVISION[p.division_id % len(_DC_PALETA_DIVISION)] if p.division_id else '#90A4AE',
+            'empresa': p.empresa.nombre if p.empresa else '—',
+            'servicio': p.servicio_inicial.nombre if p.servicio_inicial else '—',
+            'contacto': p.get_identidad_contacto_display(),
+            'estado': p.estado,
+            'dado_de_alta': p.dado_de_alta,
+            'fecha_registro': p.fecha_registro,
+            'sede': sede_p,
+            'terapeuta': terapeuta_p,
+            'ultima_cita': ultima_cita.fecha if ultima_cita else None,
+            'desercion': desercion_p,
+            'historial': todas_citas,
+        })
+
+    if orden_filtro == 'desercion':
+        pacientes.sort(key=lambda p: (not p['desercion'], p['nombre']))
+    elif orden_filtro == 'ultima_cita':
+        pacientes.sort(key=lambda p: (p['ultima_cita'] is not None, p['ultima_cita'] or date.max))
+    # 'nombre' ya queda ordenado alfabeticamente desde pacientes_qs.order_by('nombre')
+
+    filtros_actuales = {
+        'q': q_filtro,
+        'division': division_filtro,
+        'empresa': empresa_filtro,
+        'servicio': servicio_filtro,
+        'sede': sede_filtro,
+        'terapeuta': terapeuta_filtro,
+        'sexo': sexo_filtro,
+        'contacto': contacto_filtro,
+        'estado': estado_filtro,
+        'alta': alta_filtro,
+        'desercion': desercion_filtro,
+        'orden': orden_filtro,
+    }
+    query_string = urlencode({k: v for k, v in filtros_actuales.items() if v})
+
+    # Columnas basicas siempre visibles; el resto solo aparece cuando filtras por ese dato.
+    columnas_extra = {
+        'sexo': bool(sexo_filtro),
+        'empresa': bool(empresa_filtro),
+        'servicio': bool(servicio_filtro),
+        'contacto': bool(contacto_filtro),
+        'alta': bool(alta_filtro),
+        'sede': bool(sede_filtro),
+        'terapeuta': bool(terapeuta_filtro),
+        'ultima_cita': bool(desercion_filtro) or orden_filtro == 'ultima_cita',
+    }
+    total_columnas = 4 + sum(1 for visible in columnas_extra.values() if visible)
+
+    if request.GET.get('export') == 'csv':
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = 'attachment; filename="relacion_pacientes.csv"'
+        writer = csv.writer(response)
+        writer.writerow([
+            'Paciente', 'Telefono', 'Sexo', 'Division', 'Empresa', 'Servicio', 'Contacto',
+            'Estado', 'Dado de alta', 'Fecha de registro', 'Sede', 'Terapeuta', 'Ultima cita', 'Desercion',
+        ])
+        for p in pacientes:
+            writer.writerow([
+                p['nombre'], p['telefono'], p['sexo'], p['division'], p['empresa'], p['servicio'], p['contacto'],
+                p['estado'], 'Si' if p['dado_de_alta'] else 'No',
+                p['fecha_registro'].strftime('%d/%m/%Y') if p['fecha_registro'] else '',
+                p['sede'], p['terapeuta'],
+                p['ultima_cita'].strftime('%d/%m/%Y') if p['ultima_cita'] else 'Nunca',
+                'Si' if p['desercion'] else 'No',
+            ])
+        return response
+
+    context = {
+        'dias_desercion': _LOC_DIAS_DESERCION,
+        'divisiones_disponibles': divisiones_disponibles,
+        'empresas_disponibles': empresas_disponibles,
+        'servicios_disponibles': servicios_disponibles,
+        'sedes_disponibles': sedes_disponibles,
+        'terapeutas_disponibles': terapeutas_disponibles,
+        'filtros_actuales': filtros_actuales,
+        'query_string': query_string,
+        'pacientes': pacientes,
+        'columnas_extra': columnas_extra,
+        'total_columnas': total_columnas,
+    }
+    return render(request, 'clinica/portal_lider_operaciones_clinicas.html', context)
 
 
 @login_required
