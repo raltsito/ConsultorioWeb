@@ -1,6 +1,6 @@
 import unicodedata
 import uuid
-from datetime import date
+from datetime import date, datetime
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.auth.models import User
@@ -219,13 +219,10 @@ class BloqueoAgendaTerapeuta(models.Model):
 
         if self.fecha_inicio and self.fecha_inicio < date.today():
             errores['fecha_inicio'] = 'Solo puedes bloquear fechas actuales o futuras.'
-
         if self.alcance == self.ALCANCE_DIA_SEMANA and self.dia_semana is None:
             errores['dia_semana'] = 'Selecciona el día semanal a bloquear.'
-
         if self.alcance == self.ALCANCE_FECHA:
             self.dia_semana = None
-
         if self.tipo_bloqueo == self.TIPO_TEMPORAL:
             if not self.fecha_fin:
                 errores['fecha_fin'] = 'Indica la fecha final del bloqueo temporal.'
@@ -233,12 +230,19 @@ class BloqueoAgendaTerapeuta(models.Model):
                 errores['fecha_fin'] = 'La fecha final no puede ser anterior a la inicial.'
         else:
             self.fecha_fin = None
-
         if self.hora_inicio or self.hora_fin:
             if not self.hora_inicio or not self.hora_fin:
-                errores['hora_fin'] = 'Indica hora de inicio y hora final para un bloqueo parcial.'
-            elif self.hora_fin <= self.hora_inicio:
-                errores['hora_fin'] = 'La hora final debe ser posterior a la inicial.'
+                errores['hora_fin'] = (
+                    'Indica hora de inicio y hora final para un bloqueo parcial.'
+                )
+            else:
+                inicio = datetime.combine(self.fecha_inicio, self.hora_inicio)
+                fecha_fin = self.fecha_fin if self.fecha_fin else self.fecha_inicio
+                fin = datetime.combine(fecha_fin, self.hora_fin)
+                if fin <= inicio:
+                    errores['hora_fin'] = (
+                        'La fecha y hora final deben ser posteriores a la fecha y hora inicial.'
+                    )
 
         if errores:
             raise ValidationError(errores)
@@ -256,7 +260,11 @@ class BloqueoAgendaTerapeuta(models.Model):
         if not self.aplica_en_fecha(fecha_obj):
             return False
         if self.hora_inicio and self.hora_fin and hora_obj:
-            return self.hora_inicio <= hora_obj < self.hora_fin
+            inicio = datetime.combine(self.fecha_inicio, self.hora_inicio)
+            fecha_fin = self.fecha_fin if self.fecha_fin else self.fecha_inicio
+            fin = datetime.combine(fecha_fin, self.hora_fin)
+            fecha_hora_consulta = datetime.combine(fecha_obj, hora_obj)
+            return inicio <= fecha_hora_consulta < fin
         return True
 
     def es_bloqueo_parcial(self):
