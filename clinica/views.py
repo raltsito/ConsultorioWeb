@@ -712,7 +712,7 @@ def api_sin_reagendar(request):
         estatus__in=[Cita.ESTATUS_SI_ASISTIO, Cita.ESTATUS_NO_ASISTIO],
         paciente__isnull=False,
         paciente__dado_de_alta=False, # dar de alta a un paciente
-        paciente__estado='activo', # dar suspension a un paciente
+        paciente__estado='Activo', # dar suspension a un paciente
     )
     if fecha_inicio is not None:
         citas_qs = citas_qs.filter(fecha__range=(fecha_inicio, fecha_fin))
