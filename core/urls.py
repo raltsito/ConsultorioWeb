@@ -82,6 +82,7 @@ urlpatterns = [
     path('disponibilidad/', clinica_views.disponibilidad_semanal, name='disponibilidad_semanal'),
     path('disponibilidad/agregar/', clinica_views.agregar_disponibilidad, name='agregar_disponibilidad'),
     path('disponibilidad/eliminar/<int:horario_id>/', clinica_views.eliminar_disponibilidad, name='eliminar_disponibilidad'),
+    path('disponibilidad/radar/', clinica_views.radar_disponibilidad_semanal, name='radar_disponibilidad_semanal'),
 
     # Reagendos
     path('citas/<int:cita_id>/solicitar-reagendo/', clinica_views.solicitar_reagendo, name='solicitar_reagendo'),
@@ -128,6 +129,7 @@ urlpatterns = [
 
     # Portal Lider de Operaciones Clinicas
     path('portal-operaciones-clinicas/', clinica_views.portal_lider_operaciones_clinicas, name='portal_lider_operaciones_clinicas'),
+    path('portal-supervisor-seguimiento/', clinica_views.portal_supervisor_seguimiento, name='portal_supervisor_seguimiento'),
 
     # Catálogo de Terapeutas
     path('catalogo-terapeutas/', clinica_views.catalogo_terapeutas, name='catalogo_terapeutas'),

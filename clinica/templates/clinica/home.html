@@ -649,6 +649,18 @@
                 </a>
                 {% endif %}
 
+                {% if user.is_staff or user.is_superuser %}
+                <a href="{% url 'radar_disponibilidad_semanal' %}" class="dock-tile">
+                    <span class="dock-chip" style="--c1:#0d6efd;--c2:#0A4FB5;">
+                        <i class="bi bi-grid-3x3-gap-fill"></i>
+                    </span>
+                    <span class="dock-text">
+                        <span class="dock-label">Radar de Disponibilidad</span>
+                        <span class="dock-sub">Huecos semanales de terapeutas</span>
+                    </span>
+                </a>
+                {% endif %}
+
                 {% if user.is_superuser %}
 
                 <a href="#" class="dock-tile" data-bs-toggle="modal" data-bs-target="#modalManualPortal">

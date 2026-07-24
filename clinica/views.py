@@ -5,7 +5,7 @@ import unicodedata
 import csv
 import io
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
 
@@ -400,6 +400,9 @@ def home(request):
 
     if hasattr(request.user, 'perfil_lider_operaciones_clinicas'):
         return redirect('portal_lider_operaciones_clinicas')
+
+    if hasattr(request.user, 'perfil_supervisor_seguimiento'):
+        return redirect('portal_supervisor_seguimiento')
 
     hoy = timezone.now().date()
     mes_actual = timezone.now().month
@@ -3542,6 +3545,14 @@ def portal_lider_operaciones_clinicas(request):
 
 
 @login_required
+def portal_supervisor_seguimiento(request):
+    if not hasattr(request.user, 'perfil_supervisor_seguimiento'):
+        return redirect('home')
+
+    return render(request, 'clinica/portal_supervisor_seguimiento.html')
+
+
+@login_required
 def portal_paciente(request):
     # 1. Verificamos si el usuario actual tiene un perfil de paciente
     if not hasattr(request.user, 'perfil_paciente'):
@@ -5228,6 +5239,103 @@ def eliminar_disponibilidad(request, horario_id):
         terapeuta=ter_obj)
     messages.success(request, f'Horario eliminado para {nombre}.')
     return redirect('disponibilidad_semanal')
+
+
+_RADAR_HORA_INICIO = 8
+_RADAR_HORA_FIN = 21
+
+
+@login_required
+def radar_disponibilidad_semanal(request):
+    """
+    Calendario semanal con TODOS los terapeutas a la vez, para detectar huecos
+    de cobertura. Solo visible para staff/superuser (info sensible de plantilla completa).
+    """
+    if not (request.user.is_staff or request.user.is_superuser):
+        return redirect('home')
+
+    hoy = timezone.localdate()
+    lunes_actual = hoy - timedelta(days=hoy.weekday())
+    semana_param = request.GET.get('semana', '')
+    try:
+        lunes = datetime.strptime(semana_param, '%Y-%m-%d').date() if semana_param else lunes_actual
+        lunes = lunes - timedelta(days=lunes.weekday())
+    except ValueError:
+        lunes = lunes_actual
+    fechas_semana = [lunes + timedelta(days=i) for i in range(7)]
+
+    terapeutas = list(Terapeuta.objects.filter(activo=True).order_by('nombre'))
+    terapeutas_ids = [t.id for t in terapeutas]
+    terapeutas_by_id = {t.id: t for t in terapeutas}
+
+    horarios_por_dia = defaultdict(list)
+    for h in Horario.objects.filter(terapeuta_id__in=terapeutas_ids):
+        horarios_por_dia[h.dia].append(h)
+
+    bloqueos_por_terapeuta = defaultdict(list)
+    for b in BloqueoAgendaTerapeuta.objects.filter(terapeuta_id__in=terapeutas_ids, activo=True):
+        bloqueos_por_terapeuta[b.terapeuta_id].append(b)
+
+    citas_por_terapeuta_fecha = defaultdict(list)
+    citas_qs = Cita.objects.filter(
+        terapeuta_id__in=terapeutas_ids,
+        fecha__range=(fechas_semana[0], fechas_semana[-1]),
+        estatus__in=Cita.ESTATUS_ACTIVOS,
+    ).values('terapeuta_id', 'fecha', 'hora')
+    for c in citas_qs:
+        citas_por_terapeuta_fecha[(c['terapeuta_id'], c['fecha'])].append(c['hora'])
+
+    dias_nombres = dict(DIAS_SEMANA)
+    dias_header = [{'fecha': f, 'nombre': dias_nombres[f.weekday()]} for f in fechas_semana]
+
+    filas = []
+    for h in range(_RADAR_HORA_INICIO, _RADAR_HORA_FIN):
+        slot_ini = time(h, 0)
+        slot_fin = time(h + 1, 0) if h + 1 < 24 else time(23, 59)
+        celdas = []
+        for fecha in fechas_semana:
+            dia_num = fecha.weekday()
+            nombres_base = set()
+            nombres_real = set()
+            for horario in horarios_por_dia.get(dia_num, []):
+                if not (horario.hora_inicio <= slot_ini < horario.hora_fin):
+                    continue
+                terapeuta = terapeutas_by_id.get(horario.terapeuta_id)
+                if not terapeuta:
+                    continue
+                nombres_base.add(terapeuta.nombre)
+
+                bloqueado = any(
+                    b.bloquea_fecha_hora(fecha, slot_ini)
+                    for b in bloqueos_por_terapeuta.get(horario.terapeuta_id, [])
+                )
+                if bloqueado:
+                    continue
+                ocupado = any(
+                    slot_ini <= ho < slot_fin
+                    for ho in citas_por_terapeuta_fecha.get((horario.terapeuta_id, fecha), [])
+                )
+                if ocupado:
+                    continue
+                nombres_real.add(terapeuta.nombre)
+
+            celdas.append({
+                'base': sorted(nombres_base),
+                'real': sorted(nombres_real),
+            })
+        filas.append({'hora': f'{h:02d}:00', 'celdas': celdas})
+
+    return render(request, 'clinica/radar_disponibilidad_semanal.html', {
+        'dias_header': dias_header,
+        'filas': filas,
+        'lunes': lunes,
+        'domingo': fechas_semana[-1],
+        'semana_anterior': (lunes - timedelta(days=7)).isoformat(),
+        'semana_siguiente': (lunes + timedelta(days=7)).isoformat(),
+        'semana_actual': lunes_actual.isoformat(),
+        'es_semana_actual': lunes == lunes_actual,
+        'total_terapeutas': len(terapeutas),
+    })
 
 
 @api_key_required

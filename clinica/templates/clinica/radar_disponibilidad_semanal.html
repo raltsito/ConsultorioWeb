@@ -1,0 +1,147 @@
+{% extends 'clinica/base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .rd-hero {
+        background: #0d6efd;
+        border-radius: 24px;
+        padding: 30px 34px;
+        box-shadow: 0 20px 45px rgba(13,110,253,.28);
+        color: #fff;
+        margin-bottom: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    .rd-hero-icon {
+        width: 64px; height: 64px; border-radius: 18px;
+        background: rgba(255,255,255,.18);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.8rem; flex-shrink: 0;
+    }
+    .rd-nav {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .rd-nav-btn {
+        display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.16); color: #fff;
+        border: none; padding: 9px 16px; border-radius: 999px; font-weight: 700; font-size: .82rem;
+        cursor: pointer; text-decoration: none; transition: background .15s ease;
+    }
+    .rd-nav-btn:hover { background: rgba(255,255,255,.28); color: #fff; }
+    .rd-nav-btn.rd-hoy { background: #fff; color: #0d6efd; }
+
+    .rd-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+    .rd-tab {
+        border: none; background: #fff; color: #607D8B; font-weight: 700; font-size: .82rem;
+        padding: 10px 18px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0,0,0,.06); cursor: pointer;
+    }
+    .rd-tab.active { background: #0d6efd; color: #fff; box-shadow: 0 8px 20px rgba(13,110,253,.3); }
+
+    .rd-leyenda { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; font-size: .82rem; color: #607D8B; }
+    .rd-leyenda-chip { display: inline-flex; align-items: center; gap: 6px; }
+    .rd-leyenda-dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+
+    .rd-tabla-card { background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.05); overflow: hidden; }
+    .rd-tabla-wrap { overflow-x: auto; }
+    .rd-tabla { width: 100%; border-collapse: collapse; min-width: 1100px; }
+    .rd-tabla th { text-align: center; padding: 12px 8px; font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: #607D8B; font-weight: 700; background: #F7F9FC; border-bottom: 1px solid #EEF1F5; white-space: nowrap; }
+    .rd-tabla th.rd-th-hora { text-align: left; padding-left: 16px; }
+    .rd-tabla td.rd-td-hora { padding: 10px 16px; font-size: .78rem; font-weight: 700; color: #90A4AE; white-space: nowrap; border-top: 1px solid #F0F4F8; vertical-align: top; }
+    .rd-tabla td.rd-celda { padding: 6px; border-top: 1px solid #F0F4F8; border-left: 1px solid #F0F4F8; vertical-align: top; min-width: 130px; }
+
+    .rd-celda-inner { border-radius: 10px; padding: 8px; min-height: 44px; display: flex; flex-direction: column; gap: 4px; }
+    .rd-celda-inner.rd-ok { background: #EAF7F1; }
+    .rd-celda-inner.rd-hueco { background: #FCEBEC; }
+
+    .rd-chip-terapeuta {
+        display: inline-block; background: #fff; color: #2E7D32; border: 1px solid #C8E6C9;
+        border-radius: 999px; padding: 2px 9px; font-size: .72rem; font-weight: 600; line-height: 1.5;
+    }
+    .rd-hueco-label { display: flex; align-items: center; gap: 5px; color: #C62828; font-size: .72rem; font-weight: 700; margin: auto 0; }
+
+    .rd-view-real { display: none; }
+    .rd-tabla[data-modo="real"] .rd-view-base { display: none; }
+    .rd-tabla[data-modo="real"] .rd-view-real { display: flex; }
+</style>
+
+<div class="rd-hero">
+    <div style="display:flex; align-items:center; gap:18px; min-width:280px;">
+        <div class="rd-hero-icon"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+        <div>
+            <h2 style="font-family:'Poppins',sans-serif; font-weight:700; margin:0 0 4px; font-size:1.5rem;">Radar de Disponibilidad</h2>
+            <p style="margin:0; opacity:.9; font-size:1rem;">
+                {{ lunes|date:"d M" }} – {{ domingo|date:"d M Y" }} · {{ total_terapeutas }} terapeuta{{ total_terapeutas|pluralize }} activo{{ total_terapeutas|pluralize }}
+            </p>
+        </div>
+    </div>
+    <div class="rd-nav">
+        <a href="?semana={{ semana_anterior }}" class="rd-nav-btn"><i class="bi bi-chevron-left"></i> Semana anterior</a>
+        {% if not es_semana_actual %}
+            <a href="?semana={{ semana_actual }}" class="rd-nav-btn rd-hoy">Esta semana</a>
+        {% endif %}
+        <a href="?semana={{ semana_siguiente }}" class="rd-nav-btn">Semana siguiente <i class="bi bi-chevron-right"></i></a>
+    </div>
+</div>
+
+<div class="rd-tabs">
+    <button class="rd-tab active" data-modo="base" onclick="cambiarRDModo('base')">Horario base</button>
+    <button class="rd-tab" data-modo="real" onclick="cambiarRDModo('real')">Disponibilidad real (sin bloqueos ni citas)</button>
+</div>
+
+<div class="rd-leyenda">
+    <span class="rd-leyenda-chip"><span class="rd-leyenda-dot" style="background:#EAF7F1;border:1px solid #C8E6C9;"></span> Con cobertura</span>
+    <span class="rd-leyenda-chip"><span class="rd-leyenda-dot" style="background:#FCEBEC;border:1px solid #F8BBD0;"></span> Hueco: sin terapeutas disponibles</span>
+</div>
+
+<div class="rd-tabla-card">
+    <div class="rd-tabla-wrap">
+        <table class="rd-tabla" id="rdTabla" data-modo="base">
+            <thead>
+                <tr>
+                    <th class="rd-th-hora">Hora</th>
+                    {% for dia in dias_header %}
+                        <th>{{ dia.nombre }}<br><span style="font-weight:600;">{{ dia.fecha|date:"d/m" }}</span></th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in filas %}
+                <tr>
+                    <td class="rd-td-hora">{{ fila.hora }}</td>
+                    {% for celda in fila.celdas %}
+                    <td class="rd-celda">
+                        <div class="rd-celda-inner rd-view-base {% if celda.base %}rd-ok{% else %}rd-hueco{% endif %}">
+                            {% for nombre in celda.base %}
+                                <span class="rd-chip-terapeuta">{{ nombre }}</span>
+                            {% empty %}
+                                <span class="rd-hueco-label"><i class="bi bi-exclamation-triangle-fill"></i> Sin cobertura</span>
+                            {% endfor %}
+                        </div>
+                        <div class="rd-celda-inner rd-view-real {% if celda.real %}rd-ok{% else %}rd-hueco{% endif %}">
+                            {% for nombre in celda.real %}
+                                <span class="rd-chip-terapeuta">{{ nombre }}</span>
+                            {% empty %}
+                                <span class="rd-hueco-label"><i class="bi bi-exclamation-triangle-fill"></i> Sin cobertura</span>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    window.cambiarRDModo = function(modo) {
+        document.getElementById('rdTabla').dataset.modo = modo;
+        document.querySelectorAll('.rd-tab').forEach(function(t) {
+            t.classList.toggle('active', t.dataset.modo === modo);
+        });
+    };
+</script>
+{% endblock %}

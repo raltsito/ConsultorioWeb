@@ -143,6 +143,22 @@ class LiderOperacionesClinicas(models.Model):
         verbose_name_plural = "Líderes de Operaciones Clínicas"
 
 
+class SupervisorSeguimiento(models.Model):
+    usuario = models.OneToOneField(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='perfil_supervisor_seguimiento'
+    )
+    nombre = models.CharField(max_length=100)
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nombre
+
+    class Meta:
+        verbose_name = "Supervisor de Seguimiento"
+        verbose_name_plural = "Supervisores de Seguimiento"
+
+
 class HostChecklistTask(models.Model):
     titulo = models.CharField(max_length=140)
     subtitulo = models.CharField(max_length=180, blank=True)

@@ -1,0 +1,218 @@
+{% extends 'clinica/base.html' %}
+{% load static %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+    .ss-hero {
+        background: #0d6efd;
+        border-radius: 24px;
+        padding: 30px 34px;
+        box-shadow: 0 20px 45px rgba(13,110,253,.28);
+        color: #fff;
+        margin-bottom: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    .ss-hero-icon {
+        width: 64px; height: 64px; border-radius: 18px;
+        background: rgba(255,255,255,.18);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.8rem; flex-shrink: 0;
+    }
+    .ss-btn-exportar {
+        display: inline-flex; align-items: center; gap: 8px; background: #fff; color: #0d6efd;
+        border: none; padding: 11px 20px; border-radius: 999px; font-weight: 700; font-size: .9rem;
+        cursor: pointer; box-shadow: 0 10px 22px rgba(0,0,0,.14); transition: transform .18s ease; text-decoration: none;
+    }
+    .ss-btn-exportar:hover { transform: translateY(-2px); color: #0d6efd; }
+    .ss-btn-exportar:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .ss-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .ss-tab {
+        border: none; background: #fff; color: #607D8B; font-weight: 700; font-size: .82rem;
+        padding: 10px 18px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0,0,0,.06); cursor: pointer;
+        transition: all .15s ease;
+    }
+    .ss-tab.active { background: #0d6efd; color: #fff; box-shadow: 0 8px 20px rgba(13,110,253,.3); }
+
+    .ss-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .ss-stat-card {
+        background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.05);
+        padding: 20px 24px; text-align: center;
+    }
+    .ss-stat-num { font-size: 2.1rem; font-weight: 800; font-family:'Poppins',sans-serif; margin: 0; }
+    .ss-stat-label { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: #90A4AE; font-weight: 700; margin-top: 4px; }
+    .ss-stat-card.total .ss-stat-num { color: #3949AB; }
+    .ss-stat-card.si .ss-stat-num { color: #2E7D32; }
+    .ss-stat-card.no .ss-stat-num { color: #C62828; }
+
+    .ss-tabla-card { background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.05); overflow: hidden; }
+    .ss-tabla-head { display: flex; justify-content: space-between; align-items: center; padding: 22px 26px; border-bottom: 1px solid #F0F4F8; }
+    .ss-tabla { width: 100%; border-collapse: collapse; }
+    .ss-tabla thead tr { background: #F7F9FC; }
+    .ss-tabla th { text-align: left; padding: 12px 14px; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: #90A4AE; font-weight: 700; white-space: nowrap; }
+    .ss-tabla td { padding: 14px; border-top: 1px solid #F0F4F8; font-size: .86rem; }
+    .ss-tabla tbody tr:hover { background: #F7FBFC; }
+    .ss-badge-estado { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; }
+    .ss-badge-estado.si { background: #EAF7F1; color: #2E7D32; }
+    .ss-badge-estado.no { background: #FCEBEC; color: #C62828; }
+</style>
+
+<div class="ss-hero">
+    <div style="display:flex; align-items:center; gap:18px; min-width:280px;">
+        <div class="ss-hero-icon"><i class="bi bi-person-lines-fill"></i></div>
+        <div>
+            <h2 style="font-family:'Poppins',sans-serif; font-weight:700; margin:0 0 4px; font-size:1.5rem;">Pacientes sin Seguimiento</h2>
+            <p style="margin:0; opacity:.9; font-size:1rem;">Supervisión de seguimiento clínico · vista de solo lectura</p>
+        </div>
+    </div>
+    <button type="button" class="ss-btn-exportar" id="ssBtnExportar" onclick="exportarSSPDF()">
+        <i class="bi bi-file-earmark-arrow-down"></i> Exportar PDF
+    </button>
+</div>
+
+<div class="ss-tabs">
+    <button class="ss-tab active" data-periodo="dia" onclick="cambiarSSPeriodo('dia')">Ayer</button>
+    <button class="ss-tab" data-periodo="semana" onclick="cambiarSSPeriodo('semana')">Esta semana</button>
+    <button class="ss-tab" data-periodo="mes" onclick="cambiarSSPeriodo('mes')">Este mes</button>
+    <button class="ss-tab" data-periodo="todo" onclick="cambiarSSPeriodo('todo')">Histórico</button>
+</div>
+
+<div class="ss-stats">
+    <div class="ss-stat-card total">
+        <p class="ss-stat-num" id="ssStatTotal">—</p>
+        <p class="ss-stat-label">Sin seguimiento</p>
+    </div>
+    <div class="ss-stat-card si">
+        <p class="ss-stat-num" id="ssStatSi">—</p>
+        <p class="ss-stat-label">Asistieron</p>
+    </div>
+    <div class="ss-stat-card no">
+        <p class="ss-stat-num" id="ssStatNo">—</p>
+        <p class="ss-stat-label">No asistieron</p>
+    </div>
+</div>
+
+<div class="ss-tabla-card">
+    <div class="ss-tabla-head">
+        <h5 class="fw-bold mb-0 text-dark" id="ssTablaTitulo">Pacientes de ayer sin reagendar</h5>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="ss-tabla">
+            <thead>
+                <tr>
+                    <th>Paciente</th>
+                    <th>Última cita</th>
+                    <th>Terapeuta</th>
+                    <th>Estatus</th>
+                </tr>
+            </thead>
+            <tbody id="ssTablaBody">
+                <tr><td colspan="4" class="text-center text-muted py-4">Cargando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+(function() {
+    const SUB = {
+        dia: 'Pacientes de ayer sin reagendar',
+        semana: 'Pacientes de esta semana sin reagendar',
+        mes: 'Pacientes de este mes sin reagendar',
+        todo: 'Todos los pacientes sin reagendar (histórico)',
+    };
+    const LABELS = { dia: 'Ayer', semana: 'Esta semana', mes: 'Este mes', todo: 'Histórico' };
+    let ssPeriodo = 'dia';
+    let ssData = null;
+
+    window.cambiarSSPeriodo = function(periodo) {
+        ssPeriodo = periodo;
+        document.querySelectorAll('.ss-tab').forEach(function(t) {
+            t.classList.toggle('active', t.dataset.periodo === periodo);
+        });
+        document.getElementById('ssTablaTitulo').textContent = SUB[periodo];
+        const body = document.getElementById('ssTablaBody');
+        body.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>Cargando...</td></tr>';
+        document.getElementById('ssBtnExportar').disabled = true;
+
+        fetch('/api/sin-reagendar/?periodo=' + periodo)
+            .then(function(r) { return r.json(); })
+            .then(renderSS)
+            .catch(function() {
+                body.innerHTML = '<tr><td colspan="4" class="text-center text-danger small py-4"><i class="bi bi-exclamation-circle me-2"></i>Error al cargar. Intenta de nuevo.</td></tr>';
+            });
+    };
+
+    function renderSS(data) {
+        ssData = data;
+        document.getElementById('ssStatTotal').textContent = data.total;
+        document.getElementById('ssStatSi').textContent = data.si;
+        document.getElementById('ssStatNo').textContent = data.no;
+        document.getElementById('ssBtnExportar').disabled = data.total === 0;
+
+        const body = document.getElementById('ssTablaBody');
+        if (data.total === 0) {
+            body.innerHTML = '<tr><td colspan="4" class="text-center py-5"><div class="mb-2" style="font-size:2.4rem;">✅</div><p class="fw-semibold text-secondary mb-0">¡Todo al día!</p><p class="text-muted small mb-0">Todos los pacientes tienen seguimiento agendado.</p></td></tr>';
+            return;
+        }
+        body.innerHTML = data.pacientes.map(function(p) {
+            const esSi = p.estatus === 'si_asistio';
+            const badgeClass = esSi ? 'si' : 'no';
+            const icon = esSi ? 'check-circle-fill' : 'x-circle-fill';
+            const label = esSi ? 'Asistió' : 'No asistió';
+            return '<tr>' +
+                '<td class="fw-semibold">' + p.nombre + '</td>' +
+                '<td>' + p.fecha + '</td>' +
+                '<td>' + p.terapeuta + '</td>' +
+                '<td><span class="ss-badge-estado ' + badgeClass + '"><i class="bi bi-' + icon + '"></i>' + label + '</span></td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    window.exportarSSPDF = function() {
+        if (!ssData || ssData.total === 0) return;
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const hoy = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+
+        doc.setFontSize(16);
+        doc.setTextColor(13, 110, 253);
+        doc.text('Pacientes sin seguimiento', 14, 18);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(LABELS[ssPeriodo] || ssPeriodo, 14, 25);
+        doc.text('Generado: ' + hoy, 14, 31);
+
+        doc.setFontSize(9);
+        doc.setTextColor(60);
+        doc.text('Total: ' + ssData.total + '   Asistieron: ' + ssData.si + '   No asistieron: ' + ssData.no, 14, 38);
+
+        const rows = ssData.pacientes.map(function(p) {
+            return [p.nombre, p.fecha, p.terapeuta !== '—' ? p.terapeuta : '', p.estatus === 'si_asistio' ? 'Asistió' : 'No asistió'];
+        });
+
+        doc.autoTable({
+            startY: 44,
+            head: [['Paciente', 'Última cita', 'Terapeuta', 'Estatus']],
+            body: rows,
+            headStyles: { fillColor: [13, 110, 253], textColor: 255, fontSize: 9, fontStyle: 'bold' },
+            bodyStyles: { fontSize: 8.5 },
+            alternateRowStyles: { fillColor: [240, 246, 255] },
+            columnStyles: { 3: { halign: 'center' } },
+            margin: { left: 14, right: 14 },
+        });
+
+        doc.save('pacientes-sin-seguimiento-' + ssPeriodo + '.pdf');
+    };
+
+    document.addEventListener('DOMContentLoaded', function() { cambiarSSPeriodo('dia'); });
+})();
+</script>
+{% endblock %}
