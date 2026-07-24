@@ -546,7 +546,7 @@
     </div>
     <!-- Botones -->
     <div class="hero-actions">
-      {% if request.user.is_superuser %}
+      {% if request.user.is_superuser or request.user.is_staff %}
       <button class="btn-hero-primary" data-bs-toggle="modal" data-bs-target="#modalAltaPaciente">
         {% if paciente.dado_de_alta %}
           <i class="bi bi-arrow-clockwise me-1"></i>
