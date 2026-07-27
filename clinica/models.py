@@ -460,9 +460,6 @@ class Paciente(models.Model):
     fecha_nacimiento = models.DateField(verbose_name="Fecha de Nacimiento")
 
     # Dar de alta un paciente
-
-
-
     dado_de_alta = models.BooleanField(
         default = False,
         verbose_name = "Dado de alta"

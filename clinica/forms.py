@@ -120,13 +120,14 @@ class PacienteForm(forms.ModelForm):
     class Meta:
         model = Paciente
         fields = [
-            'nombre', 'fecha_nacimiento', 'telefono', 'identidad_contacto',
+            'nombre', 'fecha_nacimiento', 'sexo', 'telefono', 'identidad_contacto',
             'servicio_inicial','pacientes_relacionados', 'consentimiento_firmado', 'estudio_socioeconomico',
             'apertura_expediente', 'resumen_clinico', 'enlace_resultados'
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre completo'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'WhatsApp'}),
+            'sexo': forms.Select(attrs={'class': 'form-select'}),
             'identidad_contacto': forms.Select(attrs={'class': 'form-select'}),
             'servicio_inicial': forms.Select(attrs={'class': 'form-select'}),
             
