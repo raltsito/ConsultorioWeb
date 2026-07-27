@@ -17,3 +17,10 @@ Thumbs.db
 
 # Respaldos de base de datos
 *.dump
+
+# Tailwind (dev build files — CSS is precompiled in clinica/static/)
+node_modules/
+input.css
+tailwind.config.js
+package.json
+package-lock.json

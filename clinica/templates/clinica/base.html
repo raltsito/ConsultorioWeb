@@ -670,19 +670,7 @@ document.addEventListener('DOMContentLoaded', function() {
         el.style.display = 'none';
     });
     
-    // Monitoreo cada 150ms para asegurar limpieza
-    setInterval(function() {
-        document.querySelectorAll('input, select, textarea').forEach(field => {
-            if (field.hasAttribute('required')) {
-                field.removeAttribute('required');
-            }
-            field.classList.remove('is-invalid');
-        });
-        document.querySelectorAll('button[type="submit"]').forEach(btn => {
-            btn.disabled = false;
-            btn.removeAttribute('disabled');
-        });
-    }, 150);
+
 });
 
 </script>
