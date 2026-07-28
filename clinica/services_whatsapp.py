@@ -100,9 +100,12 @@ TEMPLATE_BODIES = {
         '¡Gracias por tu compromiso con tu formación! 🩺',
 
     # --- Campañas masivas de Academia (panel Dirección Comercial) ---
+    # La clave es el nombre EXACTO con el que la plantilla quedó aprobada en
+    # Meta ('masivos1'); si no coincide, la API responde 132001. El nombre
+    # legible para el panel va en CAMPANAS_MASIVAS['titulo'].
     # Sin variables a propósito: el mismo texto para todos, aprueba más rápido en
     # Meta y no hay riesgo de parámetro vacío en un envío de ~250 mensajes.
-    'promo_diplomado_psicoterapia_infantil':
+    'masivos1':
         '🎓 ¡Atención, estudiantes de Academia! 🚨\n\n'
         '¡Últimos lugares para el Diplomado en Psicoterapia Infantil!\n\n'
         'Solo esta semana podrás aprovechar esta promoción exclusiva:\n\n'
@@ -119,12 +122,14 @@ TEMPLATE_BODIES = {
 
 # Plantillas ofrecidas en el panel de Mensajes Masivos (Dirección Comercial).
 # 'campos' vacío = plantilla sin variables. La clave debe existir y estar
-# APROBADA en Meta Business Manager con exactamente ese nombre.
+# APROBADA en Meta Business Manager con exactamente ese nombre y ese idioma:
+# si cualquiera de los dos no coincide, la API responde 132001.
 CAMPANAS_MASIVAS = {
-    'promo_diplomado_psicoterapia_infantil': {
+    'masivos1': {
         'titulo': 'Promoción — Diplomado en Psicoterapia Infantil',
         'descripcion': 'Últimos lugares, inscripción y mensualidad a $500. Inicio 15 de agosto.',
         'campos': [],
+        'idioma': 'es_MX',
     },
 }
 
@@ -235,10 +240,13 @@ def buscar_paciente_por_wa_id(wa_id: str):
     return Paciente.objects.filter(telefono=local).first()
 
 
-def enviar_template(telefono: str, nombre_template: str, parametros: list) -> dict:
+def enviar_template(telefono: str, nombre_template: str, parametros: list,
+                    idioma: str = 'es_MX') -> dict:
     """
     Envía un template pre-aprobado por Meta.
     parametros: lista de strings en el orden de los {{N}} del template.
+    idioma: debe ser el mismo con el que se aprobó en Meta; si el nombre o el
+            idioma no coinciden, la API responde 132001.
     """
     numero = _normalizar_telefono(telefono)
     payload = {
@@ -247,7 +255,7 @@ def enviar_template(telefono: str, nombre_template: str, parametros: list) -> di
         "type": "template",
         "template": {
             "name": nombre_template,
-            "language": {"code": "es_MX"},
+            "language": {"code": idioma},
             "components": [{
                 "type": "body",
                 "parameters": [{"type": "text", "text": str(p)} for p in parametros]

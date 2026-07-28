@@ -3475,10 +3475,12 @@ def mensajes_masivos_probar(request):
     if plantilla not in wa.CAMPANAS_MASIVAS:
         return JsonResponse({'error': 'Plantilla no válida'}, status=400)
 
+    idioma = wa.CAMPANAS_MASIVAS[plantilla].get('idioma', 'es_MX')
+
     resultados = []
     for telefono in wa.TELEFONOS_PRUEBA:
         try:
-            resp = wa.enviar_template(telefono, plantilla, [])
+            resp = wa.enviar_template(telefono, plantilla, [], idioma=idioma)
         except Exception as e:
             resp = {'error': {'message': str(e), 'code': ''}}
 
@@ -3525,6 +3527,7 @@ def mensajes_masivos_crear_campana(request):
         campana = CampanaMasiva.objects.create(
             nombre=f"{info['titulo']} — {timezone.localdate():%d/%m/%Y}",
             plantilla_meta=plantilla,
+            idioma=info.get('idioma', 'es_MX'),
             texto_render=wa.TEMPLATE_BODIES.get(plantilla, ''),
             estado=CampanaMasiva.ESTADO_ENVIANDO,
             creada_por=request.user,
@@ -3569,7 +3572,8 @@ def mensajes_masivos_enviar_lote(request):
 
     for envio in pendientes:
         try:
-            resp = wa.enviar_template(envio.telefono, campana.plantilla_meta, [])
+            resp = wa.enviar_template(envio.telefono, campana.plantilla_meta, [],
+                                       idioma=campana.idioma or 'es_MX')
         except Exception as e:
             resp = {'error': {'message': str(e), 'code': ''}}
 
