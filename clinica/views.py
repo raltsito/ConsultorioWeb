@@ -17,7 +17,7 @@ from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.db import transaction
-from django.db.models import Q, Sum, Count, Max, Prefetch
+from django.db.models import Q, Sum, Count, Max, Min, Prefetch
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
@@ -3632,15 +3632,38 @@ def mensajes_masivos_enviar_lote(request):
 MM_VENTANA_RESPUESTA_HORAS = 24
 
 
+def _mm_primer_envio_por_contacto():
+    """
+    {contacto_id: fecha del primer envío de campaña} para los contactos que ya
+    recibieron alguna.
+
+    La bandeja se acota con esto: el número de WhatsApp es el mismo que atiende
+    a los pacientes, y varios alumnos de Academia también son pacientes. Sin
+    este corte, la conversación clínica de esas personas (confirmaciones de
+    cita, pagos) se mezclaría en la bandeja comercial.
+    """
+    return dict(
+        EnvioMasivo.objects
+        .exclude(enviado_en__isnull=True)
+        .values_list('contacto_id')
+        .annotate(primero=Min('enviado_en'))
+        .values_list('contacto_id', 'primero')
+    )
+
+
 def _mm_conversaciones(solo_pendientes=False):
     """
-    Agrupa por alumno las respuestas recibidas de contactos de Academia.
-    Se agrupa en Python porque el volumen es bajo (respuestas de una campaña) y
-    así se evita una subconsulta para traer el último texto de cada grupo.
+    Agrupa por alumno las respuestas recibidas DESPUÉS de haberle enviado una
+    campaña. Se agrupa en Python porque el volumen es bajo y así se evita una
+    subconsulta para traer el último texto de cada grupo.
     """
+    primer_envio = _mm_primer_envio_por_contacto()
+    if not primer_envio:
+        return []
+
     qs = (
         MensajeWhatsAppEntrante.objects
-        .filter(contacto_academia__isnull=False)
+        .filter(contacto_academia_id__in=primer_envio)
         .select_related('contacto_academia')
         .order_by('-recibido_en')
     )
@@ -3651,6 +3674,8 @@ def _mm_conversaciones(solo_pendientes=False):
     conversaciones = {}
     for mensaje in qs:
         contacto = mensaje.contacto_academia
+        if mensaje.recibido_en < primer_envio[contacto.pk]:
+            continue  # anterior a la campaña: no es respuesta a ella
         conv = conversaciones.get(contacto.pk)
         if conv is None:
             horas = (ahora - mensaje.recibido_en).total_seconds() / 3600
@@ -3700,13 +3725,21 @@ def mensajes_masivos_conversacion(request):
 
     contacto = get_object_or_404(ContactoAcademia, pk=request.GET.get('contacto_id'))
 
+    # Mismo corte que la bandeja: solo lo posterior a la campaña, para no
+    # arrastrar aquí la conversación clínica de quien además es paciente.
+    desde = _mm_primer_envio_por_contacto().get(contacto.pk)
+    entrantes = (
+        contacto.mensajes_recibidos.filter(recibido_en__gte=desde)
+        if desde else contacto.mensajes_recibidos.none()
+    )
+
     mensajes = [
         {
             'origen': 'entrante',
             'texto': m.texto,
             'fecha': timezone.localtime(m.recibido_en),
         }
-        for m in contacto.mensajes_recibidos.all()
+        for m in entrantes
     ]
     mensajes += [
         {
