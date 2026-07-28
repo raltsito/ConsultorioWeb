@@ -4,11 +4,14 @@ Uso:
     python manage.py cargar_scid2_scl90
     python manage.py cargar_scid2_scl90 --ruta "C:/ruta/al/archivo.xlsx"
 """
+import os
+
 import openpyxl
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from clinica.models import Instrumento, PreguntaInstrumento
 
-RUTA_DEFAULT = r'C:\Users\carlo\Downloads\Copia de Pruebas psicométricas de ingreso (PSI).xlsx'
+RUTA_DEFAULT = os.path.join(settings.BASE_DIR, 'docs_xslx_instrumentos', 'scid2_scl90.xlsx')
 
 
 class Command(BaseCommand):
