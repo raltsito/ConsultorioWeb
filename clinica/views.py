@@ -7323,11 +7323,13 @@ def _registrar_mensaje_entrante(mensaje: dict):
     else:
         texto = ''
 
+    # Las dos búsquedas son independientes a propósito: varios alumnos de
+    # Academia son TAMBIÉN pacientes, y atribuir solo a Paciente dejaba sus
+    # respuestas de campaña fuera de la bandeja comercial para siempre.
+    # Ligar ambos no ensucia nada: el panel clínico agrupa por paciente y la
+    # bandeja de Mensajes Masivos solo mira lo posterior a la campaña.
     paciente = wa.buscar_paciente_por_wa_id(wa_id)
-    # Los alumnos de Academia no son pacientes: si el número no corresponde a un
-    # Paciente se intenta contra ContactoAcademia para poder mostrar la respuesta
-    # en la bandeja de Mensajes Masivos.
-    contacto = None if paciente else wa.buscar_contacto_academia_por_wa_id(wa_id)
+    contacto = wa.buscar_contacto_academia_por_wa_id(wa_id)
 
     MensajeWhatsAppEntrante.objects.create(
         wa_message_id=wa_message_id,
