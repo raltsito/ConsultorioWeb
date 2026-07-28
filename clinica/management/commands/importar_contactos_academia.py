@@ -236,37 +236,83 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def _guardar(self, registros):
-        creados = actualizados = inscripciones_nuevas = 0
-        vistos = set()
+        """
+        Escribe con operaciones masivas: ~8 consultas en total en vez de 4 por
+        fila. Con update_or_create fila por fila eran >1,100 viajes a la base,
+        y contra el Postgres de Railway (a través del proxy, con la latencia de
+        internet de por medio) la importación tardaba minutos.
+        """
+        # --- Contactos: una fila por teléfono, la primera del archivo gana ---
+        # Las filas siguientes de la misma persona pueden traer el nombre
+        # abreviado o con typo, y se ignoran a propósito.
+        por_telefono = {}
+        for r in registros:
+            por_telefono.setdefault(r['telefono'], r)
+
+        existentes = {
+            c.telefono: c
+            for c in ContactoAcademia.objects.filter(telefono__in=por_telefono)
+        }
+
+        nuevos, actualizar = [], []
+        for telefono, r in por_telefono.items():
+            contacto = existentes.get(telefono)
+            if contacto is None:
+                nuevos.append(ContactoAcademia(
+                    telefono=telefono, nombre=r['nombre'], correo=r['correo'],
+                ))
+            else:
+                contacto.nombre = r['nombre']
+                contacto.correo = r['correo']
+                actualizar.append(contacto)
+
+        if nuevos:
+            ContactoAcademia.objects.bulk_create(nuevos, batch_size=500)
+        if actualizar:
+            ContactoAcademia.objects.bulk_update(actualizar, ['nombre', 'correo'], batch_size=500)
+
+        # Se relee para tener los ids de los recién creados en todos los motores
+        # (bulk_create solo los devuelve en algunos backends).
+        contactos = {
+            c.telefono: c
+            for c in ContactoAcademia.objects.filter(telefono__in=por_telefono)
+        }
+
+        # --- Inscripciones ---
+        previas = {
+            (i.contacto_id, i.diplomado, i.anio_fuente): i
+            for i in InscripcionAcademia.objects.filter(contacto__in=contactos.values())
+        }
+
+        campos = ['estatus', 'matricula', 'fecha_inscripcion', 'observaciones', 'fila_origen']
+        insc_nuevas, insc_actualizar, vistas = [], [], set()
 
         for r in registros:
-            telefono = r['telefono']
-            if telefono in vistos:
-                # Ya se creó/actualizó el contacto con la primera fila de esta
-                # persona; el nombre de las filas siguientes puede variar
-                # (abreviado, con typo) y se ignora a propósito.
-                contacto = ContactoAcademia.objects.get(telefono=telefono)
+            contacto = contactos[r['telefono']]
+            clave = (contacto.pk, r['diplomado'], r['anio_fuente'])
+            if clave in vistas:
+                # El archivo repite la misma inscripción; bulk_create no valida
+                # unique_together en Python, así que hay que filtrarlo aquí o
+                # revienta con IntegrityError.
+                continue
+            vistas.add(clave)
+
+            inscripcion = previas.get(clave)
+            if inscripcion is None:
+                insc_nuevas.append(InscripcionAcademia(
+                    contacto=contacto,
+                    diplomado=r['diplomado'],
+                    anio_fuente=r['anio_fuente'],
+                    **{campo: r[campo] for campo in campos},
+                ))
             else:
-                contacto, creado = ContactoAcademia.objects.update_or_create(
-                    telefono=telefono,
-                    defaults={'nombre': r['nombre'], 'correo': r['correo']},
-                )
-                creados += 1 if creado else 0
-                actualizados += 0 if creado else 1
-                vistos.add(telefono)
+                for campo in campos:
+                    setattr(inscripcion, campo, r[campo])
+                insc_actualizar.append(inscripcion)
 
-            _, nueva = InscripcionAcademia.objects.update_or_create(
-                contacto=contacto,
-                diplomado=r['diplomado'],
-                anio_fuente=r['anio_fuente'],
-                defaults={
-                    'estatus': r['estatus'],
-                    'matricula': r['matricula'],
-                    'fecha_inscripcion': r['fecha_inscripcion'],
-                    'observaciones': r['observaciones'],
-                    'fila_origen': r['fila_origen'],
-                },
-            )
-            inscripciones_nuevas += 1 if nueva else 0
+        if insc_nuevas:
+            InscripcionAcademia.objects.bulk_create(insc_nuevas, batch_size=500)
+        if insc_actualizar:
+            InscripcionAcademia.objects.bulk_update(insc_actualizar, campos, batch_size=500)
 
-        return creados, actualizados, inscripciones_nuevas
+        return len(nuevos), len(actualizar), len(insc_nuevas)
