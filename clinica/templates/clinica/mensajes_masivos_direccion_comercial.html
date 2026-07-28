@@ -469,9 +469,25 @@ document.addEventListener('DOMContentLoaded', function () {
         return d.innerHTML;
     }
 
+    // Devuelve el JSON o lanza un Error con el detalle real (status + cuerpo).
+    // Un catch mudo aquí hacía indistinguibles un 403, un 500 y una respuesta
+    // que no era JSON, y no había forma de diagnosticar desde el panel.
+    function obtenerJson(url) {
+        return fetch(url).then(async r => {
+            const crudo = await r.text();
+            let cuerpo;
+            try {
+                cuerpo = JSON.parse(crudo);
+            } catch (e) {
+                throw new Error(`El servidor respondió ${r.status} con algo que no es JSON: ${crudo.slice(0, 160)}`);
+            }
+            if (!r.ok) throw new Error(`Error ${r.status}: ${cuerpo.error || crudo.slice(0, 160)}`);
+            return cuerpo;
+        });
+    }
+
     function cargarConversaciones() {
-        fetch("{% url 'mensajes_masivos_respuestas' %}")
-            .then(r => r.json())
+        obtenerJson("{% url 'mensajes_masivos_respuestas' %}")
             .then(data => {
                 const badge = $('mm-badge-pendientes');
                 if (data.pendientes > 0) {
@@ -503,15 +519,18 @@ document.addEventListener('DOMContentLoaded', function () {
                     el.addEventListener('click', () => abrirConversacion(parseInt(el.dataset.id, 10)));
                 });
             })
-            .catch(() => {
-                $('mm-lista-conv').innerHTML = '<div style="padding:36px; text-align:center; color:#C62828; font-size:.88rem;">No se pudieron cargar las respuestas.</div>';
+            .catch(e => {
+                $('mm-lista-conv').innerHTML =
+                    `<div style="padding:24px; color:#C62828; font-size:.84rem; line-height:1.5;">
+                        <strong>No se pudieron cargar las respuestas.</strong><br>
+                        <span style="color:#78909C;">${escapar(e.message)}</span>
+                     </div>`;
             });
     }
 
     function abrirConversacion(contactoId) {
         convActiva = contactoId;
-        fetch("{% url 'mensajes_masivos_conversacion' %}?contacto_id=" + contactoId)
-            .then(r => r.json())
+        obtenerJson("{% url 'mensajes_masivos_conversacion' %}?contacto_id=" + contactoId)
             .then(data => {
                 const burbujas = data.mensajes.map(m => {
                     const entrante = m.origen === 'entrante';
@@ -588,7 +607,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 cargarConversaciones();
             })
-            .catch(() => aviso($('mm-chat'), 'err', 'No se pudo cargar la conversación.'));
+            .catch(e => aviso($('mm-chat'), 'err', 'No se pudo cargar la conversación. ' + escapar(e.message)));
     }
 
     $('mm-btn-refrescar').addEventListener('click', cargarConversaciones);
