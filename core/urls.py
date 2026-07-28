@@ -130,6 +130,10 @@ urlpatterns = [
     path('portal-direccion-comercial/mensajes-masivos/probar/', clinica_views.mensajes_masivos_probar, name='mensajes_masivos_probar'),
     path('portal-direccion-comercial/mensajes-masivos/crear-campana/', clinica_views.mensajes_masivos_crear_campana, name='mensajes_masivos_crear_campana'),
     path('portal-direccion-comercial/mensajes-masivos/enviar-lote/', clinica_views.mensajes_masivos_enviar_lote, name='mensajes_masivos_enviar_lote'),
+    path('portal-direccion-comercial/mensajes-masivos/respuestas/', clinica_views.mensajes_masivos_respuestas, name='mensajes_masivos_respuestas'),
+    path('portal-direccion-comercial/mensajes-masivos/conversacion/', clinica_views.mensajes_masivos_conversacion, name='mensajes_masivos_conversacion'),
+    path('portal-direccion-comercial/mensajes-masivos/marcar-atendido/', clinica_views.mensajes_masivos_marcar_atendido, name='mensajes_masivos_marcar_atendido'),
+    path('portal-direccion-comercial/mensajes-masivos/responder/', clinica_views.mensajes_masivos_responder, name='mensajes_masivos_responder'),
 
     # Portal Lider de Operaciones Clinicas
     path('portal-operaciones-clinicas/', clinica_views.portal_lider_operaciones_clinicas, name='portal_lider_operaciones_clinicas'),

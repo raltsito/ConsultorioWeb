@@ -267,6 +267,63 @@ def enviar_template(telefono: str, nombre_template: str, parametros: list) -> di
     return response.json()
 
 
+def enviar_texto(telefono: str, texto: str) -> dict:
+    """
+    Envía un mensaje de texto libre (sin plantilla).
+
+    Solo funciona dentro de la ventana de 24 h que abre una respuesta del
+    contacto: fuera de ella Meta rechaza el mensaje (error 131047) y hay que
+    usar una plantilla aprobada. Se usa para contestar en la bandeja de
+    Mensajes Masivos.
+    """
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": _normalizar_telefono(telefono),
+        "type": "text",
+        "text": {"body": texto},
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.WHATSAPP_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    response = requests.post(
+        f"{WHATSAPP_API_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages",
+        headers=headers,
+        json=payload,
+        timeout=10,
+    )
+    return response.json()
+
+
+def buscar_contacto_academia_por_wa_id(wa_id: str):
+    """
+    Igual que buscar_paciente_por_wa_id pero contra ContactoAcademia: Meta
+    entrega 52XXXXXXXXXX (12 dígitos) y la BD guarda 10, así que el match es
+    por los últimos 10.
+    """
+    from .models import ContactoAcademia
+    digits = ''.join(filter(str.isdigit, wa_id or ''))
+    if len(digits) < 10:
+        return None
+    return ContactoAcademia.objects.filter(telefono=digits[-10:]).first()
+
+
+# Frases con las que un contacto pide dejar de recibir campañas. Se comparan
+# sin acentos y en mayúsculas (ver views._es_baja_campana). "No deseo recibir
+# promociones" es el texto exacto del botón de opt-out de la plantilla.
+FRASES_BAJA = [
+    'NO DESEO RECIBIR',
+    'DEJAR DE RECIBIR',
+    'NO ME MANDEN',
+    'NO ME ENVIEN',
+    'DAR DE BAJA',
+    'DARME DE BAJA',
+    'BAJA',
+    'STOP',
+    'UNSUBSCRIBE',
+]
+
+
 def construir_parametros_cita(cita) -> dict:
     """
     Extrae los datos de una Cita para llenar los templates.

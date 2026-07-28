@@ -1031,6 +1031,30 @@ class EnvioMasivo(models.Model):
         unique_together = [('campana', 'contacto')]
 
 
+class RespuestaMasiva(models.Model):
+    """
+    Texto libre que el personal le contesta a un alumno desde la bandeja de
+    Mensajes Masivos. Solo se puede dentro de la ventana de 24 h que abre la
+    respuesta del alumno (regla de Meta), por eso no es una plantilla.
+    """
+    contacto = models.ForeignKey(
+        ContactoAcademia, on_delete=models.CASCADE, related_name='respuestas_enviadas',
+    )
+    texto = models.TextField()
+    enviado_en = models.DateTimeField(auto_now_add=True)
+    exitoso = models.BooleanField(default=False)
+    respuesta_api = models.JSONField(null=True, blank=True)
+    enviado_por = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+
+    def __str__(self):
+        return f"A {self.contacto.nombre} ({self.enviado_en:%d/%m/%Y %H:%M})"
+
+    class Meta:
+        verbose_name = 'Respuesta a alumno'
+        verbose_name_plural = 'Respuestas a alumnos'
+        ordering = ['enviado_en']
+
+
 class Horario(models.Model):
     DIAS_SEMANA = [
         (0, 'Lunes'),

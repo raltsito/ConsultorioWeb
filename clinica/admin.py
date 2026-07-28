@@ -3,7 +3,7 @@ from django.contrib import admin
 from .models import AccesoDirectoPortal, Consultoria, DireccionComercial, LiderOperacionesClinicas, SupervisorSeguimiento, Empresa, Host, HostChecklistTask, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta, RecursoPropio, MensajeWhatsApp, ConfiguracionWhatsApp, MensajeWhatsAppDemo
 from .models import Horario
 from .models import Instrumento, PreguntaInstrumento, EnvioInstrumento, RespuestaInstrumento
-from .models import ContactoAcademia, InscripcionAcademia, CampanaMasiva, EnvioMasivo
+from .models import ContactoAcademia, InscripcionAcademia, CampanaMasiva, EnvioMasivo, RespuestaMasiva
 
 admin.site.register(Terapeuta)
 admin.site.register(Consultorio)
@@ -145,6 +145,17 @@ class EnvioMasivoAdmin(admin.ModelAdmin):
     search_fields = ('contacto__nombre', 'telefono', 'wa_message_id')
     readonly_fields = ('campana', 'contacto', 'telefono', 'wa_message_id', 'respuesta_api',
                         'enviado_en', 'actualizado_en')
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(RespuestaMasiva)
+class RespuestaMasivaAdmin(admin.ModelAdmin):
+    list_display = ('contacto', 'exitoso', 'enviado_por', 'enviado_en')
+    list_filter = ('exitoso',)
+    search_fields = ('contacto__nombre', 'contacto__telefono', 'texto')
+    readonly_fields = ('contacto', 'texto', 'enviado_en', 'exitoso', 'respuesta_api', 'enviado_por')
 
     def has_add_permission(self, request):
         return False

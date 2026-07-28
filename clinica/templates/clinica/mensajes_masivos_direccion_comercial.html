@@ -224,7 +224,32 @@
     <div id="mm-progreso-aviso" style="margin-top:16px;"></div>
 </div>
 
-<!-- 4. Historial -->
+<!-- 4. Bandeja de respuestas -->
+<div class="mm-card">
+    <div class="mm-card-head">
+        <h5 class="mm-titulo">
+            <i class="bi bi-inbox-fill me-2" style="color:#26C6DA;"></i>Respuestas de alumnos
+            <span id="mm-badge-pendientes" class="mm-chip" style="background:#FEF1F1; color:#C62828; margin-left:8px; display:none;"></span>
+        </h5>
+        <button type="button" id="mm-btn-refrescar" class="mm-btn-prueba" style="padding:8px 16px; font-size:.84rem;">
+            <i class="bi bi-arrow-clockwise"></i> Actualizar
+        </button>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 340px 1fr; gap:20px;" class="mm-grid-bandeja">
+        <div id="mm-lista-conv" style="max-height:460px; overflow-y:auto; border:1px solid #F0F4F8; border-radius:14px;">
+            <div style="padding:36px; text-align:center; color:#90A4AE; font-size:.88rem;">Cargando...</div>
+        </div>
+
+        <div id="mm-chat" style="border:1px solid #F0F4F8; border-radius:14px; display:flex; flex-direction:column; min-height:460px;">
+            <div style="flex:1; display:flex; align-items:center; justify-content:center; color:#90A4AE; font-size:.9rem;" id="mm-chat-vacio">
+                Selecciona una conversación para verla completa.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 5. Historial -->
 <div class="mm-card">
     <div class="mm-card-head">
         <h5 class="mm-titulo"><i class="bi bi-clock-history me-2" style="color:#26C6DA;"></i>Campañas anteriores</h5>
@@ -435,6 +460,140 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // --- Bandeja de respuestas ---
+    let convActiva = null;
+
+    function escapar(s) {
+        const d = document.createElement('div');
+        d.textContent = s || '';
+        return d.innerHTML;
+    }
+
+    function cargarConversaciones() {
+        fetch("{% url 'mensajes_masivos_respuestas' %}")
+            .then(r => r.json())
+            .then(data => {
+                const badge = $('mm-badge-pendientes');
+                if (data.pendientes > 0) {
+                    badge.textContent = `${data.pendientes} sin atender`;
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                }
+
+                const lista = $('mm-lista-conv');
+                if (!data.conversaciones.length) {
+                    lista.innerHTML = '<div style="padding:36px; text-align:center; color:#90A4AE; font-size:.88rem;">Todavía no hay respuestas de alumnos.</div>';
+                    return;
+                }
+                lista.innerHTML = data.conversaciones.map(c => `
+                    <div class="mm-conv" data-id="${c.contacto_id}" style="padding:14px 16px; border-bottom:1px solid #F0F4F8; cursor:pointer; ${convActiva === c.contacto_id ? 'background:#E8F1FF;' : ''}">
+                        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
+                            <strong style="font-size:.9rem; color:#37474F;">${escapar(c.nombre)}</strong>
+                            ${c.pendientes ? `<span class="mm-chip" style="background:#FEF1F1; color:#C62828;">${c.pendientes}</span>` : ''}
+                        </div>
+                        <div style="color:#607D8B; font-size:.82rem; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapar(c.ultimo_texto) || '<i>(sin texto)</i>'}</div>
+                        <div style="color:#90A4AE; font-size:.74rem; margin-top:4px;">
+                            ${c.ultimo_en}
+                            ${!c.suscrito ? ' · <span style="color:#C62828; font-weight:700;">pidió baja</span>' : ''}
+                        </div>
+                    </div>`).join('');
+
+                lista.querySelectorAll('.mm-conv').forEach(el => {
+                    el.addEventListener('click', () => abrirConversacion(parseInt(el.dataset.id, 10)));
+                });
+            })
+            .catch(() => {
+                $('mm-lista-conv').innerHTML = '<div style="padding:36px; text-align:center; color:#C62828; font-size:.88rem;">No se pudieron cargar las respuestas.</div>';
+            });
+    }
+
+    function abrirConversacion(contactoId) {
+        convActiva = contactoId;
+        fetch("{% url 'mensajes_masivos_conversacion' %}?contacto_id=" + contactoId)
+            .then(r => r.json())
+            .then(data => {
+                const burbujas = data.mensajes.map(m => {
+                    const entrante = m.origen === 'entrante';
+                    return `
+                        <div style="display:flex; justify-content:${entrante ? 'flex-start' : 'flex-end'}; margin-bottom:10px;">
+                            <div style="max-width:78%; padding:10px 14px; border-radius:14px; font-size:.86rem; white-space:pre-wrap;
+                                        background:${entrante ? '#fff' : '#DCF8C6'}; border:1px solid ${entrante ? '#E0E6EC' : '#CDEFCD'}; color:#263238;">
+                                ${m.etiqueta ? `<div style="font-size:.7rem; color:#78909C; font-weight:700; margin-bottom:4px;">${escapar(m.etiqueta)}</div>` : ''}
+                                ${escapar(m.texto) || '<i style="color:#90A4AE;">(sin texto)</i>'}
+                                <div style="font-size:.68rem; color:#90A4AE; margin-top:5px; text-align:right;">${m.fecha}</div>
+                            </div>
+                        </div>`;
+                }).join('');
+
+                const cajaRespuesta = data.puede_responder
+                    ? `<div style="display:flex; gap:8px; padding:14px; border-top:1px solid #F0F4F8;">
+                           <input type="text" id="mm-input-respuesta" placeholder="Escribe tu respuesta..."
+                                  style="flex:1; padding:11px 14px; border-radius:12px; border:1px solid #E0E6EC; font-size:.88rem;">
+                           <button type="button" id="mm-btn-responder" class="mm-btn-azul" style="padding:10px 18px;">
+                               <i class="bi bi-send"></i>
+                           </button>
+                       </div>
+                       <div style="padding:0 14px 12px; color:#90A4AE; font-size:.74rem;">
+                           Quedan ${data.horas_restantes} h para responder con texto libre.
+                       </div>`
+                    : `<div style="padding:14px; border-top:1px solid #F0F4F8;">
+                           <div class="mm-aviso info" style="font-size:.82rem;">
+                               Pasaron más de 24 h desde su último mensaje. WhatsApp ya no permite texto libre;
+                               habría que enviarle una plantilla aprobada.
+                           </div>
+                       </div>`;
+
+                $('mm-chat').innerHTML = `
+                    <div style="padding:14px 18px; border-bottom:1px solid #F0F4F8; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div>
+                            <strong style="color:#37474F;">${escapar(data.nombre)}</strong>
+                            <span style="color:#90A4AE; font-size:.82rem; margin-left:8px;">${data.telefono}</span>
+                            ${!data.suscrito ? '<span class="mm-chip" style="background:#FEF1F1; color:#C62828; margin-left:8px;">pidió baja</span>' : ''}
+                        </div>
+                        <button type="button" id="mm-btn-atendido" class="mm-btn-prueba" style="padding:7px 14px; font-size:.8rem;">
+                            <i class="bi bi-check2-all"></i> Marcar atendido
+                        </button>
+                    </div>
+                    <div style="flex:1; overflow-y:auto; padding:16px; background:#ECE5DD; max-height:320px;">${burbujas}</div>
+                    <div id="mm-respuesta-aviso" style="padding:0 14px;"></div>
+                    ${cajaRespuesta}`;
+
+                const cont = $('mm-chat').querySelector('div[style*="overflow-y:auto"]');
+                if (cont) cont.scrollTop = cont.scrollHeight;
+
+                $('mm-btn-atendido').addEventListener('click', function () {
+                    post("{% url 'mensajes_masivos_marcar_atendido' %}", {contacto_id: contactoId})
+                        .then(cargarConversaciones)
+                        .catch(e => aviso($('mm-respuesta-aviso'), 'err', e.message));
+                });
+
+                const btnResponder = $('mm-btn-responder');
+                if (btnResponder) {
+                    const enviar = () => {
+                        const input = $('mm-input-respuesta');
+                        const texto = input.value.trim();
+                        if (!texto) return;
+                        btnResponder.disabled = true;
+                        post("{% url 'mensajes_masivos_responder' %}", {contacto_id: contactoId, texto})
+                            .then(() => { input.value = ''; abrirConversacion(contactoId); })
+                            .catch(e => aviso($('mm-respuesta-aviso'), 'err', e.message))
+                            .finally(() => { btnResponder.disabled = false; });
+                    };
+                    btnResponder.addEventListener('click', enviar);
+                    $('mm-input-respuesta').addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); enviar(); }
+                    });
+                }
+
+                cargarConversaciones();
+            })
+            .catch(() => aviso($('mm-chat'), 'err', 'No se pudo cargar la conversación.'));
+    }
+
+    $('mm-btn-refrescar').addEventListener('click', cargarConversaciones);
+    cargarConversaciones();
+
     $('mm-btn-enviar').addEventListener('click', async function () {
         const total = seleccionados.size;
         if (!confirm(`Se enviará el mensaje a ${total} alumno(s) por WhatsApp.\n\nEsta acción no se puede deshacer. ¿Continuar?`)) return;
@@ -467,7 +626,10 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <style>
-@media (max-width: 992px) { .mm-grid-mensaje { grid-template-columns: 1fr !important; } }
+@media (max-width: 992px) {
+    .mm-grid-mensaje, .mm-grid-bandeja { grid-template-columns: 1fr !important; }
+}
+.mm-conv:hover { background: #F7FBFC; }
 </style>
 {% endif %}
 {% endblock %}

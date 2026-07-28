@@ -65,6 +65,7 @@ from .models import (
     InscripcionAcademia,
     CampanaMasiva,
     EnvioMasivo,
+    RespuestaMasiva,
     Horario,
     SolicitudCita,
     SolicitudReagendo,
@@ -3624,6 +3625,192 @@ def mensajes_masivos_enviar_lote(request):
     })
 
 
+MM_VENTANA_RESPUESTA_HORAS = 24
+
+
+def _mm_conversaciones(solo_pendientes=False):
+    """
+    Agrupa por alumno las respuestas recibidas de contactos de Academia.
+    Se agrupa en Python porque el volumen es bajo (respuestas de una campaña) y
+    así se evita una subconsulta para traer el último texto de cada grupo.
+    """
+    qs = (
+        MensajeWhatsAppEntrante.objects
+        .filter(contacto_academia__isnull=False)
+        .select_related('contacto_academia')
+        .order_by('-recibido_en')
+    )
+    if solo_pendientes:
+        qs = qs.filter(atendido=False)
+
+    ahora = timezone.now()
+    conversaciones = {}
+    for mensaje in qs:
+        contacto = mensaje.contacto_academia
+        conv = conversaciones.get(contacto.pk)
+        if conv is None:
+            horas = (ahora - mensaje.recibido_en).total_seconds() / 3600
+            conversaciones[contacto.pk] = {
+                'contacto_id': contacto.pk,
+                'nombre': contacto.nombre,
+                'telefono': contacto.telefono,
+                'suscrito': contacto.suscrito,
+                'ultimo_texto': mensaje.texto,
+                'ultimo_en': timezone.localtime(mensaje.recibido_en).strftime('%d/%m/%Y %H:%M'),
+                'orden': mensaje.recibido_en,
+                'pendientes': 1 if not mensaje.atendido else 0,
+                'total': 1,
+                # Fuera de la ventana de 24 h Meta ya no acepta texto libre.
+                'puede_responder': horas < MM_VENTANA_RESPUESTA_HORAS,
+                'horas_restantes': max(0, round(MM_VENTANA_RESPUESTA_HORAS - horas, 1)),
+            }
+        else:
+            conv['total'] += 1
+            if not mensaje.atendido:
+                conv['pendientes'] += 1
+
+    ordenadas = sorted(conversaciones.values(), key=lambda c: c['orden'], reverse=True)
+    for c in ordenadas:
+        c.pop('orden')
+    return ordenadas
+
+
+@login_required
+def mensajes_masivos_respuestas(request):
+    """Bandeja: respuestas de alumnos de Academia, agrupadas por contacto."""
+    if not hasattr(request.user, 'perfil_direccion_comercial'):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    conversaciones = _mm_conversaciones()
+    return JsonResponse({
+        'conversaciones': conversaciones,
+        'pendientes': sum(c['pendientes'] for c in conversaciones),
+    })
+
+
+@login_required
+def mensajes_masivos_conversacion(request):
+    """Historial completo con un alumno (sus respuestas + lo que le hemos enviado)."""
+    if not hasattr(request.user, 'perfil_direccion_comercial'):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    contacto = get_object_or_404(ContactoAcademia, pk=request.GET.get('contacto_id'))
+
+    mensajes = [
+        {
+            'origen': 'entrante',
+            'texto': m.texto,
+            'fecha': timezone.localtime(m.recibido_en),
+        }
+        for m in contacto.mensajes_recibidos.all()
+    ]
+    mensajes += [
+        {
+            'origen': 'saliente',
+            'texto': e.campana.texto_render,
+            'fecha': timezone.localtime(e.enviado_en),
+            'etiqueta': e.campana.nombre,
+        }
+        for e in contacto.envios.select_related('campana').exclude(enviado_en__isnull=True)
+    ]
+    mensajes += [
+        {
+            'origen': 'saliente',
+            'texto': r.texto,
+            'fecha': timezone.localtime(r.enviado_en),
+            'etiqueta': 'Respuesta manual',
+        }
+        for r in contacto.respuestas_enviadas.all()
+    ]
+
+    mensajes.sort(key=lambda m: m['fecha'])
+    ultima_entrante = contacto.mensajes_recibidos.order_by('-recibido_en').first()
+    horas = (
+        (timezone.now() - ultima_entrante.recibido_en).total_seconds() / 3600
+        if ultima_entrante else None
+    )
+
+    for m in mensajes:
+        m['fecha'] = m['fecha'].strftime('%d/%m/%Y %H:%M')
+
+    return JsonResponse({
+        'contacto_id': contacto.pk,
+        'nombre': contacto.nombre,
+        'telefono': contacto.telefono,
+        'suscrito': contacto.suscrito,
+        'mensajes': mensajes,
+        'puede_responder': horas is not None and horas < MM_VENTANA_RESPUESTA_HORAS,
+        'horas_restantes': round(MM_VENTANA_RESPUESTA_HORAS - horas, 1) if horas is not None else 0,
+    })
+
+
+@login_required
+@require_POST
+def mensajes_masivos_marcar_atendido(request):
+    """Marca como atendidas todas las respuestas pendientes de un alumno."""
+    if not hasattr(request.user, 'perfil_direccion_comercial'):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    contacto_id = json.loads(request.body or '{}').get('contacto_id')
+    marcados = (
+        MensajeWhatsAppEntrante.objects
+        .filter(contacto_academia_id=contacto_id, atendido=False)
+        .update(atendido=True, atendido_por=request.user, atendido_en=timezone.now())
+    )
+    return JsonResponse({'ok': True, 'marcados': marcados})
+
+
+@login_required
+@require_POST
+def mensajes_masivos_responder(request):
+    """
+    Responde con texto libre a un alumno que escribió.
+
+    Meta solo lo permite dentro de las 24 h siguientes a su último mensaje; se
+    valida aquí antes de gastar la llamada, y si aun así Meta la rechaza se
+    devuelve su error tal cual.
+    """
+    if not hasattr(request.user, 'perfil_direccion_comercial'):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    data = json.loads(request.body or '{}')
+    texto = (data.get('texto') or '').strip()
+    if not texto:
+        return JsonResponse({'error': 'El mensaje está vacío'}, status=400)
+
+    contacto = get_object_or_404(ContactoAcademia, pk=data.get('contacto_id'))
+    ultima = contacto.mensajes_recibidos.order_by('-recibido_en').first()
+    if not ultima:
+        return JsonResponse({'error': 'Este alumno no ha escrito, no se le puede mandar texto libre'}, status=400)
+
+    horas = (timezone.now() - ultima.recibido_en).total_seconds() / 3600
+    if horas >= MM_VENTANA_RESPUESTA_HORAS:
+        return JsonResponse({
+            'error': 'Pasaron más de 24 h desde su último mensaje. WhatsApp ya no permite '
+                     'texto libre; hay que usar una plantilla aprobada.'
+        }, status=400)
+
+    try:
+        resp = wa.enviar_texto(contacto.telefono, texto)
+    except Exception as e:
+        resp = {'error': {'message': str(e), 'code': ''}}
+
+    exitoso = 'messages' in resp
+    RespuestaMasiva.objects.create(
+        contacto=contacto,
+        texto=texto,
+        exitoso=exitoso,
+        respuesta_api=resp,
+        enviado_por=request.user,
+    )
+
+    if not exitoso:
+        _, mensaje = wa.extraer_error(resp)
+        return JsonResponse({'error': mensaje or 'Meta rechazó el mensaje'}, status=400)
+
+    return JsonResponse({'ok': True})
+
+
 def _mm_totales(campana):
     conteos = dict(
         campana.envios.values_list('estado').annotate(n=Count('id')).values_list('estado', 'n')
@@ -7100,15 +7287,85 @@ def _registrar_mensaje_entrante(mensaje: dict):
         texto = ''
 
     paciente = wa.buscar_paciente_por_wa_id(wa_id)
+    # Los alumnos de Academia no son pacientes: si el número no corresponde a un
+    # Paciente se intenta contra ContactoAcademia para poder mostrar la respuesta
+    # en la bandeja de Mensajes Masivos.
+    contacto = None if paciente else wa.buscar_contacto_academia_por_wa_id(wa_id)
+
     MensajeWhatsAppEntrante.objects.create(
         wa_message_id=wa_message_id,
         wa_id=wa_id,
         texto=texto,
         paciente=paciente,
+        contacto_academia=contacto,
     )
 
     if paciente and _es_confirmacion(texto):
         _confirmar_cita_pendiente(paciente)
+
+    if contacto and _es_baja_campana(texto):
+        _dar_de_baja_contacto(contacto)
+
+
+def _es_baja_campana(texto: str) -> bool:
+    """True si el contacto pidió dejar de recibir campañas (botón de opt-out o texto libre)."""
+    normalizado = unicodedata.normalize('NFKD', texto or '').encode('ascii', 'ignore').decode('ascii').upper()
+    return any(frase in normalizado for frase in wa.FRASES_BAJA)
+
+
+def _dar_de_baja_contacto(contacto):
+    """Marca la baja para que las campañas siguientes excluyan a este contacto."""
+    if contacto.suscrito:
+        contacto.suscrito = False
+        contacto.baja_en = timezone.now()
+        contacto.save(update_fields=['suscrito', 'baja_en'])
+
+
+# Estado que reporta Meta -> estado del EnvioMasivo.
+MM_ESTADOS_WEBHOOK = {
+    'sent': EnvioMasivo.ESTADO_ENVIADO,
+    'delivered': EnvioMasivo.ESTADO_ENTREGADO,
+    'read': EnvioMasivo.ESTADO_LEIDO,
+    'failed': EnvioMasivo.ESTADO_FALLIDO,
+}
+
+# Orden de avance: Meta puede entregar los webhooks desordenados, así que un
+# 'sent' que llega tarde no debe pisar un 'read' que ya se registró.
+MM_ORDEN_ESTADOS = {
+    EnvioMasivo.ESTADO_PENDIENTE: 0,
+    EnvioMasivo.ESTADO_ENVIADO: 1,
+    EnvioMasivo.ESTADO_ENTREGADO: 2,
+    EnvioMasivo.ESTADO_LEIDO: 3,
+}
+
+
+def _registrar_estado_envio(status: dict):
+    """Actualiza el EnvioMasivo correspondiente con el estado de entrega que reporta Meta."""
+    wa_message_id = status.get('id')
+    nuevo = MM_ESTADOS_WEBHOOK.get(status.get('status'))
+    if not wa_message_id or not nuevo:
+        return
+
+    envio = EnvioMasivo.objects.filter(wa_message_id=wa_message_id).first()
+    if not envio:
+        return
+
+    if nuevo == EnvioMasivo.ESTADO_FALLIDO:
+        error = (status.get('errors') or [{}])[0]
+        envio.estado = nuevo
+        envio.error_codigo = str(error.get('code', ''))
+        envio.error_mensaje = error.get('title') or error.get('message') or ''
+        envio.save(update_fields=['estado', 'error_codigo', 'error_mensaje', 'actualizado_en'])
+        return
+
+    # Un envío ya marcado 'fallido' no se revive, y no se retrocede de estado.
+    if envio.estado == EnvioMasivo.ESTADO_FALLIDO:
+        return
+    if MM_ORDEN_ESTADOS.get(nuevo, 0) <= MM_ORDEN_ESTADOS.get(envio.estado, 0):
+        return
+
+    envio.estado = nuevo
+    envio.save(update_fields=['estado', 'actualizado_en'])
 
 
 def _es_confirmacion(texto: str) -> bool:
@@ -7145,7 +7402,8 @@ def whatsapp_webhook(request):
     """
     GET:  verificación inicial de Meta (handshake)
     POST: mensajes entrantes — se guardan para revisión manual del personal
-          (panel "Mensajes recibidos" en whatsapp_recordatorios.html)
+          (panel "Mensajes recibidos" en whatsapp_recordatorios.html), y
+          estados de entrega de las campañas masivas (sent/delivered/read/failed).
     """
     if request.method == 'GET':
         mode = request.GET.get('hub.mode')
@@ -7160,8 +7418,11 @@ def whatsapp_webhook(request):
             data = json.loads(request.body)
             for entry in data.get('entry', []):
                 for change in entry.get('changes', []):
-                    for mensaje in change.get('value', {}).get('messages', []):
+                    valor = change.get('value', {})
+                    for mensaje in valor.get('messages', []):
                         _registrar_mensaje_entrante(mensaje)
+                    for status in valor.get('statuses', []):
+                        _registrar_estado_envio(status)
         except Exception:
             logging.getLogger(__name__).exception('Error procesando webhook de WhatsApp')
         # Siempre 200: si Meta recibe un error, reintenta el mismo payload repetidamente.
