@@ -821,6 +821,12 @@ class MensajeWhatsAppEntrante(models.Model):
         'Paciente', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='mensajes_whatsapp_recibidos',
     )
+    # Los alumnos de Academia no son Pacientes: si el wa_id no corresponde a un
+    # Paciente se intenta contra ContactoAcademia (campañas masivas).
+    contacto_academia = models.ForeignKey(
+        'ContactoAcademia', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='mensajes_recibidos',
+    )
     texto = models.TextField(blank=True)
     recibido_en = models.DateTimeField(auto_now_add=True)
     atendido = models.BooleanField(default=False)
@@ -880,6 +886,149 @@ class ConfiguracionWhatsApp(models.Model):
     class Meta:
         verbose_name = 'Configuración WhatsApp'
         verbose_name_plural = 'Configuración WhatsApp'
+
+
+class ContactoAcademia(models.Model):
+    """
+    Alumno de Academia (diplomados), destinatario de campañas masivas de
+    WhatsApp. No es un Paciente: son dos bases distintas que solo comparten el
+    número de WhatsApp desde el que se envía.
+
+    Único por teléfono: en el Excel de origen una misma persona aparece varias
+    veces si se inscribió a más de un diplomado (ver InscripcionAcademia), y
+    enviarle la misma campaña 2-3 veces sería spam.
+    """
+    telefono = models.CharField(
+        max_length=10, unique=True, db_index=True,
+        help_text='10 dígitos, sin lada de país (mismo formato que Paciente.telefono).',
+    )
+    nombre = models.CharField(max_length=200)
+    correo = models.EmailField(blank=True)
+    suscrito = models.BooleanField(
+        default=True,
+        help_text='Si es False, el contacto pidió la baja y se excluye de toda campaña.',
+    )
+    baja_en = models.DateTimeField(null=True, blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.nombre} ({self.telefono})"
+
+    class Meta:
+        verbose_name = 'Contacto Academia'
+        verbose_name_plural = 'Contactos Academia'
+        ordering = ['nombre']
+
+
+class InscripcionAcademia(models.Model):
+    """Inscripción de un ContactoAcademia a un diplomado (una fila del Excel de origen)."""
+    ESTATUS_ACTIVO = 'activo'
+    ESTATUS_INACTIVO = 'inactivo'
+    ESTATUS_POR_CONFIRMAR = 'por_confirmar'
+    ESTATUS_CHOICES = [
+        (ESTATUS_ACTIVO, 'Activo'),
+        (ESTATUS_INACTIVO, 'Inactivo'),
+        (ESTATUS_POR_CONFIRMAR, 'Por confirmar'),
+    ]
+
+    contacto = models.ForeignKey(
+        ContactoAcademia, on_delete=models.CASCADE, related_name='inscripciones',
+    )
+    diplomado = models.CharField(max_length=120)
+    anio_fuente = models.IntegerField()
+    estatus = models.CharField(max_length=20, choices=ESTATUS_CHOICES, default=ESTATUS_ACTIVO)
+    matricula = models.CharField(max_length=50, blank=True)
+    fecha_inscripcion = models.DateField(null=True, blank=True)
+    observaciones = models.TextField(blank=True)
+    fila_origen = models.IntegerField(
+        null=True, blank=True,
+        help_text='Columna "Fila en archivo original" del Excel, para rastrear el dato.',
+    )
+
+    def __str__(self):
+        return f"{self.contacto.nombre} — {self.diplomado} ({self.anio_fuente})"
+
+    class Meta:
+        verbose_name = 'Inscripción Academia'
+        verbose_name_plural = 'Inscripciones Academia'
+        ordering = ['-anio_fuente', 'diplomado']
+        unique_together = [('contacto', 'diplomado', 'anio_fuente')]
+
+
+class CampanaMasiva(models.Model):
+    """Un envío masivo de una plantilla de WhatsApp a contactos de Academia."""
+    ESTADO_BORRADOR = 'borrador'
+    ESTADO_ENVIANDO = 'enviando'
+    ESTADO_ENVIADA = 'enviada'
+    ESTADO_PAUSADA = 'pausada'
+    ESTADO_CHOICES = [
+        (ESTADO_BORRADOR, 'Borrador'),
+        (ESTADO_ENVIANDO, 'Enviando'),
+        (ESTADO_ENVIADA, 'Enviada'),
+        (ESTADO_PAUSADA, 'Pausada'),
+    ]
+
+    nombre = models.CharField(max_length=150)
+    plantilla_meta = models.CharField(
+        max_length=120, help_text='Nombre exacto de la plantilla aprobada en Meta.',
+    )
+    idioma = models.CharField(max_length=10, default='es_MX')
+    texto_render = models.TextField(
+        blank=True,
+        help_text='Copia del cuerpo de la plantilla al momento de crear la campaña.',
+    )
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default=ESTADO_BORRADOR)
+    creada_por = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    creada_en = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.nombre} ({self.get_estado_display()}, {self.creada_en:%d/%m/%Y})"
+
+    class Meta:
+        verbose_name = 'Campaña masiva'
+        verbose_name_plural = 'Campañas masivas'
+        ordering = ['-creada_en']
+
+
+class EnvioMasivo(models.Model):
+    """Un mensaje individual dentro de una CampanaMasiva, con su estado de entrega."""
+    ESTADO_PENDIENTE = 'pendiente'
+    ESTADO_ENVIADO = 'enviado'
+    ESTADO_ENTREGADO = 'entregado'
+    ESTADO_LEIDO = 'leido'
+    ESTADO_FALLIDO = 'fallido'
+    ESTADO_CHOICES = [
+        (ESTADO_PENDIENTE, 'Pendiente'),
+        (ESTADO_ENVIADO, 'Enviado'),
+        (ESTADO_ENTREGADO, 'Entregado'),
+        (ESTADO_LEIDO, 'Leído'),
+        (ESTADO_FALLIDO, 'Fallido'),
+    ]
+
+    campana = models.ForeignKey(CampanaMasiva, on_delete=models.CASCADE, related_name='envios')
+    contacto = models.ForeignKey(ContactoAcademia, on_delete=models.CASCADE, related_name='envios')
+    telefono = models.CharField(max_length=20)
+    wa_message_id = models.CharField(
+        max_length=100, blank=True, db_index=True,
+        help_text='ID que devuelve Meta al enviar; correlaciona los webhooks de estado.',
+    )
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default=ESTADO_PENDIENTE)
+    error_codigo = models.CharField(max_length=20, blank=True)
+    error_mensaje = models.TextField(blank=True)
+    respuesta_api = models.JSONField(null=True, blank=True)
+    enviado_en = models.DateTimeField(null=True, blank=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.contacto.nombre} — {self.get_estado_display()}"
+
+    class Meta:
+        verbose_name = 'Envío masivo'
+        verbose_name_plural = 'Envíos masivos'
+        ordering = ['contacto__nombre']
+        # Blindaje anti doble envío: un contacto solo puede recibir una campaña una vez.
+        unique_together = [('campana', 'contacto')]
 
 
 class Horario(models.Model):

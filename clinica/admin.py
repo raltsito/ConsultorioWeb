@@ -3,6 +3,7 @@ from django.contrib import admin
 from .models import AccesoDirectoPortal, Consultoria, DireccionComercial, LiderOperacionesClinicas, SupervisorSeguimiento, Empresa, Host, HostChecklistTask, Paciente, Cita, Terapeuta, Consultorio, Division, Servicio, BloqueoAgendaTerapeuta, RecursoPropio, MensajeWhatsApp, ConfiguracionWhatsApp, MensajeWhatsAppDemo
 from .models import Horario
 from .models import Instrumento, PreguntaInstrumento, EnvioInstrumento, RespuestaInstrumento
+from .models import ContactoAcademia, InscripcionAcademia, CampanaMasiva, EnvioMasivo
 
 admin.site.register(Terapeuta)
 admin.site.register(Consultorio)
@@ -93,6 +94,57 @@ class MensajeWhatsAppDemoAdmin(admin.ModelAdmin):
     search_fields = ('nombre_contacto', 'telefono')
     readonly_fields = ('campana', 'tipo', 'telefono', 'nombre_contacto', 'texto', 'enviado_en',
                         'exitoso', 'respuesta_api', 'enviado_por')
+
+    def has_add_permission(self, request):
+        return False
+
+
+class InscripcionAcademiaInline(admin.TabularInline):
+    model = InscripcionAcademia
+    extra = 0
+
+
+@admin.register(ContactoAcademia)
+class ContactoAcademiaAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'telefono', 'correo', 'suscrito', 'creado_en')
+    list_filter = ('suscrito', 'inscripciones__estatus', 'inscripciones__anio_fuente')
+    search_fields = ('nombre', 'telefono', 'correo')
+    inlines = [InscripcionAcademiaInline]
+
+
+@admin.register(InscripcionAcademia)
+class InscripcionAcademiaAdmin(admin.ModelAdmin):
+    list_display = ('contacto', 'diplomado', 'anio_fuente', 'estatus', 'matricula')
+    list_filter = ('estatus', 'anio_fuente', 'diplomado')
+    search_fields = ('contacto__nombre', 'contacto__telefono', 'matricula')
+
+
+class EnvioMasivoInline(admin.TabularInline):
+    model = EnvioMasivo
+    extra = 0
+    fields = ('contacto', 'telefono', 'estado', 'error_codigo', 'enviado_en')
+    readonly_fields = fields
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(CampanaMasiva)
+class CampanaMasivaAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'plantilla_meta', 'estado', 'creada_por', 'creada_en')
+    list_filter = ('estado', 'plantilla_meta')
+    search_fields = ('nombre',)
+    inlines = [EnvioMasivoInline]
+
+
+@admin.register(EnvioMasivo)
+class EnvioMasivoAdmin(admin.ModelAdmin):
+    list_display = ('contacto', 'campana', 'telefono', 'estado', 'error_codigo', 'enviado_en')
+    list_filter = ('estado', 'campana')
+    search_fields = ('contacto__nombre', 'telefono', 'wa_message_id')
+    readonly_fields = ('campana', 'contacto', 'telefono', 'wa_message_id', 'respuesta_api',
+                        'enviado_en', 'actualizado_en')
 
     def has_add_permission(self, request):
         return False

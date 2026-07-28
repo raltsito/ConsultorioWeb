@@ -3378,6 +3378,14 @@ def portal_direccion_comercial(request):
     return render(request, 'clinica/portal_direccion_comercial.html', context)
 
 
+@login_required
+def mensajes_masivos_direccion_comercial(request):
+    if not hasattr(request.user, 'perfil_direccion_comercial'):
+        return redirect('home')
+
+    return render(request, 'clinica/mensajes_masivos_direccion_comercial.html', {})
+
+
 _LOC_DIAS_DESERCION = 60
 
 

@@ -93,6 +93,7 @@
             <button type="submit" name="mes" value="{{ m.value }}" class="dc-mes-pill {% if m.value == mes_actual %}active{% endif %}">{{ m.short }}</button>
             {% endfor %}
         </form>
+        <a href="{% url 'mensajes_masivos_direccion_comercial' %}" class="dc-btn-exportar"><i class="bi bi-send-fill"></i> Mensajes Masivos</a>
         <a href="?{{ query_string }}&export=csv" class="dc-btn-exportar"><i class="bi bi-file-earmark-arrow-down"></i> Exportar reporte</a>
     </div>
 </div>

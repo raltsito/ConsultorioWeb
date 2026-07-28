@@ -98,6 +98,34 @@ TEMPLATE_BODIES = {
         '🏪 Pago en OXXO: menciona la referencia DEMO-12345 en cualquier tienda\n\n'
         'Te recordamos realizar tu pago hoy para mantener tu acceso a clases y evitar recargos.\n\n'
         '¡Gracias por tu compromiso con tu formación! 🩺',
+
+    # --- Campañas masivas de Academia (panel Dirección Comercial) ---
+    # Sin variables a propósito: el mismo texto para todos, aprueba más rápido en
+    # Meta y no hay riesgo de parámetro vacío en un envío de ~250 mensajes.
+    'promo_diplomado_psicoterapia_infantil':
+        '🎓 ¡Atención, estudiantes de Academia! 🚨\n\n'
+        '¡Últimos lugares para el Diplomado en Psicoterapia Infantil!\n\n'
+        'Solo esta semana podrás aprovechar esta promoción exclusiva:\n\n'
+        '✅ Inscripción por solo $500 (precio regular $650)\n'
+        '✅ Mensualidad por solo $500 (precio regular $650)\n\n'
+        '⏳ La promoción termina esta semana, después de esa fecha la inscripción y la '
+        'mensualidad regresan a $650.\n\n'
+        '📚 Inicio de clases: 15 de agosto.\n\n'
+        '📲 Inscríbete hoy y asegura tu lugar con este precio preferencial.\n\n'
+        '📞 Contáctanos al 844 236 9864.\n\n'
+        '¡No dejes pasar esta oportunidad de fortalecer tu formación profesional en '
+        'Psicoterapia Infantil!',
+}
+
+# Plantillas ofrecidas en el panel de Mensajes Masivos (Dirección Comercial).
+# 'campos' vacío = plantilla sin variables. La clave debe existir y estar
+# APROBADA en Meta Business Manager con exactamente ese nombre.
+CAMPANAS_MASIVAS = {
+    'promo_diplomado_psicoterapia_infantil': {
+        'titulo': 'Promoción — Diplomado en Psicoterapia Infantil',
+        'descripcion': 'Últimos lugares, inscripción y mensualidad a $500. Inicio 15 de agosto.',
+        'campos': [],
+    },
 }
 
 # Campañas de demo mostradas en el panel "DEMOS" (acceso exclusivo SUPERADMIN).

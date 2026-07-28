@@ -1,0 +1,55 @@
+{% extends 'clinica/base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .mm-hero {
+        background: #0d6efd;
+        border-radius: 24px;
+        padding: 30px 34px;
+        box-shadow: 0 20px 45px rgba(13,110,253,.28);
+        color: #fff;
+        margin-bottom: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    .mm-hero-icon {
+        width: 64px; height: 64px; border-radius: 18px;
+        background: rgba(255,255,255,.18);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.8rem; flex-shrink: 0;
+    }
+    .mm-btn-volver {
+        display: inline-flex; align-items: center; gap: 8px; background: #fff; color: #0d6efd;
+        border: none; padding: 11px 20px; border-radius: 999px; font-weight: 700; font-size: .9rem;
+        cursor: pointer; box-shadow: 0 10px 22px rgba(0,0,0,.14); transition: transform .18s ease; text-decoration: none;
+    }
+    .mm-btn-volver:hover { transform: translateY(-2px); color: #0d6efd; }
+
+    .mm-card {
+        background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.05);
+        padding: 60px 26px; text-align: center;
+    }
+    .mm-card i { font-size: 3rem; color: #90A4AE; }
+</style>
+
+<div class="mm-hero">
+    <div style="display:flex; align-items:center; gap:18px; min-width:280px;">
+        <div class="mm-hero-icon"><i class="bi bi-send-fill"></i></div>
+        <div>
+            <h2 style="font-family:'Poppins',sans-serif; font-weight:700; margin:0 0 4px; font-size:1.5rem;">Mensajes Masivos</h2>
+            <p style="margin:0; opacity:.9; font-size:1rem;">Comunicación masiva a pacientes de INTRA</p>
+        </div>
+    </div>
+    <a href="{% url 'portal_direccion_comercial' %}" class="mm-btn-volver"><i class="bi bi-arrow-left"></i> Volver al portal</a>
+</div>
+
+<div class="mm-card">
+    <i class="bi bi-tools"></i>
+    <h4 style="font-family:'Poppins',sans-serif; font-weight:700; color:#37474F; margin:18px 0 8px;">Módulo en construcción</h4>
+    <p style="color:#90A4AE; margin:0;">Aquí podrás enviar mensajes masivos a los pacientes. Próximamente.</p>
+</div>
+{% endblock %}
