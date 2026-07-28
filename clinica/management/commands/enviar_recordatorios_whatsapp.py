@@ -67,14 +67,18 @@ class Command(BaseCommand):
             resp = {'error': str(e)}
             exitoso = False
 
-        campo = {
-            MensajeWhatsApp.TIPO_RECORDATORIO_5D: 'recordatorio_5d_enviado_en',
-            MensajeWhatsApp.TIPO_RECORDATORIO_3D: 'recordatorio_3d_enviado_en',
-            MensajeWhatsApp.TIPO_CONFIRMACION_1D: 'recordatorio_1d_enviado_en',
-            MensajeWhatsApp.TIPO_ENCUESTA: 'encuesta_enviada_en',
-        }[tipo]
-        setattr(cita, campo, timezone.now())
-        cita.save(update_fields=[campo])
+        # Solo se marca cuando Meta aceptó el mensaje; si falló, la cita sigue
+        # apareciendo como pendiente en /whatsapp/recordatorios/ para reenviarla
+        # a mano en lugar de darse por enviada en silencio.
+        if exitoso:
+            campo = {
+                MensajeWhatsApp.TIPO_RECORDATORIO_5D: 'recordatorio_5d_enviado_en',
+                MensajeWhatsApp.TIPO_RECORDATORIO_3D: 'recordatorio_3d_enviado_en',
+                MensajeWhatsApp.TIPO_CONFIRMACION_1D: 'recordatorio_1d_enviado_en',
+                MensajeWhatsApp.TIPO_ENCUESTA: 'encuesta_enviada_en',
+            }[tipo]
+            setattr(cita, campo, timezone.now())
+            cita.save(update_fields=[campo])
 
         MensajeWhatsApp.objects.create(
             cita=cita,
