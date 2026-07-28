@@ -150,6 +150,47 @@ DEMOS_CAMPANAS = {
     },
 }
 
+# Números a los que dispara el botón "PROBAR ENVÍO" del panel de Mensajes
+# Masivos. Se validan contra esta lista en el servidor: el front no puede pedir
+# una prueba a un número arbitrario.
+TELEFONOS_PRUEBA = ['8445860246', '8118226008']
+
+# Clasificación de los códigos de error de la Cloud API para decidir qué hacer
+# con cada envío fallido dentro de un lote.
+# Reintentables: se dejan en 'pendiente' y el siguiente lote los vuelve a tomar.
+ERRORES_REINTENTABLES = {'4', '80007', '130429', '131056', '613'}
+# Definitivos: el mensaje nunca va a llegar, marcar 'fallido' y no insistir.
+ERRORES_DEFINITIVOS = {'131026', '131047', '131049', '130472', '131031', '133010'}
+
+
+def clasificar_error(codigo: str) -> str:
+    """
+    'plantilla'    -> problema con la plantilla en Meta: aborta la campaña entera,
+                      porque va a fallar idéntico en los 248 envíos.
+    'reintentable' -> límite de tasa momentáneo, se reintenta en el siguiente lote.
+    'definitivo'   -> este número en particular no puede recibirlo.
+    """
+    codigo = str(codigo or '')
+    if codigo.startswith('132'):
+        return 'plantilla'
+    if codigo in ERRORES_REINTENTABLES:
+        return 'reintentable'
+    return 'definitivo'
+
+
+def extraer_error(respuesta: dict):
+    """Saca (codigo, mensaje) de una respuesta de error de la Cloud API."""
+    error = (respuesta or {}).get('error') or {}
+    codigo = str(error.get('code', '')) if error else ''
+    mensaje = error.get('message') or ''
+    detalle = (error.get('error_data') or {}).get('details')
+    if detalle:
+        mensaje = f'{mensaje} — {detalle}'
+    if not error:
+        mensaje = mensaje or 'Respuesta inesperada de Meta'
+    return codigo, mensaje
+
+
 CAMPOS_DEMO_LABELS = {
     'nombre': 'Nombre del contacto',
     'fecha_vencimiento': 'Fecha de vencimiento',

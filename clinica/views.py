@@ -7,6 +7,9 @@ import io
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
+# 'time' arriba es datetime.time, no el módulo: para dormir entre envíos se
+# importa sleep con un alias en vez de 'import time'.
+from time import sleep as _dormir
 from urllib.parse import urlencode
 
 #Herramientas base de Django
@@ -58,6 +61,10 @@ from .models import (
     MensajeWhatsApp,
     MensajeWhatsAppEntrante,
     MensajeWhatsAppDemo,
+    ContactoAcademia,
+    InscripcionAcademia,
+    CampanaMasiva,
+    EnvioMasivo,
     Horario,
     SolicitudCita,
     SolicitudReagendo,
@@ -3378,12 +3385,257 @@ def portal_direccion_comercial(request):
     return render(request, 'clinica/portal_direccion_comercial.html', context)
 
 
+MM_TAM_LOTE = 20          # envíos por request AJAX
+MM_PAUSA_ENVIO = 0.25     # segundos entre envíos, para no golpear el rate limit
+
+
+def _mm_contactos_para_panel():
+    """
+    Contactos de Academia suscritos, con sus inscripciones ya agregadas para
+    poder filtrar en el navegador sin recargar (son ~250, cabe todo en la página).
+    """
+    contactos = (
+        ContactoAcademia.objects
+        .filter(suscrito=True)
+        .prefetch_related('inscripciones')
+        .order_by('nombre')
+    )
+
+    filas = []
+    for c in contactos:
+        inscripciones = list(c.inscripciones.all())
+        estatus = (
+            InscripcionAcademia.ESTATUS_ACTIVO
+            if any(i.estatus == InscripcionAcademia.ESTATUS_ACTIVO for i in inscripciones)
+            else (inscripciones[0].estatus if inscripciones else InscripcionAcademia.ESTATUS_INACTIVO)
+        )
+        filas.append({
+            'id': c.pk,
+            'nombre': c.nombre,
+            'telefono': c.telefono,
+            'estatus': estatus,
+            'diplomados': sorted({i.diplomado for i in inscripciones}),
+            'anios': sorted({i.anio_fuente for i in inscripciones}, reverse=True),
+        })
+    return filas
+
+
 @login_required
 def mensajes_masivos_direccion_comercial(request):
     if not hasattr(request.user, 'perfil_direccion_comercial'):
         return redirect('home')
 
-    return render(request, 'clinica/mensajes_masivos_direccion_comercial.html', {})
+    contactos = _mm_contactos_para_panel()
+
+    plantillas = [
+        {
+            'clave': clave,
+            'titulo': info['titulo'],
+            'descripcion': info['descripcion'],
+            'texto': wa.TEMPLATE_BODIES.get(clave, ''),
+        }
+        for clave, info in wa.CAMPANAS_MASIVAS.items()
+    ]
+
+    campanas = (
+        CampanaMasiva.objects
+        .annotate(
+            total=Count('envios'),
+            enviados=Count('envios', filter=~Q(envios__estado=EnvioMasivo.ESTADO_PENDIENTE)),
+            fallidos=Count('envios', filter=Q(envios__estado=EnvioMasivo.ESTADO_FALLIDO)),
+        )
+        .select_related('creada_por')[:15]
+    )
+
+    return render(request, 'clinica/mensajes_masivos_direccion_comercial.html', {
+        'contactos': contactos,
+        'plantillas': plantillas,
+        'diplomados': sorted({d for c in contactos for d in c['diplomados']}),
+        'anios': sorted({a for c in contactos for a in c['anios']}, reverse=True),
+        'telefonos_prueba': wa.TELEFONOS_PRUEBA,
+        'campanas': campanas,
+        'tam_lote': MM_TAM_LOTE,
+    })
+
+
+@login_required
+@require_POST
+def mensajes_masivos_probar(request):
+    """
+    Botón "PROBAR ENVÍO": manda la plantilla solo a los números de prueba
+    definidos en services_whatsapp.TELEFONOS_PRUEBA. No crea CampanaMasiva ni
+    toca a los contactos reales — sirve para verificar que la plantilla ya fue
+    aprobada y que el texto se ve bien en el celular antes del disparo masivo.
+    """
+    if not hasattr(request.user, 'perfil_direccion_comercial'):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    plantilla = (json.loads(request.body or '{}').get('plantilla') or '').strip()
+    if plantilla not in wa.CAMPANAS_MASIVAS:
+        return JsonResponse({'error': 'Plantilla no válida'}, status=400)
+
+    resultados = []
+    for telefono in wa.TELEFONOS_PRUEBA:
+        try:
+            resp = wa.enviar_template(telefono, plantilla, [])
+        except Exception as e:
+            resp = {'error': {'message': str(e), 'code': ''}}
+
+        ok = 'messages' in resp
+        codigo, mensaje = ('', '') if ok else wa.extraer_error(resp)
+        resultados.append({
+            'telefono': telefono,
+            'ok': ok,
+            'error_codigo': codigo,
+            'error_mensaje': mensaje,
+        })
+
+    return JsonResponse({'resultados': resultados})
+
+
+@login_required
+@require_POST
+def mensajes_masivos_crear_campana(request):
+    """
+    Prepara la campaña: crea la CampanaMasiva y un EnvioMasivo en 'pendiente'
+    por cada contacto seleccionado. Todavía no envía nada — el disparo real lo
+    hace mensajes_masivos_enviar_lote, lote por lote.
+    """
+    if not hasattr(request.user, 'perfil_direccion_comercial'):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    data = json.loads(request.body or '{}')
+    plantilla = (data.get('plantilla') or '').strip()
+    contacto_ids = data.get('contactos') or []
+
+    if plantilla not in wa.CAMPANAS_MASIVAS:
+        return JsonResponse({'error': 'Plantilla no válida'}, status=400)
+    if not contacto_ids:
+        return JsonResponse({'error': 'No seleccionaste ningún destinatario'}, status=400)
+
+    contactos = list(
+        ContactoAcademia.objects.filter(pk__in=contacto_ids, suscrito=True)
+    )
+    if not contactos:
+        return JsonResponse({'error': 'Los destinatarios seleccionados ya no están disponibles'}, status=400)
+
+    info = wa.CAMPANAS_MASIVAS[plantilla]
+    with transaction.atomic():
+        campana = CampanaMasiva.objects.create(
+            nombre=f"{info['titulo']} — {timezone.localdate():%d/%m/%Y}",
+            plantilla_meta=plantilla,
+            texto_render=wa.TEMPLATE_BODIES.get(plantilla, ''),
+            estado=CampanaMasiva.ESTADO_ENVIANDO,
+            creada_por=request.user,
+        )
+        EnvioMasivo.objects.bulk_create([
+            EnvioMasivo(campana=campana, contacto=c, telefono=c.telefono)
+            for c in contactos
+        ])
+
+    return JsonResponse({
+        'campana_id': campana.pk,
+        'total': len(contactos),
+        'omitidos': len(contacto_ids) - len(contactos),
+    })
+
+
+@login_required
+@require_POST
+def mensajes_masivos_enviar_lote(request):
+    """
+    Envía el siguiente lote de pendientes de una campaña. El front llama a este
+    endpoint en bucle hasta que 'restantes' llega a 0.
+
+    Va por lotes y no de un jalón porque el proyecto no tiene worker asíncrono
+    (ni Celery ni RQ) y enviar ~250 mensajes en un solo request superaría el
+    timeout de gunicorn en Railway, dejando la campaña a medias.
+    """
+    if not hasattr(request.user, 'perfil_direccion_comercial'):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    data = json.loads(request.body or '{}')
+    campana = get_object_or_404(CampanaMasiva, pk=data.get('campana_id'))
+
+    pendientes = list(
+        campana.envios
+        .filter(estado=EnvioMasivo.ESTADO_PENDIENTE)
+        .select_related('contacto')[:MM_TAM_LOTE]
+    )
+
+    enviados = fallidos = reintentables = 0
+    abortar = None
+
+    for envio in pendientes:
+        try:
+            resp = wa.enviar_template(envio.telefono, campana.plantilla_meta, [])
+        except Exception as e:
+            resp = {'error': {'message': str(e), 'code': ''}}
+
+        if 'messages' in resp:
+            envio.wa_message_id = resp['messages'][0].get('id', '')
+            envio.estado = EnvioMasivo.ESTADO_ENVIADO
+            envio.error_codigo = ''
+            envio.error_mensaje = ''
+            envio.enviado_en = timezone.now()
+            envio.respuesta_api = resp
+            envio.save()
+            enviados += 1
+        else:
+            codigo, mensaje = wa.extraer_error(resp)
+            clase = wa.clasificar_error(codigo)
+
+            if clase == 'plantilla':
+                # Falla la plantilla, no este número: abortar antes de quemar
+                # el resto de la lista con el mismo error.
+                campana.estado = CampanaMasiva.ESTADO_PAUSADA
+                campana.save(update_fields=['estado'])
+                abortar = f'{mensaje} (código {codigo})'
+                break
+
+            if clase == 'reintentable':
+                # Se queda 'pendiente': el siguiente lote lo vuelve a intentar.
+                reintentables += 1
+                break
+
+            envio.estado = EnvioMasivo.ESTADO_FALLIDO
+            envio.error_codigo = codigo
+            envio.error_mensaje = mensaje
+            envio.respuesta_api = resp
+            envio.enviado_en = timezone.now()
+            envio.save()
+            fallidos += 1
+
+        _dormir(MM_PAUSA_ENVIO)
+
+    restantes = campana.envios.filter(estado=EnvioMasivo.ESTADO_PENDIENTE).count()
+    if restantes == 0 and not abortar:
+        campana.estado = CampanaMasiva.ESTADO_ENVIADA
+        campana.save(update_fields=['estado'])
+
+    return JsonResponse({
+        'campana_id': campana.pk,
+        'enviados': enviados,
+        'fallidos': fallidos,
+        'reintentables': reintentables,
+        'restantes': restantes,
+        'abortar': abortar,
+        'totales': _mm_totales(campana),
+    })
+
+
+def _mm_totales(campana):
+    conteos = dict(
+        campana.envios.values_list('estado').annotate(n=Count('id')).values_list('estado', 'n')
+    )
+    return {
+        'total': campana.envios.count(),
+        'pendiente': conteos.get(EnvioMasivo.ESTADO_PENDIENTE, 0),
+        'enviado': conteos.get(EnvioMasivo.ESTADO_ENVIADO, 0),
+        'entregado': conteos.get(EnvioMasivo.ESTADO_ENTREGADO, 0),
+        'leido': conteos.get(EnvioMasivo.ESTADO_LEIDO, 0),
+        'fallido': conteos.get(EnvioMasivo.ESTADO_FALLIDO, 0),
+    }
 
 
 _LOC_DIAS_DESERCION = 60

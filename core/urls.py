@@ -127,6 +127,9 @@ urlpatterns = [
     # Portal Direccion Comercial
     path('portal-direccion-comercial/', clinica_views.portal_direccion_comercial, name='portal_direccion_comercial'),
     path('portal-direccion-comercial/mensajes-masivos/', clinica_views.mensajes_masivos_direccion_comercial, name='mensajes_masivos_direccion_comercial'),
+    path('portal-direccion-comercial/mensajes-masivos/probar/', clinica_views.mensajes_masivos_probar, name='mensajes_masivos_probar'),
+    path('portal-direccion-comercial/mensajes-masivos/crear-campana/', clinica_views.mensajes_masivos_crear_campana, name='mensajes_masivos_crear_campana'),
+    path('portal-direccion-comercial/mensajes-masivos/enviar-lote/', clinica_views.mensajes_masivos_enviar_lote, name='mensajes_masivos_enviar_lote'),
 
     # Portal Lider de Operaciones Clinicas
     path('portal-operaciones-clinicas/', clinica_views.portal_lider_operaciones_clinicas, name='portal_lider_operaciones_clinicas'),

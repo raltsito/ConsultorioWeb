@@ -4,36 +4,83 @@
 {% block content %}
 <style>
     .mm-hero {
-        background: #0d6efd;
-        border-radius: 24px;
-        padding: 30px 34px;
-        box-shadow: 0 20px 45px rgba(13,110,253,.28);
-        color: #fff;
-        margin-bottom: 24px;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 20px;
-        flex-wrap: wrap;
+        background: #0d6efd; border-radius: 24px; padding: 30px 34px;
+        box-shadow: 0 20px 45px rgba(13,110,253,.28); color: #fff; margin-bottom: 24px;
+        display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap;
     }
     .mm-hero-icon {
-        width: 64px; height: 64px; border-radius: 18px;
-        background: rgba(255,255,255,.18);
-        display: flex; align-items: center; justify-content: center;
-        font-size: 1.8rem; flex-shrink: 0;
+        width: 64px; height: 64px; border-radius: 18px; background: rgba(255,255,255,.18);
+        display: flex; align-items: center; justify-content: center; font-size: 1.8rem; flex-shrink: 0;
     }
-    .mm-btn-volver {
+    .mm-btn-blanco {
         display: inline-flex; align-items: center; gap: 8px; background: #fff; color: #0d6efd;
         border: none; padding: 11px 20px; border-radius: 999px; font-weight: 700; font-size: .9rem;
         cursor: pointer; box-shadow: 0 10px 22px rgba(0,0,0,.14); transition: transform .18s ease; text-decoration: none;
     }
-    .mm-btn-volver:hover { transform: translateY(-2px); color: #0d6efd; }
+    .mm-btn-blanco:hover { transform: translateY(-2px); color: #0d6efd; }
 
     .mm-card {
         background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.05);
-        padding: 60px 26px; text-align: center;
+        padding: 26px; margin-bottom: 20px;
     }
-    .mm-card i { font-size: 3rem; color: #90A4AE; }
+    .mm-card-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+    .mm-titulo { font-family:'Poppins',sans-serif; font-weight:700; color:#37474F; margin:0; font-size:1.05rem; }
+    .mm-label { color: #78909C; font-size: .82rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+
+    .mm-preview {
+        background: #E7FBE7; border: 1px solid #CDEFCD; border-radius: 14px; padding: 18px 20px;
+        white-space: pre-wrap; font-size: .9rem; color: #263238; line-height: 1.5; max-height: 340px; overflow-y: auto;
+    }
+    .mm-preview-wrap { background:#ECE5DD; border-radius:18px; padding:14px; }
+
+    .mm-btn-azul {
+        display: inline-flex; align-items: center; gap: 8px; background: #0d6efd; color: #fff; border: none;
+        padding: 12px 22px; border-radius: 999px; font-weight: 700; font-size: .92rem; cursor: pointer;
+        transition: transform .18s ease, opacity .18s ease;
+    }
+    .mm-btn-azul:hover:not(:disabled) { transform: translateY(-2px); color:#fff; }
+    .mm-btn-azul:disabled { opacity: .45; cursor: not-allowed; }
+    .mm-btn-prueba {
+        display: inline-flex; align-items: center; gap: 8px; background: #fff; color: #0d6efd;
+        border: 2px solid #0d6efd; padding: 10px 20px; border-radius: 999px; font-weight: 700;
+        font-size: .9rem; cursor: pointer; transition: background .18s ease;
+    }
+    .mm-btn-prueba:hover:not(:disabled) { background: #E8F1FF; }
+    .mm-btn-prueba:disabled { opacity: .45; cursor: not-allowed; }
+
+    .mm-filtros { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .mm-filtros input[type="text"], .mm-filtros select {
+        padding: 10px 14px; border-radius: 12px; border: 1px solid #E0E6EC; font-size: .86rem;
+        color: #37474F; background: #fff; font-weight: 600;
+    }
+    .mm-search-wrap { position: relative; flex: 1 1 220px; min-width: 200px; }
+    .mm-search-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #90A4AE; }
+    .mm-search-wrap input { width: 100%; box-sizing: border-box; padding-left: 38px; }
+
+    .mm-tabla-wrap { max-height: 460px; overflow-y: auto; border: 1px solid #F0F4F8; border-radius: 14px; }
+    .mm-tabla { width: 100%; border-collapse: collapse; }
+    .mm-tabla thead tr { background: #F7F9FC; position: sticky; top: 0; z-index: 2; }
+    .mm-tabla th { text-align: left; padding: 12px 16px; font-size: .72rem; text-transform: uppercase;
+                    letter-spacing: .05em; color: #90A4AE; font-weight: 700; }
+    .mm-tabla td { padding: 12px 16px; border-top: 1px solid #F0F4F8; font-size: .88rem; color: #37474F; }
+    .mm-tabla tbody tr:hover { background: #F7FBFC; }
+    .mm-chip { display:inline-block; padding:3px 9px; border-radius:999px; font-size:.72rem; font-weight:700; }
+    .mm-chip.activo { background:#EAF7F1; color:#2E7D32; }
+    .mm-chip.inactivo { background:#ECEFF1; color:#607D8B; }
+    .mm-chip.por_confirmar { background:#FFF6E5; color:#EF6C00; }
+    .mm-dip { color:#90A4AE; font-size:.76rem; }
+
+    .mm-progreso-track { height: 14px; background: #ECEFF1; border-radius: 999px; overflow: hidden; }
+    .mm-progreso-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#26C6DA,#0d6efd);
+                         border-radius: 999px; transition: width .35s ease; }
+    .mm-stat { text-align:center; padding: 12px 6px; }
+    .mm-stat-num { font-family:'Poppins',sans-serif; font-weight:700; font-size:1.5rem; color:#37474F; }
+    .mm-stat-lbl { font-size:.74rem; color:#90A4AE; text-transform:uppercase; letter-spacing:.04em; font-weight:700; }
+
+    .mm-aviso { border-radius: 14px; padding: 14px 18px; font-size: .88rem; font-weight: 600; }
+    .mm-aviso.ok { background:#EAF7F1; color:#2E7D32; }
+    .mm-aviso.err { background:#FEF1F1; color:#C62828; }
+    .mm-aviso.info { background:#E8F1FF; color:#0d6efd; }
 </style>
 
 <div class="mm-hero">
@@ -41,15 +88,386 @@
         <div class="mm-hero-icon"><i class="bi bi-send-fill"></i></div>
         <div>
             <h2 style="font-family:'Poppins',sans-serif; font-weight:700; margin:0 0 4px; font-size:1.5rem;">Mensajes Masivos</h2>
-            <p style="margin:0; opacity:.9; font-size:1rem;">Comunicación masiva a pacientes de INTRA</p>
+            <p style="margin:0; opacity:.9; font-size:1rem;">Campañas de WhatsApp a alumnos de Academia</p>
         </div>
     </div>
-    <a href="{% url 'portal_direccion_comercial' %}" class="mm-btn-volver"><i class="bi bi-arrow-left"></i> Volver al portal</a>
+    <a href="{% url 'portal_direccion_comercial' %}" class="mm-btn-blanco"><i class="bi bi-arrow-left"></i> Volver al portal</a>
 </div>
 
+{% if not plantillas %}
 <div class="mm-card">
-    <i class="bi bi-tools"></i>
-    <h4 style="font-family:'Poppins',sans-serif; font-weight:700; color:#37474F; margin:18px 0 8px;">Módulo en construcción</h4>
-    <p style="color:#90A4AE; margin:0;">Aquí podrás enviar mensajes masivos a los pacientes. Próximamente.</p>
+    <div class="mm-aviso err">No hay plantillas configuradas. Registra una en services_whatsapp.CAMPANAS_MASIVAS.</div>
 </div>
+{% else %}
+
+<!-- 1. Plantilla + preview + prueba -->
+<div class="mm-card">
+    <div class="mm-card-head">
+        <h5 class="mm-titulo"><i class="bi bi-chat-square-text-fill me-2" style="color:#26C6DA;"></i>Mensaje a enviar</h5>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;" class="mm-grid-mensaje">
+        <div>
+            <div class="mm-label" style="margin-bottom:8px;">Plantilla</div>
+            <select id="mm-plantilla" style="width:100%; padding:11px 14px; border-radius:12px; border:1px solid #E0E6EC; font-weight:600; color:#37474F;">
+                {% for p in plantillas %}
+                <option value="{{ p.clave }}" data-texto="{{ p.texto }}">{{ p.titulo }}</option>
+                {% endfor %}
+            </select>
+            <p id="mm-plantilla-desc" style="color:#90A4AE; font-size:.84rem; margin:10px 0 0;"></p>
+
+            <div style="margin-top:22px; padding-top:20px; border-top:1px solid #F0F4F8;">
+                <div class="mm-label" style="margin-bottom:6px;">Prueba antes de disparar</div>
+                <p style="color:#90A4AE; font-size:.84rem; margin:0 0 12px;">
+                    Envía la plantilla solo a estos números para revisar cómo se ve en el celular.
+                    No toca a los alumnos ni registra una campaña.
+                </p>
+                <div style="margin-bottom:14px;">
+                    {% for t in telefonos_prueba %}
+                    <span class="mm-chip inactivo" style="font-size:.8rem; margin-right:6px;"><i class="bi bi-phone me-1"></i>{{ t }}</span>
+                    {% endfor %}
+                </div>
+                <button type="button" id="mm-btn-probar" class="mm-btn-prueba">
+                    <i class="bi bi-send-check"></i> PROBAR ENVÍO
+                </button>
+                <div id="mm-resultado-prueba" style="margin-top:14px;"></div>
+            </div>
+        </div>
+
+        <div>
+            <div class="mm-label" style="margin-bottom:8px;">Vista previa</div>
+            <div class="mm-preview-wrap">
+                <div class="mm-preview" id="mm-preview"></div>
+            </div>
+            <p style="color:#90A4AE; font-size:.78rem; margin:8px 0 0;">
+                Así llega el mensaje. El texto debe coincidir exactamente con la plantilla aprobada en Meta.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Destinatarios -->
+<div class="mm-card">
+    <div class="mm-card-head">
+        <h5 class="mm-titulo"><i class="bi bi-people-fill me-2" style="color:#26C6DA;"></i>Destinatarios</h5>
+        <span style="color:#90A4AE; font-size:.86rem; font-weight:600;">
+            <span id="mm-contador-sel">0</span> seleccionados de <span id="mm-contador-vis">0</span> visibles
+            · {{ contactos|length }} contactos en total
+        </span>
+    </div>
+
+    <div class="mm-filtros">
+        <div class="mm-search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" id="mm-buscar" placeholder="Buscar por nombre o teléfono...">
+        </div>
+        <select id="mm-filtro-estatus">
+            <option value="">Activos e inactivos</option>
+            <option value="activo">Solo activos</option>
+            <option value="inactivo">Solo inactivos</option>
+            <option value="por_confirmar">Solo por confirmar</option>
+        </select>
+        <select id="mm-filtro-diplomado">
+            <option value="">Todo diplomado</option>
+            {% for d in diplomados %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+        </select>
+        <select id="mm-filtro-anio">
+            <option value="">Todo año</option>
+            {% for a in anios %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+        </select>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+        <button type="button" id="mm-sel-todos" class="mm-btn-prueba" style="padding:8px 16px; font-size:.84rem;">
+            <i class="bi bi-check-all"></i> Seleccionar todos los visibles
+        </button>
+        <button type="button" id="mm-sel-ninguno" class="mm-btn-prueba" style="padding:8px 16px; font-size:.84rem; border-color:#CFD8DC; color:#607D8B;">
+            <i class="bi bi-x-lg"></i> Quitar selección
+        </button>
+    </div>
+
+    <div class="mm-tabla-wrap">
+        <table class="mm-tabla">
+            <thead>
+                <tr>
+                    <th style="width:44px;"><input type="checkbox" id="mm-check-todos" class="form-check-input"></th>
+                    <th>Alumno</th>
+                    <th>Teléfono</th>
+                    <th>Estatus</th>
+                    <th>Diplomados</th>
+                </tr>
+            </thead>
+            <tbody id="mm-tbody"></tbody>
+        </table>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; margin-top:18px;">
+        <button type="button" id="mm-btn-enviar" class="mm-btn-azul" disabled>
+            <i class="bi bi-whatsapp"></i> Enviar campaña a <span id="mm-btn-enviar-num">0</span> alumnos
+        </button>
+    </div>
+</div>
+
+<!-- 3. Progreso -->
+<div class="mm-card" id="mm-card-progreso" style="display:none;">
+    <div class="mm-card-head">
+        <h5 class="mm-titulo"><i class="bi bi-broadcast me-2" style="color:#26C6DA;"></i>Envío en curso</h5>
+        <span id="mm-progreso-pct" style="font-family:'Poppins',sans-serif; font-weight:700; color:#0d6efd;">0%</span>
+    </div>
+    <div class="mm-progreso-track"><div class="mm-progreso-fill" id="mm-progreso-fill"></div></div>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:18px;">
+        <div class="mm-stat"><div class="mm-stat-num" id="mm-stat-enviado">0</div><div class="mm-stat-lbl">Enviados</div></div>
+        <div class="mm-stat"><div class="mm-stat-num" id="mm-stat-fallido" style="color:#C62828;">0</div><div class="mm-stat-lbl">Fallidos</div></div>
+        <div class="mm-stat"><div class="mm-stat-num" id="mm-stat-pendiente">0</div><div class="mm-stat-lbl">Pendientes</div></div>
+        <div class="mm-stat"><div class="mm-stat-num" id="mm-stat-total">0</div><div class="mm-stat-lbl">Total</div></div>
+    </div>
+    <div id="mm-progreso-aviso" style="margin-top:16px;"></div>
+</div>
+
+<!-- 4. Historial -->
+<div class="mm-card">
+    <div class="mm-card-head">
+        <h5 class="mm-titulo"><i class="bi bi-clock-history me-2" style="color:#26C6DA;"></i>Campañas anteriores</h5>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="mm-tabla">
+            <thead>
+                <tr><th>Campaña</th><th>Estado</th><th style="text-align:center;">Enviados</th>
+                    <th style="text-align:center;">Fallidos</th><th>Creada por</th><th>Fecha</th></tr>
+            </thead>
+            <tbody>
+                {% for c in campanas %}
+                <tr>
+                    <td style="font-weight:600;">{{ c.nombre }}</td>
+                    <td><span class="mm-chip {% if c.estado == 'enviada' %}activo{% else %}inactivo{% endif %}">{{ c.get_estado_display }}</span></td>
+                    <td style="text-align:center;">{{ c.enviados }} / {{ c.total }}</td>
+                    <td style="text-align:center; {% if c.fallidos %}color:#C62828; font-weight:700;{% endif %}">{{ c.fallidos }}</td>
+                    <td style="color:#607D8B;">{{ c.creada_por.get_full_name|default:c.creada_por.username|default:"—" }}</td>
+                    <td style="color:#90A4AE;">{{ c.creada_en|date:"d/m/Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" style="padding:36px; text-align:center; color:#90A4AE;">Todavía no se ha enviado ninguna campaña.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{{ contactos|json_script:"mm-datos-contactos" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Los ~250 contactos viajan completos en la página: filtrar en el navegador
+    // es instantáneo y no pierde la selección al cambiar de filtro.
+    const CONTACTOS = JSON.parse(document.getElementById('mm-datos-contactos').textContent);
+    const DESCRIPCIONES = {
+        {% for p in plantillas %}"{{ p.clave|escapejs }}": "{{ p.descripcion|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}
+    };
+    const TAM_LOTE = {{ tam_lote }};
+    const seleccionados = new Set();
+    let visibles = [];
+    let enviando = false;
+
+    const $ = (id) => document.getElementById(id);
+    const csrftoken = document.cookie.split('; ').find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
+
+    function post(url, datos) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
+            body: JSON.stringify(datos),
+        }).then(async r => {
+            const cuerpo = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(cuerpo.error || `Error ${r.status}`);
+            return cuerpo;
+        });
+    }
+
+    function aviso(contenedor, clase, texto) {
+        contenedor.innerHTML = `<div class="mm-aviso ${clase}">${texto}</div>`;
+    }
+
+    // --- Plantilla y preview ---
+    const selPlantilla = $('mm-plantilla');
+    function pintarPlantilla() {
+        const opcion = selPlantilla.selectedOptions[0];
+        $('mm-preview').textContent = opcion.dataset.texto || '';
+        $('mm-plantilla-desc').textContent = DESCRIPCIONES[opcion.value] || '';
+    }
+    selPlantilla.addEventListener('change', pintarPlantilla);
+    pintarPlantilla();
+
+    // --- Filtros y tabla ---
+    function normalizar(s) {
+        // ̀-ͯ = marcas diacríticas, para que "Martinez" encuentre a "Martínez".
+        return (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    }
+
+    function filtrar() {
+        const q = normalizar($('mm-buscar').value.trim());
+        const estatus = $('mm-filtro-estatus').value;
+        const diplomado = $('mm-filtro-diplomado').value;
+        const anio = $('mm-filtro-anio').value;
+
+        visibles = CONTACTOS.filter(c => {
+            if (q && !normalizar(c.nombre).includes(q) && !c.telefono.includes(q)) return false;
+            if (estatus && c.estatus !== estatus) return false;
+            if (diplomado && !c.diplomados.includes(diplomado)) return false;
+            if (anio && !c.anios.map(String).includes(anio)) return false;
+            return true;
+        });
+        pintarTabla();
+    }
+
+    function pintarTabla() {
+        const tbody = $('mm-tbody');
+        if (!visibles.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="padding:36px; text-align:center; color:#90A4AE;">Ningún alumno coincide con estos filtros.</td></tr>';
+        } else {
+            tbody.innerHTML = visibles.map(c => `
+                <tr>
+                    <td><input type="checkbox" class="form-check-input mm-check" data-id="${c.id}" ${seleccionados.has(c.id) ? 'checked' : ''}></td>
+                    <td style="font-weight:600;">${c.nombre}</td>
+                    <td>${c.telefono}</td>
+                    <td><span class="mm-chip ${c.estatus}">${c.estatus.replace('_', ' ')}</span></td>
+                    <td class="mm-dip">${c.diplomados.join(' · ')}</td>
+                </tr>`).join('');
+        }
+        tbody.querySelectorAll('.mm-check').forEach(chk => {
+            chk.addEventListener('change', () => {
+                const id = parseInt(chk.dataset.id, 10);
+                chk.checked ? seleccionados.add(id) : seleccionados.delete(id);
+                actualizarContadores();
+            });
+        });
+        actualizarContadores();
+    }
+
+    function actualizarContadores() {
+        $('mm-contador-sel').textContent = seleccionados.size;
+        $('mm-contador-vis').textContent = visibles.length;
+        $('mm-btn-enviar-num').textContent = seleccionados.size;
+        $('mm-btn-enviar').disabled = seleccionados.size === 0 || enviando;
+        const idsVisibles = visibles.map(c => c.id);
+        $('mm-check-todos').checked = idsVisibles.length > 0 && idsVisibles.every(id => seleccionados.has(id));
+    }
+
+    ['mm-buscar', 'mm-filtro-estatus', 'mm-filtro-diplomado', 'mm-filtro-anio'].forEach(id => {
+        $(id).addEventListener('input', filtrar);
+    });
+
+    function seleccionarVisibles(activar) {
+        visibles.forEach(c => activar ? seleccionados.add(c.id) : seleccionados.delete(c.id));
+        pintarTabla();
+    }
+    $('mm-sel-todos').addEventListener('click', () => seleccionarVisibles(true));
+    $('mm-check-todos').addEventListener('change', (e) => seleccionarVisibles(e.target.checked));
+    $('mm-sel-ninguno').addEventListener('click', () => { seleccionados.clear(); pintarTabla(); });
+
+    filtrar();
+
+    // --- PROBAR ENVÍO ---
+    $('mm-btn-probar').addEventListener('click', function () {
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Enviando prueba...';
+        aviso($('mm-resultado-prueba'), 'info', 'Enviando a los números de prueba...');
+
+        post("{% url 'mensajes_masivos_probar' %}", {plantilla: selPlantilla.value})
+            .then(data => {
+                const filas = data.resultados.map(r => r.ok
+                    ? `✅ ${r.telefono} — enviado`
+                    : `❌ ${r.telefono} — ${r.error_mensaje || 'falló'}${r.error_codigo ? ' (código ' + r.error_codigo + ')' : ''}`
+                ).join('<br>');
+                const todoBien = data.resultados.every(r => r.ok);
+                aviso($('mm-resultado-prueba'), todoBien ? 'ok' : 'err', filas);
+            })
+            .catch(e => aviso($('mm-resultado-prueba'), 'err', e.message))
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-send-check"></i> PROBAR ENVÍO';
+            });
+    });
+
+    // --- Envío de la campaña ---
+    function pintarProgreso(totales) {
+        const hechos = totales.total - totales.pendiente;
+        const pct = totales.total ? Math.round((hechos / totales.total) * 100) : 0;
+        $('mm-progreso-fill').style.width = pct + '%';
+        $('mm-progreso-pct').textContent = pct + '%';
+        $('mm-stat-enviado').textContent = totales.enviado + totales.entregado + totales.leido;
+        $('mm-stat-fallido').textContent = totales.fallido;
+        $('mm-stat-pendiente').textContent = totales.pendiente;
+        $('mm-stat-total').textContent = totales.total;
+    }
+
+    async function correrLotes(campanaId) {
+        // Bucle secuencial: cada request manda TAM_LOTE mensajes y devuelve
+        // cuántos quedan. Se detiene solo cuando restantes llega a 0.
+        let vueltasSinAvance = 0;
+        while (true) {
+            const data = await post("{% url 'mensajes_masivos_enviar_lote' %}", {campana_id: campanaId});
+            pintarProgreso(data.totales);
+
+            if (data.abortar) {
+                aviso($('mm-progreso-aviso'), 'err',
+                    `Campaña detenida: ${data.abortar}<br>Revisa que la plantilla esté aprobada en Meta. Los pendientes quedan guardados y puedes reanudar después.`);
+                return;
+            }
+            if (data.restantes === 0) {
+                aviso($('mm-progreso-aviso'), 'ok',
+                    `Campaña terminada. Enviados: ${data.totales.enviado + data.totales.entregado + data.totales.leido} · Fallidos: ${data.totales.fallido}`);
+                return;
+            }
+            if (data.enviados === 0 && data.fallidos === 0) {
+                // Meta está limitando la tasa: esperar y reintentar, pero no
+                // eternamente si nunca destraba.
+                if (++vueltasSinAvance >= 5) {
+                    aviso($('mm-progreso-aviso'), 'err',
+                        'Meta está rechazando los envíos por límite de tasa y no avanza. Espera unos minutos y vuelve a intentar; los pendientes quedan guardados.');
+                    return;
+                }
+                aviso($('mm-progreso-aviso'), 'info', 'Meta está limitando el ritmo, esperando 5 segundos...');
+                await new Promise(r => setTimeout(r, 5000));
+            } else {
+                vueltasSinAvance = 0;
+            }
+        }
+    }
+
+    $('mm-btn-enviar').addEventListener('click', async function () {
+        const total = seleccionados.size;
+        if (!confirm(`Se enviará el mensaje a ${total} alumno(s) por WhatsApp.\n\nEsta acción no se puede deshacer. ¿Continuar?`)) return;
+
+        enviando = true;
+        this.disabled = true;
+        this.innerHTML = '<i class="bi bi-hourglass-split"></i> Enviando...';
+        $('mm-card-progreso').style.display = 'block';
+        $('mm-card-progreso').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+        $('mm-progreso-aviso').innerHTML = '';
+
+        try {
+            const campana = await post("{% url 'mensajes_masivos_crear_campana' %}", {
+                plantilla: selPlantilla.value,
+                contactos: Array.from(seleccionados),
+            });
+            pintarProgreso({total: campana.total, pendiente: campana.total, enviado: 0, entregado: 0, leido: 0, fallido: 0});
+            await correrLotes(campana.campana_id);
+            seleccionados.clear();
+            pintarTabla();
+        } catch (e) {
+            aviso($('mm-progreso-aviso'), 'err', e.message);
+        } finally {
+            enviando = false;
+            this.innerHTML = '<i class="bi bi-whatsapp"></i> Enviar campaña a <span id="mm-btn-enviar-num">' + seleccionados.size + '</span> alumnos';
+            actualizarContadores();
+        }
+    });
+});
+</script>
+
+<style>
+@media (max-width: 992px) { .mm-grid-mensaje { grid-template-columns: 1fr !important; } }
+</style>
+{% endif %}
 {% endblock %}
