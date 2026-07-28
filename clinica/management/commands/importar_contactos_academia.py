@@ -21,7 +21,7 @@ import unicodedata
 from datetime import date, datetime
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import connection, transaction
 
 from clinica.models import ContactoAcademia, InscripcionAcademia
 
@@ -93,6 +93,8 @@ class Command(BaseCommand):
         except ImportError:
             raise CommandError('Falta openpyxl. Instálalo con: pip install openpyxl')
 
+        self._reportar_base_de_datos()
+
         ruta = options['archivo']
         if not os.path.exists(ruta):
             raise CommandError(f'No existe el archivo: {ruta}')
@@ -124,6 +126,29 @@ class Command(BaseCommand):
             f'Total de contactos en la base: {ContactoAcademia.objects.count()} '
             f'({ContactoAcademia.objects.filter(suscrito=True).count()} suscritos)'
         )
+
+    def _reportar_base_de_datos(self):
+        """
+        Deja clarísimo contra qué base se va a escribir.
+
+        settings usa dj_database_url con fallback a SQLite: si DATABASE_URL no
+        llega (p. ej. se corrió sin `railway run`), la importación entraría en
+        la base local sin avisar y parecería que ya está en producción.
+        """
+        config = connection.settings_dict
+        motor = config['ENGINE'].rsplit('.', 1)[-1]
+
+        if motor == 'sqlite3':
+            self.stdout.write(self.style.WARNING(
+                f'BASE DE DATOS: SQLite LOCAL ({config["NAME"]})\n'
+                'Si esperabas producción, el comando debe correrse con `railway run` '
+                'para que DATABASE_URL apunte a Postgres.\n'
+            ))
+        else:
+            destino = config.get('HOST') or 'desconocido'
+            self.stdout.write(self.style.SUCCESS(
+                f'BASE DE DATOS: {motor} en {destino} — base "{config.get("NAME")}"\n'
+            ))
 
     def _localizar_encabezados(self, filas):
         """
