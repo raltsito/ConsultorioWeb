@@ -371,7 +371,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function actualizarContadores() {
         $('mm-contador-sel').textContent = seleccionados.size;
         $('mm-contador-vis').textContent = visibles.length;
-        $('mm-btn-enviar-num').textContent = seleccionados.size;
+        // El botón de enviar reemplaza su innerHTML mientras envía (spinner),
+        // así que el span #mm-btn-enviar-num no existe todo ese rato.
+        const btnEnviarNum = $('mm-btn-enviar-num');
+        if (btnEnviarNum) btnEnviarNum.textContent = seleccionados.size;
         $('mm-btn-enviar').disabled = seleccionados.size === 0 || enviando;
         const idsVisibles = visibles.map(c => c.id);
         $('mm-check-todos').checked = idsVisibles.length > 0 && idsVisibles.every(id => seleccionados.has(id));
