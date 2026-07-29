@@ -3386,7 +3386,8 @@ def portal_direccion_comercial(request):
     return render(request, 'clinica/portal_direccion_comercial.html', context)
 
 
-MM_TAM_LOTE = 20          # envíos por request AJAX
+MM_TAM_LOTE = 10          # envíos por request AJAX; con timeout=10s por envío hay que
+                          # dejar margen bajo el --timeout de gunicorn (ver start.sh)
 MM_PAUSA_ENVIO = 0.25     # segundos entre envíos, para no golpear el rate limit
 
 
