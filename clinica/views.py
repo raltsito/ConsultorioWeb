@@ -7870,7 +7870,7 @@ def toggle_alta_paciente(request, paciente_id):
 @login_required
 @require_POST
 def toggle_alta_paciente(request, paciente_id):
-    if not request.user.is_superuser or request.user.is_staff:
+    if not (request.user.is_superuser or request.user.is_staff):
         messages.error(
             request,
             "No tienes permisos para realizar esta acción."
