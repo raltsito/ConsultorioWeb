@@ -447,8 +447,29 @@ document.addEventListener('DOMContentLoaded', function () {
                             etiqueta.textContent = m.tipo + (m.exitoso ? '' : ' (no enviado)');
                             burbuja.appendChild(etiqueta);
                         }
+                        // Adjuntos: las fotos se ven en el chat (comprobantes de
+                        // pago, recetas); lo demás es un enlace de descarga. El
+                        // archivo se baja de Meta al abrirlo, no aquí.
+                        if (m.media_url) {
+                            const enlace = document.createElement('a');
+                            enlace.href = m.media_url;
+                            enlace.target = '_blank';
+                            enlace.rel = 'noopener';
+                            enlace.className = 'd-block mb-1';
+                            if (m.media_tipo === 'image' || m.media_tipo === 'sticker') {
+                                const img = document.createElement('img');
+                                img.src = m.media_url;
+                                img.alt = m.media_nombre || 'Imagen';
+                                img.loading = 'lazy';
+                                img.style.cssText = 'max-width:100%; max-height:220px; border-radius:8px;';
+                                enlace.appendChild(img);
+                            } else {
+                                enlace.textContent = '📎 ' + (m.media_nombre || 'Archivo');
+                            }
+                            burbuja.appendChild(enlace);
+                        }
                         const texto = document.createElement('span');
-                        texto.textContent = m.texto || '(mensaje sin texto)';
+                        texto.textContent = m.texto || (m.media_url ? '' : '(mensaje sin texto)');
                         burbuja.appendChild(texto);
                         const hora = document.createElement('span');
                         hora.className = 'burbuja-hora';

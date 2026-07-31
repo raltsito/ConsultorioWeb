@@ -1,6 +1,7 @@
 #Librerias estandar de Python
 import json
 import logging
+import mimetypes
 import unicodedata
 import csv
 import io
@@ -20,7 +21,8 @@ from django.db import transaction
 from django.db.models import Q, Sum, Count, Max, Min, Prefetch
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
+from django.utils.encoding import escape_uri_path
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 
@@ -3701,7 +3703,7 @@ def _mm_conversaciones(solo_pendientes=False):
                 'nombre': contacto.nombre,
                 'telefono': contacto.telefono,
                 'suscrito': contacto.suscrito,
-                'ultimo_texto': mensaje.texto,
+                'ultimo_texto': _mm_resumen_texto(mensaje),
                 'ultimo_en': timezone.localtime(mensaje.recibido_en).strftime('%d/%m/%Y %H:%M'),
                 'orden': mensaje.recibido_en,
                 'pendientes': 1 if not mensaje.atendido else 0,
@@ -3734,6 +3736,32 @@ def mensajes_masivos_respuestas(request):
     })
 
 
+def _mm_adjunto_json(registro):
+    """Datos del adjunto para el chat, o {} si el mensaje es solo texto."""
+    if not registro.media_id:
+        return {}
+    return {
+        'media_tipo': registro.media_tipo,
+        'media_nombre': registro.media_nombre,
+        'media_url': reverse('whatsapp_media', args=[registro.media_id]),
+    }
+
+
+def _mm_resumen_texto(mensaje):
+    """
+    Qué mostrar como última línea en la lista de conversaciones.
+
+    Un mensaje que es solo un archivo tiene el texto vacío; sin esto la bandeja
+    enseñaba una fila en blanco y parecía que el alumno no había escrito nada.
+    """
+    if mensaje.texto:
+        return mensaje.texto
+    if mensaje.media_id:
+        etiqueta = MM_TIPOS_ADJUNTO.get(mensaje.media_tipo, 'Archivo')
+        return f'📎 {mensaje.media_nombre or etiqueta}'
+    return ''
+
+
 @login_required
 def mensajes_masivos_conversacion(request):
     """Historial completo con un alumno (sus respuestas + lo que le hemos enviado)."""
@@ -3755,6 +3783,7 @@ def mensajes_masivos_conversacion(request):
             'origen': 'entrante',
             'texto': m.texto,
             'fecha': timezone.localtime(m.recibido_en),
+            **_mm_adjunto_json(m),
         }
         for m in entrantes
     ]
@@ -3773,6 +3802,7 @@ def mensajes_masivos_conversacion(request):
             'texto': r.texto,
             'fecha': timezone.localtime(r.enviado_en),
             'etiqueta': 'Respuesta manual',
+            **_mm_adjunto_json(r),
         }
         for r in contacto.respuestas_enviadas.all()
     ]
@@ -3818,18 +3848,25 @@ def mensajes_masivos_marcar_atendido(request):
 @require_POST
 def mensajes_masivos_responder(request):
     """
-    Responde con texto libre a un alumno que escribió.
+    Responde con texto libre y/o un archivo adjunto a un alumno que escribió.
 
     Meta solo lo permite dentro de las 24 h siguientes a su último mensaje; se
     valida aquí antes de gastar la llamada, y si aun así Meta la rechaza se
     devuelve su error tal cual.
+
+    Acepta JSON (solo texto) o multipart (con archivo en 'archivo').
     """
     if not hasattr(request.user, 'perfil_direccion_comercial'):
         return JsonResponse({'error': 'No autorizado'}, status=403)
 
-    data = json.loads(request.body or '{}')
+    archivo = request.FILES.get('archivo')
+    if archivo:
+        data = request.POST
+    else:
+        data = json.loads(request.body or '{}')
+
     texto = (data.get('texto') or '').strip()
-    if not texto:
+    if not texto and not archivo:
         return JsonResponse({'error': 'El mensaje está vacío'}, status=400)
 
     contacto = get_object_or_404(ContactoAcademia, pk=data.get('contacto_id'))
@@ -3844,25 +3881,117 @@ def mensajes_masivos_responder(request):
                      'texto libre; hay que usar una plantilla aprobada.'
         }, status=400)
 
+    adjunto = {}
+    if archivo:
+        tipo = wa.tipo_para_mime(archivo.content_type)
+        problema = wa.validar_media(tipo, archivo.size)
+        if problema:
+            return JsonResponse({'error': problema}, status=400)
+
+        try:
+            subida = wa.subir_media(archivo.file, archivo.name, archivo.content_type)
+        except Exception as e:
+            subida = {'error': {'message': str(e), 'code': ''}}
+
+        media_id = subida.get('id')
+        if not media_id:
+            _, mensaje = wa.extraer_error(subida)
+            return JsonResponse(
+                {'error': f'No se pudo subir el archivo a WhatsApp: {mensaje}'}, status=400,
+            )
+        adjunto = {
+            'media_id': media_id,
+            'media_tipo': tipo,
+            'media_nombre': archivo.name,
+            'media_mime': archivo.content_type or '',
+        }
+
     try:
-        resp = wa.enviar_texto(contacto.telefono, texto)
+        if archivo:
+            resp = wa.enviar_media(contacto.telefono, adjunto['media_tipo'], adjunto['media_id'],
+                                   caption=texto, nombre=archivo.name)
+        else:
+            resp = wa.enviar_texto(contacto.telefono, texto)
     except Exception as e:
         resp = {'error': {'message': str(e), 'code': ''}}
 
     exitoso = 'messages' in resp
+    # Audio y sticker no admiten caption: ahí el texto NO viajó con el archivo,
+    # así que no se le atribuye a este registro (se manda aparte más abajo).
+    viajo_con_el_archivo = not archivo or adjunto['media_tipo'] in wa.MEDIA_ACEPTAN_CAPTION
     RespuestaMasiva.objects.create(
         contacto=contacto,
-        texto=texto,
+        texto=texto if viajo_con_el_archivo else '',
         exitoso=exitoso,
         respuesta_api=resp,
         enviado_por=request.user,
+        **adjunto,
     )
+
+    if exitoso and texto and not viajo_con_el_archivo:
+        try:
+            resp_texto = wa.enviar_texto(contacto.telefono, texto)
+        except Exception as e:
+            resp_texto = {'error': {'message': str(e), 'code': ''}}
+        RespuestaMasiva.objects.create(
+            contacto=contacto, texto=texto, exitoso='messages' in resp_texto,
+            respuesta_api=resp_texto, enviado_por=request.user,
+        )
 
     if not exitoso:
         _, mensaje = wa.extraer_error(resp)
         return JsonResponse({'error': mensaje or 'Meta rechazó el mensaje'}, status=400)
 
     return JsonResponse({'ok': True})
+
+
+@login_required
+def whatsapp_media(request, media_id):
+    """
+    Sirve un adjunto de WhatsApp: lo baja de Meta y lo devuelve al navegador.
+
+    Tiene que pasar por aquí porque la URL que da Meta exige el token de la
+    cuenta en el header, así que no se puede enlazar directo desde el <img>.
+
+    Solo entrega media_id que ya estén en nuestra base: sin ese filtro, esto
+    sería un proxy abierto a cualquier archivo de la cuenta de WhatsApp para
+    cualquiera con sesión iniciada.
+    """
+    entrante = MensajeWhatsAppEntrante.objects.filter(media_id=media_id).first()
+    saliente = RespuestaMasiva.objects.filter(media_id=media_id).first()
+    registro = entrante or saliente
+    if not registro:
+        raise Http404('Ese archivo no pertenece a ninguna conversación.')
+
+    # Lo que mandó un paciente se abre desde el panel clínico (solo login, igual
+    # que whatsapp_conversacion). Lo de Academia queda restringido al panel
+    # comercial, que es de donde cuelga.
+    es_de_paciente = bool(entrante and entrante.paciente_id)
+    if not es_de_paciente and not hasattr(request.user, 'perfil_direccion_comercial'):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    contenido, mime_o_error = wa.descargar_media(media_id)
+    if contenido is None:
+        # Lo normal a los 30 días: Meta ya lo borró. Se explica en vez de un 500.
+        return HttpResponse(
+            f'No se pudo abrir el archivo. {mime_o_error}\n\n'
+            'WhatsApp conserva los archivos 30 días; después de ese plazo ya no '
+            'se pueden volver a descargar.',
+            content_type='text/plain; charset=utf-8', status=410,
+        )
+
+    nombre = registro.media_nombre or f'adjunto-{media_id}'
+    # Solo los documentos llegan con nombre real; a los demás ("Imagen", "Nota
+    # de voz") hay que ponerles extensión o se bajan como archivo sin tipo y
+    # Windows no sabe con qué abrirlos.
+    if '.' not in nombre:
+        nombre += mimetypes.guess_extension(mime_o_error.split(';')[0].strip()) or ''
+
+    # Las imágenes se muestran dentro del chat; el resto se descarga.
+    disposicion = 'inline' if registro.media_tipo == 'image' else 'attachment'
+    respuesta = HttpResponse(contenido, content_type=mime_o_error)
+    respuesta['Content-Disposition'] = f'{disposicion}; filename="{escape_uri_path(nombre)}"'
+    return respuesta
 
 
 def _mm_totales(campana):
@@ -7321,6 +7450,17 @@ def whatsapp_reactivacion_seguimiento(request):
     return JsonResponse({'resultados': resultados})
 
 
+# Tipos de mensaje de Meta que traen archivo -> nombre por defecto para
+# mostrarlos en la bandeja cuando el archivo no trae uno propio.
+MM_TIPOS_ADJUNTO = {
+    'image': 'Imagen',
+    'video': 'Video',
+    'audio': 'Nota de voz',
+    'document': 'Documento',
+    'sticker': 'Sticker',
+}
+
+
 def _registrar_mensaje_entrante(mensaje: dict):
     """Guarda un mensaje entrante de Meta, si no se había registrado ya (Meta reintenta envíos)."""
     wa_message_id = mensaje.get('id')
@@ -7329,6 +7469,7 @@ def _registrar_mensaje_entrante(mensaje: dict):
 
     wa_id = mensaje.get('from', '')
     tipo = mensaje.get('type')
+    adjunto = {}
     if tipo == 'text':
         texto = mensaje.get('text', {}).get('body', '')
     elif tipo == 'button':
@@ -7337,8 +7478,27 @@ def _registrar_mensaje_entrante(mensaje: dict):
         interactive = mensaje.get('interactive', {})
         respuesta = interactive.get('button_reply') or interactive.get('list_reply') or {}
         texto = respuesta.get('title', '')
+    elif tipo in MM_TIPOS_ADJUNTO:
+        # Meta no manda el archivo en el webhook, solo un id con el que se baja
+        # después (ver wa.descargar_media). El caption, si lo hay, es el texto.
+        contenido = mensaje.get(tipo) or {}
+        texto = contenido.get('caption', '')
+        adjunto = {
+            'media_id': contenido.get('id', ''),
+            'media_tipo': tipo,
+            'media_mime': contenido.get('mime_type', ''),
+            # Solo los documentos traen nombre; para el resto se arma uno legible
+            # para que la bandeja no muestre una fila en blanco.
+            'media_nombre': contenido.get('filename') or MM_TIPOS_ADJUNTO[tipo],
+        }
+    elif tipo == 'location':
+        ubicacion = mensaje.get('location') or {}
+        texto = (f"📍 Ubicación: https://maps.google.com/?q="
+                 f"{ubicacion.get('latitude')},{ubicacion.get('longitude')}")
     else:
-        texto = ''
+        # Tipo que no manejamos (contacts, order, system...). Se registra igual,
+        # con una marca visible: un mensaje en blanco en la bandeja parecía un bug.
+        texto = f'(mensaje de tipo "{tipo}" que el panel no puede mostrar)'
 
     # Las dos búsquedas son independientes a propósito: varios alumnos de
     # Academia son TAMBIÉN pacientes, y atribuir solo a Paciente dejaba sus
@@ -7354,6 +7514,7 @@ def _registrar_mensaje_entrante(mensaje: dict):
         texto=texto,
         paciente=paciente,
         contacto_academia=contacto,
+        **adjunto,
     )
 
     if paciente and _es_confirmacion(texto):
@@ -7618,7 +7779,7 @@ def whatsapp_recordatorios(request):
                 'paciente_id': mensaje.paciente_id,
                 'wa_id': mensaje.wa_id,
                 'nombre': mensaje.paciente.nombre if mensaje.paciente else None,
-                'ultimo_texto': mensaje.texto,
+                'ultimo_texto': _mm_resumen_texto(mensaje),
                 'ultimo_en': mensaje.recibido_en,
                 'pendientes': 1,
             }
@@ -7658,7 +7819,8 @@ def whatsapp_conversacion(request):
         salientes = MensajeWhatsApp.objects.none()
 
     for m in entrantes:
-        mensajes.append({'origen': 'entrante', 'texto': m.texto, 'fecha': m.recibido_en})
+        mensajes.append({'origen': 'entrante', 'texto': m.texto, 'fecha': m.recibido_en,
+                         **_mm_adjunto_json(m)})
     for m in salientes:
         mensajes.append({
             'origen': 'saliente',

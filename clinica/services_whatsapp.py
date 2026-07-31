@@ -303,6 +303,128 @@ def enviar_texto(telefono: str, texto: str) -> dict:
     return response.json()
 
 
+# --- Adjuntos (media) ---------------------------------------------------------
+#
+# Tipos que acepta la Cloud API, con sus MIME válidos y el tamaño máximo.
+# 'document' admite cualquier MIME, por eso su set va vacío: es el cajón por
+# defecto para lo que no sea imagen/video/audio.
+#
+# El límite de 'document' está en 25 MB a propósito, aunque Meta admite 100: el
+# archivo sube primero a nuestro servidor y de ahí a Meta, y con el --timeout 120
+# de gunicorn (ver start.sh) uno más grande no alcanza a completar el viaje.
+# Cubre de sobra los PDF y presentaciones que se mandan a los alumnos.
+MEDIA_TIPOS = {
+    'image': {'mimes': {'image/jpeg', 'image/png'}, 'max_mb': 5, 'etiqueta': 'Imagen'},
+    'video': {'mimes': {'video/mp4', 'video/3gpp'}, 'max_mb': 16, 'etiqueta': 'Video'},
+    'audio': {'mimes': {'audio/aac', 'audio/mp4', 'audio/mpeg', 'audio/amr', 'audio/ogg'},
+              'max_mb': 16, 'etiqueta': 'Audio'},
+    'document': {'mimes': set(), 'max_mb': 25, 'etiqueta': 'Documento'},
+}
+
+# Meta solo deja poner texto junto al archivo en estos tipos; en audio y sticker
+# el caption se ignora (o la API lo rechaza), así que se manda aparte.
+MEDIA_ACEPTAN_CAPTION = {'image', 'video', 'document'}
+
+
+def tipo_para_mime(mime: str) -> str:
+    """MIME -> tipo de mensaje de la Cloud API. Lo desconocido va como documento."""
+    mime = (mime or '').lower().split(';')[0].strip()
+    for tipo, info in MEDIA_TIPOS.items():
+        if mime in info['mimes']:
+            return tipo
+    return 'document'
+
+
+def validar_media(tipo: str, tamano_bytes: int):
+    """Devuelve un mensaje de error si el archivo no cumple, o None si está bien."""
+    info = MEDIA_TIPOS.get(tipo)
+    if not info:
+        return f'Tipo de archivo no soportado por WhatsApp: {tipo}'
+    limite = info['max_mb'] * 1024 * 1024
+    if tamano_bytes > limite:
+        return (f'{info["etiqueta"]} demasiado grande: {tamano_bytes / 1048576:.1f} MB. '
+                f'WhatsApp acepta hasta {info["max_mb"]} MB.')
+    if tamano_bytes == 0:
+        return 'El archivo está vacío.'
+    return None
+
+
+def subir_media(archivo, nombre: str, mime: str) -> dict:
+    """
+    Sube el archivo a Meta y devuelve su respuesta ({'id': ...} si salió bien).
+
+    La Cloud API no acepta binarios en el mensaje: primero se sube aquí, se
+    obtiene un media_id y ese ID es el que viaja en el mensaje. Meta guarda el
+    archivo 30 días.
+    """
+    response = requests.post(
+        f"{WHATSAPP_API_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/media",
+        headers={"Authorization": f"Bearer {settings.WHATSAPP_TOKEN}"},
+        data={"messaging_product": "whatsapp"},
+        files={"file": (nombre, archivo, mime)},
+        # Más generoso que los 10s del resto: aquí viaja el binario completo.
+        timeout=90,
+    )
+    return response.json()
+
+
+def enviar_media(telefono: str, tipo: str, media_id: str,
+                 caption: str = '', nombre: str = '') -> dict:
+    """
+    Envía un adjunto ya subido a Meta.
+
+    Igual que enviar_texto, es un mensaje de sesión: solo funciona dentro de la
+    ventana de 24 h que abre la respuesta del contacto.
+    """
+    contenido = {"id": media_id}
+    if caption and tipo in MEDIA_ACEPTAN_CAPTION:
+        contenido["caption"] = caption
+    if tipo == 'document' and nombre:
+        # Sin filename WhatsApp muestra el documento con el media_id como nombre.
+        contenido["filename"] = nombre
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": _normalizar_telefono(telefono),
+        "type": tipo,
+        tipo: contenido,
+    }
+    response = requests.post(
+        f"{WHATSAPP_API_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages",
+        headers={
+            "Authorization": f"Bearer {settings.WHATSAPP_TOKEN}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=30,
+    )
+    return response.json()
+
+
+def descargar_media(media_id: str):
+    """
+    Baja un adjunto de Meta. Devuelve (contenido_bytes, mime) o (None, error).
+
+    Son dos llamadas: la primera cambia el media_id por una URL temporal, y esa
+    URL exige el mismo token en el header (no es pública), por eso el archivo
+    tiene que pasar por nuestro servidor y no se puede enlazar directo desde el
+    navegador.
+    """
+    headers = {"Authorization": f"Bearer {settings.WHATSAPP_TOKEN}"}
+    meta = requests.get(f"{WHATSAPP_API_URL}/{media_id}", headers=headers, timeout=15).json()
+
+    url = meta.get('url')
+    if not url:
+        codigo, mensaje = extraer_error(meta)
+        # Pasados 30 días Meta borra el archivo y este es el camino normal.
+        return None, mensaje or f'Meta ya no tiene este archivo (código {codigo})'
+
+    archivo = requests.get(url, headers=headers, timeout=60)
+    if archivo.status_code != 200:
+        return None, f'Meta respondió {archivo.status_code} al bajar el archivo'
+    return archivo.content, meta.get('mime_type', 'application/octet-stream')
+
+
 def buscar_contacto_academia_por_wa_id(wa_id: str):
     """
     Igual que buscar_paciente_por_wa_id pero contra ContactoAcademia: Meta
