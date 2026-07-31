@@ -356,7 +356,21 @@ def subir_media(archivo, nombre: str, mime: str) -> dict:
     La Cloud API no acepta binarios en el mensaje: primero se sube aquí, se
     obtiene un media_id y ese ID es el que viaja en el mensaje. Meta guarda el
     archivo 30 días.
+
+    `archivo` puede ser bytes o un objeto con read(); aquí se normaliza a bytes
+    a propósito. requests 2.34 decide si leer el objeto con un isinstance contra
+    un Protocol, y esa comprobación usa inspect.getattr_static, que no dispara
+    el __getattr__ con el que _TemporaryFileWrapper delega su read(). En Python
+    3.13 (el de producción) eso hace que requests pase el objeto crudo a urllib3
+    y reviente con "a bytes-like object is required, not '_TemporaryFileWrapper'"
+    justo con los archivos grandes, que son los que Django guarda en disco.
+    Pasando bytes se toma la primera rama de requests y el problema desaparece.
     """
+    if hasattr(archivo, 'read'):
+        if hasattr(archivo, 'seek'):
+            archivo.seek(0)
+        archivo = archivo.read()
+
     response = requests.post(
         f"{WHATSAPP_API_URL}/{settings.WHATSAPP_PHONE_NUMBER_ID}/media",
         headers={"Authorization": f"Bearer {settings.WHATSAPP_TOKEN}"},

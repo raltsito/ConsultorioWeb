@@ -3889,7 +3889,7 @@ def mensajes_masivos_responder(request):
             return JsonResponse({'error': problema}, status=400)
 
         try:
-            subida = wa.subir_media(archivo.file, archivo.name, archivo.content_type)
+            subida = wa.subir_media(archivo, archivo.name, archivo.content_type)
         except Exception as e:
             subida = {'error': {'message': str(e), 'code': ''}}
 
