@@ -3386,8 +3386,11 @@ def portal_direccion_comercial(request):
     return render(request, 'clinica/portal_direccion_comercial.html', context)
 
 
-MM_TAM_LOTE = 10          # envíos por request AJAX; con timeout=10s por envío hay que
-                          # dejar margen bajo el --timeout de gunicorn (ver start.sh)
+MM_TAM_LOTE = 5           # envíos por request AJAX. Con timeout=10s por envío, el peor
+                          # caso de un lote es ~51s: cabe holgado bajo el --timeout=120
+                          # de gunicorn (ver start.sh) y bajo el corte del proxy de
+                          # Railway. Con lotes de 10 el peor caso rozaba los 102s y la
+                          # conexión se caía a media campaña ("NetworkError" en el front).
 MM_PAUSA_ENVIO = 0.25     # segundos entre envíos, para no golpear el rate limit
 
 
@@ -3445,6 +3448,9 @@ def mensajes_masivos_direccion_comercial(request):
             total=Count('envios'),
             enviados=Count('envios', filter=~Q(envios__estado=EnvioMasivo.ESTADO_PENDIENTE)),
             fallidos=Count('envios', filter=Q(envios__estado=EnvioMasivo.ESTADO_FALLIDO)),
+            # Si quedan pendientes, la campaña se cortó (se cayó la red del
+            # navegador, o Meta limitó la tasa) y el historial ofrece reanudarla.
+            pendientes=Count('envios', filter=Q(envios__estado=EnvioMasivo.ESTADO_PENDIENTE)),
         )
         .select_related('creada_por')[:15]
     )
@@ -3555,12 +3561,22 @@ def mensajes_masivos_enviar_lote(request):
     Va por lotes y no de un jalón porque el proyecto no tiene worker asíncrono
     (ni Celery ni RQ) y enviar ~250 mensajes en un solo request superaría el
     timeout de gunicorn en Railway, dejando la campaña a medias.
+
+    Es reanudable e idempotente: solo toca los envíos en 'pendiente', así que
+    volver a llamarlo (tras un corte de red, o desde el botón "Reanudar" del
+    historial) nunca le reescribe a quien ya recibió el mensaje.
     """
     if not hasattr(request.user, 'perfil_direccion_comercial'):
         return JsonResponse({'error': 'No autorizado'}, status=403)
 
     data = json.loads(request.body or '{}')
     campana = get_object_or_404(CampanaMasiva, pk=data.get('campana_id'))
+
+    # Reanudar una campaña que quedó pausada o marcada como enviada la regresa
+    # a 'enviando' mientras le queden pendientes.
+    if campana.estado != CampanaMasiva.ESTADO_ENVIANDO:
+        campana.estado = CampanaMasiva.ESTADO_ENVIANDO
+        campana.save(update_fields=['estado'])
 
     pendientes = list(
         campana.envios

@@ -48,6 +48,14 @@
     .mm-btn-prueba:hover:not(:disabled) { background: #E8F1FF; }
     .mm-btn-prueba:disabled { opacity: .45; cursor: not-allowed; }
 
+    .mm-btn-reanudar {
+        display: inline-flex; align-items: center; gap: 5px; background: #fff; color: #0d6efd;
+        border: 2px solid #0d6efd; padding: 5px 13px; border-radius: 999px; font-weight: 700;
+        font-size: .78rem; cursor: pointer; white-space: nowrap; transition: background .18s ease;
+    }
+    .mm-btn-reanudar:hover:not(:disabled) { background: #E8F1FF; }
+    .mm-btn-reanudar:disabled { opacity: .45; cursor: not-allowed; }
+
     .mm-filtros { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
     .mm-filtros input[type="text"], .mm-filtros select {
         padding: 10px 14px; border-radius: 12px; border: 1px solid #E0E6EC; font-size: .86rem;
@@ -258,7 +266,8 @@
         <table class="mm-tabla">
             <thead>
                 <tr><th>Campaña</th><th>Estado</th><th style="text-align:center;">Enviados</th>
-                    <th style="text-align:center;">Fallidos</th><th>Creada por</th><th>Fecha</th></tr>
+                    <th style="text-align:center;">Fallidos</th><th style="text-align:center;">Faltan</th>
+                    <th>Creada por</th><th>Fecha</th><th></th></tr>
             </thead>
             <tbody>
                 {% for c in campanas %}
@@ -267,11 +276,20 @@
                     <td><span class="mm-chip {% if c.estado == 'enviada' %}activo{% else %}inactivo{% endif %}">{{ c.get_estado_display }}</span></td>
                     <td style="text-align:center;">{{ c.enviados }} / {{ c.total }}</td>
                     <td style="text-align:center; {% if c.fallidos %}color:#C62828; font-weight:700;{% endif %}">{{ c.fallidos }}</td>
+                    <td style="text-align:center; {% if c.pendientes %}color:#E65100; font-weight:700;{% endif %}">{{ c.pendientes }}</td>
                     <td style="color:#607D8B;">{{ c.creada_por.get_full_name|default:c.creada_por.username|default:"—" }}</td>
                     <td style="color:#90A4AE;">{{ c.creada_en|date:"d/m/Y H:i" }}</td>
+                    <td style="text-align:right;">
+                        {% if c.pendientes %}
+                        <button type="button" class="mm-btn-reanudar" data-campana="{{ c.pk }}"
+                                data-total="{{ c.total }}" data-pendientes="{{ c.pendientes }}">
+                            <i class="bi bi-play-fill"></i> Reanudar
+                        </button>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="6" style="padding:36px; text-align:center; color:#90A4AE;">Todavía no se ha enviado ninguna campaña.</td></tr>
+                <tr><td colspan="8" style="padding:36px; text-align:center; color:#90A4AE;">Todavía no se ha enviado ninguna campaña.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -296,16 +314,50 @@ document.addEventListener('DOMContentLoaded', function () {
     const $ = (id) => document.getElementById(id);
     const csrftoken = document.cookie.split('; ').find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
 
-    function post(url, datos) {
-        return fetch(url, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
-            body: JSON.stringify(datos),
-        }).then(async r => {
-            const cuerpo = await r.json().catch(() => ({}));
-            if (!r.ok) throw new Error(cuerpo.error || `Error ${r.status}`);
-            return cuerpo;
-        });
+    async function post(url, datos) {
+        let r;
+        try {
+            r = await fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
+                body: JSON.stringify(datos),
+            });
+        } catch (e) {
+            // fetch solo rechaza por fallo de transporte (wifi caído, el proxy
+            // cerró la conexión, el request tardó más de lo que aguanta el
+            // navegador). Se marca para que quien llama pueda reintentar: el
+            // servidor pudo haber procesado el lote aunque la respuesta se perdiera.
+            const err = new Error('Se perdió la conexión con el servidor. ' + e.message);
+            err.esRed = true;
+            throw err;
+        }
+        const cuerpo = await r.json().catch(() => ({}));
+        if (!r.ok) {
+            const err = new Error(cuerpo.error || `Error ${r.status}`);
+            // 502/503/504 = el proxy cortó o el server reinició: también reintentable.
+            err.esRed = r.status >= 502;
+            throw err;
+        }
+        return cuerpo;
+    }
+
+    const esperar = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // Reintenta SOLO el envío de lotes. Es seguro repetirlo porque el estado de
+    // cada mensaje vive en la base: un reintento arranca desde los que siguen
+    // pendientes, nunca reenvía a quien ya recibió.
+    async function postLoteConReintentos(campanaId) {
+        const ESPERAS = [3000, 6000, 12000, 20000];
+        for (let intento = 0; ; intento++) {
+            try {
+                return await post("{% url 'mensajes_masivos_enviar_lote' %}", {campana_id: campanaId});
+            } catch (e) {
+                if (!e.esRed || intento >= ESPERAS.length) throw e;
+                aviso($('mm-progreso-aviso'), 'info',
+                    `Se cortó la conexión. Reintentando (${intento + 1}/${ESPERAS.length}) en ${ESPERAS[intento] / 1000}s... Nadie recibirá el mensaje dos veces.`);
+                await esperar(ESPERAS[intento]);
+            }
+        }
     }
 
     function aviso(contenedor, clase, texto) {
@@ -434,7 +486,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // cuántos quedan. Se detiene solo cuando restantes llega a 0.
         let vueltasSinAvance = 0;
         while (true) {
-            const data = await post("{% url 'mensajes_masivos_enviar_lote' %}", {campana_id: campanaId});
+            const data = await postLoteConReintentos(campanaId);
             pintarProgreso(data.totales);
 
             if (data.abortar) {
@@ -637,12 +689,49 @@ document.addEventListener('DOMContentLoaded', function () {
             seleccionados.clear();
             pintarTabla();
         } catch (e) {
-            aviso($('mm-progreso-aviso'), 'err', e.message);
+            aviso($('mm-progreso-aviso'), 'err', e.message + ' Los que ya recibieron quedaron guardados: usa "Reanudar" en el historial para enviarle solo a los que faltan.');
         } finally {
             enviando = false;
             this.innerHTML = '<i class="bi bi-whatsapp"></i> Enviar campaña a <span id="mm-btn-enviar-num">' + seleccionados.size + '</span> alumnos';
             actualizarContadores();
         }
+    });
+
+    // --- Reanudar una campaña que se cortó ---
+    // Reusa el mismo endpoint de lotes, que solo toca los envíos 'pendiente':
+    // a quien ya recibió el mensaje no se le vuelve a escribir.
+    document.querySelectorAll('.mm-btn-reanudar').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            // Ya corrió: los conteos de esta fila quedaron viejos, recargar.
+            if (this.dataset.terminado) { location.reload(); return; }
+
+            const faltan = parseInt(this.dataset.pendientes, 10);
+            if (!confirm(`Se le enviará el mensaje únicamente a los ${faltan} alumno(s) que quedaron pendientes.\n\nQuienes ya lo recibieron NO lo recibirán otra vez. ¿Continuar?`)) return;
+
+            enviando = true;
+            document.querySelectorAll('.mm-btn-reanudar').forEach(b => b.disabled = true);
+            $('mm-btn-enviar').disabled = true;
+            this.innerHTML = '<i class="bi bi-hourglass-split"></i> Reanudando...';
+            $('mm-card-progreso').style.display = 'block';
+            $('mm-card-progreso').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+            $('mm-progreso-aviso').innerHTML = '';
+
+            const total = parseInt(this.dataset.total, 10);
+            pintarProgreso({total: total, pendiente: faltan, enviado: total - faltan,
+                            entregado: 0, leido: 0, fallido: 0});
+
+            try {
+                await correrLotes(parseInt(this.dataset.campana, 10));
+            } catch (e) {
+                aviso($('mm-progreso-aviso'), 'err', e.message + ' Vuelve a darle a "Reanudar" cuando tengas conexión: retoma justo donde se quedó.');
+            } finally {
+                enviando = false;
+                this.dataset.terminado = '1';
+                this.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Recargar historial';
+                this.disabled = false;
+                actualizarContadores();
+            }
+        });
     });
 });
 </script>
