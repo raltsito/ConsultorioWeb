@@ -14,11 +14,40 @@ No manda mensajes ni modifica nada: es solo lectura. Para reanudar el envío de
 los pendientes, usa el botón "Reanudar" del panel de Mensajes Masivos.
 """
 import csv
+from collections import Counter
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from clinica.models import CampanaMasiva, EnvioMasivo
+
+# Códigos de error de la Cloud API de Meta, en español y con la acción que toca.
+# Los que empiezan con 132 son de plantilla y abortan la campaña, así que no
+# deberían aparecer aquí; se incluyen por si un webhook tardío los reporta.
+GLOSARIO_ERRORES = {
+    '131026': ('El número no tiene WhatsApp, o no puede recibir el mensaje',
+               'Verificar el teléfono con el alumno; posiblemente sea fijo o esté mal capturado.'),
+    '131047': ('Se necesita una plantilla para reabrir la conversación (ventana de 24 h cerrada)',
+               'Reintentar: el envío por plantilla debería funcionar.'),
+    '131049': ('Meta bloqueó el envío para cuidar la salud del ecosistema (anti-spam)',
+               'Espaciar las campañas a ese contacto; suele destrabarse solo.'),
+    '131031': ('La cuenta de WhatsApp Business está restringida o bloqueada',
+               'Revisar el estado de la cuenta en el Business Manager de Meta.'),
+    '130472': ('El usuario forma parte de un experimento de Meta y quedó excluido',
+               'Nada que hacer del lado nuestro.'),
+    '133010': ('El número no está registrado en la plataforma',
+               'Verificar el teléfono con el alumno.'),
+    '131000': ('Error interno de Meta al procesar el mensaje',
+               'Reintentar más tarde.'),
+    '130429': ('Límite de tasa: se mandaron demasiados mensajes muy rápido',
+               'Reintentar; el panel ya reintenta solo estos casos.'),
+    '131053': ('Meta no pudo descargar o procesar el archivo adjunto',
+               'Revisar el medio de la plantilla.'),
+    '470': ('Expiró la ventana de 24 h para mensajes de sesión',
+            'Reintentar por plantilla.'),
+    '1013': ('Número inexistente o no registrado en WhatsApp',
+             'Verificar el teléfono con el alumno.'),
+}
 
 
 class Command(BaseCommand):
@@ -68,6 +97,9 @@ class Command(BaseCommand):
         if ultimo:
             self.stdout.write(f'  Último envío: {timezone.localtime(ultimo):%d/%m/%Y %H:%M:%S}')
 
+        if fallidos:
+            self._resumir_fallidos(fallidos)
+
         if opciones['detalle']:
             self._imprimir_grupo('YA RECIBIERON (no reenviar)', recibidos)
             self._imprimir_grupo('FALLIDOS (no se entregó)', fallidos)
@@ -95,6 +127,21 @@ class Command(BaseCommand):
             hechos = c.envios.exclude(estado=EnvioMasivo.ESTADO_PENDIENTE).count()
             self.stdout.write(f'{c.pk:<4} {c.estado:<11} {hechos:>3}/{total:<5} {c.nombre}')
         self.stdout.write('\nDetalle de una: --id <ID> --detalle')
+
+    def _resumir_fallidos(self, fallidos):
+        """Agrupa los fallidos por código de Meta: 21 fallos suelen ser 2 o 3 causas."""
+        self.stdout.write(self.style.MIGRATE_HEADING('\n--- POR QUÉ FALLARON ---'))
+        for codigo, cuantos in Counter(e.error_codigo or '(sin código)' for e in fallidos).most_common():
+            titulo, accion = GLOSARIO_ERRORES.get(
+                codigo, ('Error no catalogado — ver el mensaje crudo abajo', 'Buscar el código en la documentación de Meta.'),
+            )
+            self.stdout.write(f'\n  [{codigo}] x{cuantos} — {titulo}')
+            self.stdout.write(f'      Qué hacer: {accion}')
+            # El texto tal cual lo devolvió Meta, por si el código no está catalogado.
+            crudo = next((e.error_mensaje for e in fallidos
+                          if (e.error_codigo or '(sin código)') == codigo and e.error_mensaje), '')
+            if crudo:
+                self.stdout.write(f'      Meta dijo: {crudo[:200]}')
 
     def _imprimir_grupo(self, titulo, envios):
         self.stdout.write(self.style.MIGRATE_HEADING(f'\n--- {titulo} ({len(envios)}) ---'))
