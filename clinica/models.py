@@ -739,14 +739,18 @@ class Cita(models.Model):
             self.ESTATUS_INCIDENCIA,
         )
 
+    # Nota: usar .all() y no .values_list(). values_list() ignora el cache de
+    # prefetch_related, asi que lanzaba una query por cita aunque la vista ya
+    # hubiera hecho el prefetch. Con .all() se aprovecha el cache cuando existe
+    # y se consulta igual que antes cuando no.
     def pacientes_display(self):
         nombres = [self.paciente.nombre] if self.paciente_id else []
-        nombres.extend(self.pacientes_adicionales.values_list('nombre', flat=True))
+        nombres.extend(p.nombre for p in self.pacientes_adicionales.all())
         return ", ".join(nombres)
 
     def pacientes_display_natural(self):
         nombres = [self.paciente.nombre] if self.paciente_id else []
-        nombres.extend(list(self.pacientes_adicionales.values_list('nombre', flat=True)))
+        nombres.extend(p.nombre for p in self.pacientes_adicionales.all())
         if not nombres:
             return ""
         if len(nombres) == 1:

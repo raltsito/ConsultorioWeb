@@ -1100,10 +1100,17 @@ def detalle_paciente(request, paciente_id):
     else:
         form_documento = DocumentoPacienteForm()
 
+    # La plantilla pinta servicio, terapeuta y consultorio de cada cita, y
+    # titulo_cita recorre paciente + pacientes_adicionales. Sin esto eran ~3
+    # queries por cita (N+1) y la pagina pasaba de 230 consultas.
     historial = Cita.objects.filter(
         Q(paciente=paciente) | Q(pacientes_adicionales=paciente)
+    ).select_related(
+        'terapeuta', 'servicio', 'consultorio', 'paciente'
+    ).prefetch_related(
+        'pacientes_adicionales'
     ).distinct().order_by('-fecha', '-hora')
-    
+
     # Extraemos los terapeutas unicos que han atendido a este paciente
     terapeutas_previos = set(cita.terapeuta for cita in historial if cita.terapeuta)
     notas_historial = NotaTerapeutaPaciente.objects.filter(
