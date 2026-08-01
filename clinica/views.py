@@ -461,7 +461,9 @@ def home(request):
         Q(tipo_bloqueo=BloqueoAgendaTerapeuta.TIPO_PERMANENTE) |
         Q(fecha_fin__gte=hoy)
     ).select_related('terapeuta').order_by('fecha_inicio', 'terapeuta__nombre')
-    manual_portal = AccesoDirectoPortal.objects.filter(
+    # defer('contenido'): el manual pesa ~2 MB y aqui solo se usan sus metadatos.
+    # Sin defer, cada carga del home baja el archivo completo desde Postgres.
+    manual_portal = AccesoDirectoPortal.objects.defer('contenido').filter(
         clave=AccesoDirectoPortal.CLAVE_MANUAL_PORTAL_MEDICO,
     ).first()
 
@@ -1107,7 +1109,9 @@ def detalle_paciente(request, paciente_id):
     notas_historial = NotaTerapeutaPaciente.objects.filter(
         paciente=paciente
     ).select_related('terapeuta').order_by('-creado_en')
-    documentos_historial = DocumentoPaciente.objects.filter(
+    # defer('contenido'): el historial solo lista metadatos; cada documento se
+    # descarga por separado en descargar_documento.
+    documentos_historial = DocumentoPaciente.objects.defer('contenido').filter(
         paciente=paciente
     ).select_related('terapeuta', 'subido_por').order_by('-creado_en')
     reportes_historial = ReporteSesion.objects.filter(
@@ -1217,7 +1221,9 @@ def expediente_terapeuta_detalle(request, paciente_id):
         terapeuta=terapeuta,
         paciente=paciente,
     ).order_by('-creado_en')
-    documentos_historial = DocumentoPaciente.objects.filter(
+    # defer('contenido'): el historial solo lista metadatos; cada documento se
+    # descarga por separado en descargar_documento.
+    documentos_historial = DocumentoPaciente.objects.defer('contenido').filter(
         paciente=paciente
     ).select_related('terapeuta', 'subido_por').order_by('-creado_en')
     reportes_historial = ReporteSesion.objects.filter(
@@ -2517,7 +2523,9 @@ def portal_terapeuta(request):
         Q(fecha_fin__gte=hoy) |
         Q(fecha_fin__isnull=True, fecha_inicio__gte=hoy)
     ).order_by('alcance', 'dia_semana', 'fecha_inicio', 'hora_inicio')
-    manual_portal = AccesoDirectoPortal.objects.filter(
+    # defer('contenido'): solo se necesitan los metadatos para pintar el boton
+    # de descarga; el archivo se sirve aparte en descargar_manual_portal_medico.
+    manual_portal = AccesoDirectoPortal.objects.defer('contenido').filter(
         clave=AccesoDirectoPortal.CLAVE_MANUAL_PORTAL_MEDICO,
         activo=True,
     ).first()
@@ -2658,7 +2666,9 @@ def recursos_propios(request):
             messages.success(request, 'Recurso eliminado.')
             return redirect('recursos_propios')
 
-    recursos = RecursoPropio.objects.filter(subido_por=request.user)
+    # defer('contenido'): el listado solo muestra nombre, tipo y fecha. Traer los
+    # archivos completos aqui costaba ~1.6 s por carga.
+    recursos = RecursoPropio.objects.defer('contenido').filter(subido_por=request.user)
     return render(request, 'clinica/recursos_propios.html', {'recursos': recursos})
 
 
@@ -2818,7 +2828,9 @@ def portal_consultoria(request):
             'citas': citas_por_fecha.get(fecha_item, []),
         })
 
-    manual_portal = AccesoDirectoPortal.objects.filter(
+    # defer('contenido'): solo se necesitan los metadatos para pintar el boton
+    # de descarga; el archivo se sirve aparte en descargar_manual_portal_medico.
+    manual_portal = AccesoDirectoPortal.objects.defer('contenido').filter(
         clave=AccesoDirectoPortal.CLAVE_MANUAL_PORTAL_MEDICO,
         activo=True,
     ).first()
@@ -2932,7 +2944,8 @@ def recursos_consultoria(request):
             messages.success(request, 'Recurso eliminado.')
             return redirect('recursos_consultoria')
 
-    recursos = RecursoPropio.objects.filter(subido_por=request.user)
+    # defer('contenido'): mismo motivo que en recursos_propios.
+    recursos = RecursoPropio.objects.defer('contenido').filter(subido_por=request.user)
     return render(request, 'clinica/recursos_consultoria.html', {'recursos': recursos})
 
 

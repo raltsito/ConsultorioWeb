@@ -595,6 +595,12 @@ class AccesoDirectoPortal(models.Model):
 
     @property
     def tiene_archivo(self):
+        # Cuando la consulta trae 'contenido' diferido (defer), leerlo aqui
+        # dispararia una query extra que baja el archivo completo. En ese caso
+        # nos basta con los metadatos: nombre_archivo y contenido se escriben
+        # siempre juntos en actualizar_manual_portal.
+        if 'contenido' in self.get_deferred_fields():
+            return bool(self.nombre_archivo)
         return bool(self.contenido and self.nombre_archivo)
 
     class Meta:
