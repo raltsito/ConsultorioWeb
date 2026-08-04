@@ -28,6 +28,7 @@ window.AREAS = {
   violencia:    { label: "Violencia",         iconKey: "shield",   color: "#B45309", soft: "#FEF1D6", terms: ["Violencia"] },
   familia:      { label: "Familia & Parejas", iconKey: "users",    color: "#7C3AED", soft: "#EFE6FE", terms: ["Familiar","Parejas","Grupal","Crianza"] },
   infantil:     { label: "Infantil",          iconKey: "child",    color: "#0D9488", soft: "#D6F3EF", terms: ["Infantil","Neurodesarrollo"] },
+  adolescencia: { label: "Adolescencia", iconKey: "youth", color: "#0891B2", soft: "#CFFAFE", terms: ["Adolescencia","Adolescente","Adolescentes"] },
   sexual:       { label: "Salud Sexual",      iconKey: "heart",    color: "#DB2777", soft: "#FCE2EF", terms: ["Salud sexual"] },
   tanatologia:  { label: "Tanatología",       iconKey: "leaf",     color: "#4338CA", soft: "#E2E1FB", terms: ["Tanatología"] },
   especializado:{ label: "Especializado",     iconKey: "sparkles", color: "#475569", soft: "#E5E9EF", terms: ["Hipnosis clínica","Psiquiatría","Consejería"] },
@@ -43,6 +44,7 @@ window.ICONS = {
   heart: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
   leaf: '<path d="M11 20A7 7 0 0 1 4 13c0-5 4-9 9-9 4 0 7 3 7 7 0 5-4 9-9 9z"/><path d="M2 22s2-3 6-6 8-4 8-4"/>',
   sparkles: '<path d="M12 2l2 7 7 2-7 2-2 7-2-7-7-2 7-2z"/>',
+  youth: '<path d="M12 22v-4"/><path d="M8 22v-5a4 4 0 0 1 4-4h0a4 4 0 0 1 4 4v5"/><circle cx="12" cy="7" r="4"/>',
 };
 
 // Mapa rápido término → área-key
@@ -147,10 +149,14 @@ window.SYNONYMS = {
   "menor":            "Infantil",
   "pediatrico":       "Infantil",
   "pediátrico":       "Infantil",
-  "adolescente":      "Infantil",
   "tdah":             "Neurodesarrollo",
   "autismo":          "Neurodesarrollo",
   "tea":              "Neurodesarrollo",
+
+  // ── Adolescencia ──
+"adolescente":  "Adolescencia",
+"adolescentes": "Adolescencia",
+"puberto":      "Adolescencia",
 
   // ── TLP ──
   "trastorno límite": "TLP",
