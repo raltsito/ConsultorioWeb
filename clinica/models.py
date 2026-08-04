@@ -595,6 +595,12 @@ class AccesoDirectoPortal(models.Model):
 
     @property
     def tiene_archivo(self):
+        # Cuando la consulta trae 'contenido' diferido (defer), leerlo aqui
+        # dispararia una query extra que baja el archivo completo. En ese caso
+        # nos basta con los metadatos: nombre_archivo y contenido se escriben
+        # siempre juntos en actualizar_manual_portal.
+        if 'contenido' in self.get_deferred_fields():
+            return bool(self.nombre_archivo)
         return bool(self.contenido and self.nombre_archivo)
 
     class Meta:
@@ -733,14 +739,18 @@ class Cita(models.Model):
             self.ESTATUS_INCIDENCIA,
         )
 
+    # Nota: usar .all() y no .values_list(). values_list() ignora el cache de
+    # prefetch_related, asi que lanzaba una query por cita aunque la vista ya
+    # hubiera hecho el prefetch. Con .all() se aprovecha el cache cuando existe
+    # y se consulta igual que antes cuando no.
     def pacientes_display(self):
         nombres = [self.paciente.nombre] if self.paciente_id else []
-        nombres.extend(self.pacientes_adicionales.values_list('nombre', flat=True))
+        nombres.extend(p.nombre for p in self.pacientes_adicionales.all())
         return ", ".join(nombres)
 
     def pacientes_display_natural(self):
         nombres = [self.paciente.nombre] if self.paciente_id else []
-        nombres.extend(list(self.pacientes_adicionales.values_list('nombre', flat=True)))
+        nombres.extend(p.nombre for p in self.pacientes_adicionales.all())
         if not nombres:
             return ""
         if len(nombres) == 1:
@@ -809,7 +819,37 @@ class MensajeWhatsApp(models.Model):
         ordering = ['-enviado_en']
 
 
-class MensajeWhatsAppEntrante(models.Model):
+class AdjuntoWhatsApp(models.Model):
+    """
+    Campos comunes a los mensajes que llevan archivo, en cualquiera de los dos
+    sentidos (lo que recibimos y lo que mandamos).
+
+    El binario NO se guarda aquí: vive en los servidores de Meta y se referencia
+    por media_id. Es a propósito — el disco del contenedor en Railway es efímero
+    y se borra en cada deploy. La contra es que Meta conserva el archivo solo 30
+    días; pasado ese plazo el adjunto ya no se puede volver a abrir y quedan el
+    nombre y el tipo como constancia de que existió.
+    """
+    media_id = models.CharField(
+        max_length=200, blank=True, db_index=True,
+        help_text='ID del archivo en Meta. Vacío si el mensaje es solo texto.',
+    )
+    media_tipo = models.CharField(
+        max_length=20, blank=True,
+        help_text='image, video, audio, document o sticker (tipos de la Cloud API).',
+    )
+    media_nombre = models.CharField(max_length=255, blank=True)
+    media_mime = models.CharField(max_length=120, blank=True)
+
+    @property
+    def tiene_adjunto(self):
+        return bool(self.media_id)
+
+    class Meta:
+        abstract = True
+
+
+class MensajeWhatsAppEntrante(AdjuntoWhatsApp):
     """
     Mensajes que los pacientes responden al número de WhatsApp Cloud API (el que
     envía recordatorios/confirmaciones automáticos), capturados vía webhook.
@@ -1031,16 +1071,18 @@ class EnvioMasivo(models.Model):
         unique_together = [('campana', 'contacto')]
 
 
-class RespuestaMasiva(models.Model):
+class RespuestaMasiva(AdjuntoWhatsApp):
     """
-    Texto libre que el personal le contesta a un alumno desde la bandeja de
-    Mensajes Masivos. Solo se puede dentro de la ventana de 24 h que abre la
-    respuesta del alumno (regla de Meta), por eso no es una plantilla.
+    Texto libre (y/o archivo adjunto) que el personal le contesta a un alumno
+    desde la bandeja de Mensajes Masivos. Solo se puede dentro de la ventana de
+    24 h que abre la respuesta del alumno (regla de Meta), por eso no es una
+    plantilla.
     """
     contacto = models.ForeignKey(
         ContactoAcademia, on_delete=models.CASCADE, related_name='respuestas_enviadas',
     )
-    texto = models.TextField()
+    # Vacío cuando el mensaje es solo un archivo; con adjunto hace de pie de foto.
+    texto = models.TextField(blank=True)
     enviado_en = models.DateTimeField(auto_now_add=True)
     exitoso = models.BooleanField(default=False)
     respuesta_api = models.JSONField(null=True, blank=True)

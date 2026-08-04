@@ -353,8 +353,9 @@
           <span class="xcard-title">Apertura de Expediente</span>
         </div>
         <div class="d-flex align-items-center gap-2">
-          {% if apertura and apertura.documento %}
-          <a href="{% url 'descargar_documento' apertura.documento.id %}" target="_blank" class="btn-ghost">
+          {# documento_id evita cargar el DocumentoPaciente completo (con el blob) solo para leer su id #}
+          {% if apertura and apertura.documento_id %}
+          <a href="{% url 'descargar_documento' apertura.documento_id %}" target="_blank" class="btn-ghost">
             <i class="bi bi-file-earmark-pdf"></i>PDF
           </a>
           {% endif %}

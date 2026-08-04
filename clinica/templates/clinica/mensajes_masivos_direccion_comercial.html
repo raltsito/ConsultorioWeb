@@ -48,6 +48,14 @@
     .mm-btn-prueba:hover:not(:disabled) { background: #E8F1FF; }
     .mm-btn-prueba:disabled { opacity: .45; cursor: not-allowed; }
 
+    .mm-btn-reanudar {
+        display: inline-flex; align-items: center; gap: 5px; background: #fff; color: #0d6efd;
+        border: 2px solid #0d6efd; padding: 5px 13px; border-radius: 999px; font-weight: 700;
+        font-size: .78rem; cursor: pointer; white-space: nowrap; transition: background .18s ease;
+    }
+    .mm-btn-reanudar:hover:not(:disabled) { background: #E8F1FF; }
+    .mm-btn-reanudar:disabled { opacity: .45; cursor: not-allowed; }
+
     .mm-filtros { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
     .mm-filtros input[type="text"], .mm-filtros select {
         padding: 10px 14px; border-radius: 12px; border: 1px solid #E0E6EC; font-size: .86rem;
@@ -258,7 +266,8 @@
         <table class="mm-tabla">
             <thead>
                 <tr><th>Campaña</th><th>Estado</th><th style="text-align:center;">Enviados</th>
-                    <th style="text-align:center;">Fallidos</th><th>Creada por</th><th>Fecha</th></tr>
+                    <th style="text-align:center;">Fallidos</th><th style="text-align:center;">Faltan</th>
+                    <th>Creada por</th><th>Fecha</th><th></th></tr>
             </thead>
             <tbody>
                 {% for c in campanas %}
@@ -267,11 +276,20 @@
                     <td><span class="mm-chip {% if c.estado == 'enviada' %}activo{% else %}inactivo{% endif %}">{{ c.get_estado_display }}</span></td>
                     <td style="text-align:center;">{{ c.enviados }} / {{ c.total }}</td>
                     <td style="text-align:center; {% if c.fallidos %}color:#C62828; font-weight:700;{% endif %}">{{ c.fallidos }}</td>
+                    <td style="text-align:center; {% if c.pendientes %}color:#E65100; font-weight:700;{% endif %}">{{ c.pendientes }}</td>
                     <td style="color:#607D8B;">{{ c.creada_por.get_full_name|default:c.creada_por.username|default:"—" }}</td>
                     <td style="color:#90A4AE;">{{ c.creada_en|date:"d/m/Y H:i" }}</td>
+                    <td style="text-align:right;">
+                        {% if c.pendientes %}
+                        <button type="button" class="mm-btn-reanudar" data-campana="{{ c.pk }}"
+                                data-total="{{ c.total }}" data-pendientes="{{ c.pendientes }}">
+                            <i class="bi bi-play-fill"></i> Reanudar
+                        </button>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="6" style="padding:36px; text-align:center; color:#90A4AE;">Todavía no se ha enviado ninguna campaña.</td></tr>
+                <tr><td colspan="8" style="padding:36px; text-align:center; color:#90A4AE;">Todavía no se ha enviado ninguna campaña.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -296,16 +314,50 @@ document.addEventListener('DOMContentLoaded', function () {
     const $ = (id) => document.getElementById(id);
     const csrftoken = document.cookie.split('; ').find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
 
-    function post(url, datos) {
-        return fetch(url, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
-            body: JSON.stringify(datos),
-        }).then(async r => {
-            const cuerpo = await r.json().catch(() => ({}));
-            if (!r.ok) throw new Error(cuerpo.error || `Error ${r.status}`);
-            return cuerpo;
-        });
+    async function post(url, datos) {
+        let r;
+        try {
+            r = await fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
+                body: JSON.stringify(datos),
+            });
+        } catch (e) {
+            // fetch solo rechaza por fallo de transporte (wifi caído, el proxy
+            // cerró la conexión, el request tardó más de lo que aguanta el
+            // navegador). Se marca para que quien llama pueda reintentar: el
+            // servidor pudo haber procesado el lote aunque la respuesta se perdiera.
+            const err = new Error('Se perdió la conexión con el servidor. ' + e.message);
+            err.esRed = true;
+            throw err;
+        }
+        const cuerpo = await r.json().catch(() => ({}));
+        if (!r.ok) {
+            const err = new Error(cuerpo.error || `Error ${r.status}`);
+            // 502/503/504 = el proxy cortó o el server reinició: también reintentable.
+            err.esRed = r.status >= 502;
+            throw err;
+        }
+        return cuerpo;
+    }
+
+    const esperar = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // Reintenta SOLO el envío de lotes. Es seguro repetirlo porque el estado de
+    // cada mensaje vive en la base: un reintento arranca desde los que siguen
+    // pendientes, nunca reenvía a quien ya recibió.
+    async function postLoteConReintentos(campanaId) {
+        const ESPERAS = [3000, 6000, 12000, 20000];
+        for (let intento = 0; ; intento++) {
+            try {
+                return await post("{% url 'mensajes_masivos_enviar_lote' %}", {campana_id: campanaId});
+            } catch (e) {
+                if (!e.esRed || intento >= ESPERAS.length) throw e;
+                aviso($('mm-progreso-aviso'), 'info',
+                    `Se cortó la conexión. Reintentando (${intento + 1}/${ESPERAS.length}) en ${ESPERAS[intento] / 1000}s... Nadie recibirá el mensaje dos veces.`);
+                await esperar(ESPERAS[intento]);
+            }
+        }
     }
 
     function aviso(contenedor, clase, texto) {
@@ -434,7 +486,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // cuántos quedan. Se detiene solo cuando restantes llega a 0.
         let vueltasSinAvance = 0;
         while (true) {
-            const data = await post("{% url 'mensajes_masivos_enviar_lote' %}", {campana_id: campanaId});
+            const data = await postLoteConReintentos(campanaId);
             pintarProgreso(data.totales);
 
             if (data.abortar) {
@@ -531,25 +583,57 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    // Íconos e imagen inline según el tipo. Las fotos se ven dentro del chat;
+    // lo demás es un enlace, porque el archivo se baja de Meta bajo demanda
+    // (pasa por nuestro servidor) y no conviene traerlo sin que lo pidan.
+    const ICONO_ADJUNTO = {
+        image: 'bi-image', video: 'bi-camera-video', audio: 'bi-mic',
+        document: 'bi-file-earmark-text', sticker: 'bi-emoji-smile',
+    };
+
+    function pintarAdjunto(m) {
+        const nombre = escapar(m.media_nombre || 'Archivo');
+        if (m.media_tipo === 'image' || m.media_tipo === 'sticker') {
+            return `<a href="${m.media_url}" target="_blank" rel="noopener">
+                        <img src="${m.media_url}" alt="${nombre}" loading="lazy"
+                             style="max-width:100%; max-height:220px; border-radius:10px; display:block;">
+                    </a>`;
+        }
+        const icono = ICONO_ADJUNTO[m.media_tipo] || 'bi-paperclip';
+        return `<a href="${m.media_url}" target="_blank" rel="noopener"
+                   style="display:inline-flex; align-items:center; gap:8px; color:#0d6efd; font-weight:600; text-decoration:none;">
+                    <i class="bi ${icono}" style="font-size:1.2rem;"></i>${nombre}
+                </a>`;
+    }
+
     function abrirConversacion(contactoId) {
         convActiva = contactoId;
         obtenerJson("{% url 'mensajes_masivos_conversacion' %}?contacto_id=" + contactoId)
             .then(data => {
                 const burbujas = data.mensajes.map(m => {
                     const entrante = m.origen === 'entrante';
+                    const cuerpo = m.media_url
+                        ? pintarAdjunto(m) + (m.texto ? `<div style="margin-top:6px;">${escapar(m.texto)}</div>` : '')
+                        : (escapar(m.texto) || '<i style="color:#90A4AE;">(sin texto)</i>');
                     return `
                         <div style="display:flex; justify-content:${entrante ? 'flex-start' : 'flex-end'}; margin-bottom:10px;">
                             <div style="max-width:78%; padding:10px 14px; border-radius:14px; font-size:.86rem; white-space:pre-wrap;
                                         background:${entrante ? '#fff' : '#DCF8C6'}; border:1px solid ${entrante ? '#E0E6EC' : '#CDEFCD'}; color:#263238;">
                                 ${m.etiqueta ? `<div style="font-size:.7rem; color:#78909C; font-weight:700; margin-bottom:4px;">${escapar(m.etiqueta)}</div>` : ''}
-                                ${escapar(m.texto) || '<i style="color:#90A4AE;">(sin texto)</i>'}
+                                ${cuerpo}
                                 <div style="font-size:.68rem; color:#90A4AE; margin-top:5px; text-align:right;">${m.fecha}</div>
                             </div>
                         </div>`;
                 }).join('');
 
                 const cajaRespuesta = data.puede_responder
-                    ? `<div style="display:flex; gap:8px; padding:14px; border-top:1px solid #F0F4F8;">
+                    ? `<div id="mm-archivo-chip" style="display:none; padding:0 14px;"></div>
+                       <div style="display:flex; gap:8px; padding:14px; border-top:1px solid #F0F4F8; align-items:center;">
+                           <input type="file" id="mm-input-archivo" style="display:none;">
+                           <button type="button" id="mm-btn-adjuntar" title="Adjuntar archivo"
+                                   style="background:none; border:none; color:#78909C; font-size:1.3rem; cursor:pointer; padding:4px 6px;">
+                               <i class="bi bi-paperclip"></i>
+                           </button>
                            <input type="text" id="mm-input-respuesta" placeholder="Escribe tu respuesta..."
                                   style="flex:1; padding:11px 14px; border-radius:12px; border:1px solid #E0E6EC; font-size:.88rem;">
                            <button type="button" id="mm-btn-responder" class="mm-btn-azul" style="padding:10px 18px;">
@@ -558,6 +642,7 @@ document.addEventListener('DOMContentLoaded', function () {
                        </div>
                        <div style="padding:0 14px 12px; color:#90A4AE; font-size:.74rem;">
                            Quedan ${data.horas_restantes} h para responder con texto libre.
+                           Adjuntos: imagen (5 MB), video o audio (16 MB), documento (25 MB).
                        </div>`
                     : `<div style="padding:14px; border-top:1px solid #F0F4F8;">
                            <div class="mm-aviso info" style="font-size:.82rem;">
@@ -592,13 +677,63 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 const btnResponder = $('mm-btn-responder');
                 if (btnResponder) {
+                    const inputArchivo = $('mm-input-archivo');
+                    const chip = $('mm-archivo-chip');
+
+                    const limpiarArchivo = () => {
+                        inputArchivo.value = '';
+                        chip.style.display = 'none';
+                        chip.innerHTML = '';
+                    };
+
+                    $('mm-btn-adjuntar').addEventListener('click', () => inputArchivo.click());
+                    inputArchivo.addEventListener('change', () => {
+                        const f = inputArchivo.files[0];
+                        if (!f) return limpiarArchivo();
+                        chip.style.display = 'block';
+                        chip.innerHTML = `
+                            <div style="display:flex; align-items:center; gap:8px; background:#E8F1FF; border-radius:10px;
+                                        padding:8px 12px; font-size:.82rem; color:#0d6efd; font-weight:600;">
+                                <i class="bi bi-paperclip"></i>
+                                <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapar(f.name)}</span>
+                                <span style="color:#78909C; font-weight:500;">${(f.size / 1048576).toFixed(1)} MB</span>
+                                <button type="button" id="mm-quitar-archivo" title="Quitar"
+                                        style="background:none; border:none; color:#78909C; cursor:pointer; font-size:1rem;">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>`;
+                        $('mm-quitar-archivo').addEventListener('click', limpiarArchivo);
+                    });
+
                     const enviar = () => {
                         const input = $('mm-input-respuesta');
                         const texto = input.value.trim();
-                        if (!texto) return;
+                        const archivo = inputArchivo.files[0];
+                        if (!texto && !archivo) return;
+
                         btnResponder.disabled = true;
-                        post("{% url 'mensajes_masivos_responder' %}", {contacto_id: contactoId, texto})
-                            .then(() => { input.value = ''; abrirConversacion(contactoId); })
+                        // Con archivo va como multipart; sin archivo se queda en
+                        // JSON, que es lo que ya usaba el resto del panel.
+                        let envio;
+                        if (archivo) {
+                            aviso($('mm-respuesta-aviso'), 'info', 'Subiendo el archivo a WhatsApp...');
+                            const fd = new FormData();
+                            fd.append('contacto_id', contactoId);
+                            fd.append('texto', texto);
+                            fd.append('archivo', archivo);
+                            envio = fetch("{% url 'mensajes_masivos_responder' %}", {
+                                method: 'POST', headers: {'X-CSRFToken': csrftoken}, body: fd,
+                            }).then(async r => {
+                                const cuerpo = await r.json().catch(() => ({}));
+                                if (!r.ok) throw new Error(cuerpo.error || `Error ${r.status}`);
+                                return cuerpo;
+                            });
+                        } else {
+                            envio = post("{% url 'mensajes_masivos_responder' %}", {contacto_id: contactoId, texto});
+                        }
+
+                        envio
+                            .then(() => { input.value = ''; limpiarArchivo(); abrirConversacion(contactoId); })
                             .catch(e => aviso($('mm-respuesta-aviso'), 'err', e.message))
                             .finally(() => { btnResponder.disabled = false; });
                     };
@@ -637,12 +772,49 @@ document.addEventListener('DOMContentLoaded', function () {
             seleccionados.clear();
             pintarTabla();
         } catch (e) {
-            aviso($('mm-progreso-aviso'), 'err', e.message);
+            aviso($('mm-progreso-aviso'), 'err', e.message + ' Los que ya recibieron quedaron guardados: usa "Reanudar" en el historial para enviarle solo a los que faltan.');
         } finally {
             enviando = false;
             this.innerHTML = '<i class="bi bi-whatsapp"></i> Enviar campaña a <span id="mm-btn-enviar-num">' + seleccionados.size + '</span> alumnos';
             actualizarContadores();
         }
+    });
+
+    // --- Reanudar una campaña que se cortó ---
+    // Reusa el mismo endpoint de lotes, que solo toca los envíos 'pendiente':
+    // a quien ya recibió el mensaje no se le vuelve a escribir.
+    document.querySelectorAll('.mm-btn-reanudar').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            // Ya corrió: los conteos de esta fila quedaron viejos, recargar.
+            if (this.dataset.terminado) { location.reload(); return; }
+
+            const faltan = parseInt(this.dataset.pendientes, 10);
+            if (!confirm(`Se le enviará el mensaje únicamente a los ${faltan} alumno(s) que quedaron pendientes.\n\nQuienes ya lo recibieron NO lo recibirán otra vez. ¿Continuar?`)) return;
+
+            enviando = true;
+            document.querySelectorAll('.mm-btn-reanudar').forEach(b => b.disabled = true);
+            $('mm-btn-enviar').disabled = true;
+            this.innerHTML = '<i class="bi bi-hourglass-split"></i> Reanudando...';
+            $('mm-card-progreso').style.display = 'block';
+            $('mm-card-progreso').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+            $('mm-progreso-aviso').innerHTML = '';
+
+            const total = parseInt(this.dataset.total, 10);
+            pintarProgreso({total: total, pendiente: faltan, enviado: total - faltan,
+                            entregado: 0, leido: 0, fallido: 0});
+
+            try {
+                await correrLotes(parseInt(this.dataset.campana, 10));
+            } catch (e) {
+                aviso($('mm-progreso-aviso'), 'err', e.message + ' Vuelve a darle a "Reanudar" cuando tengas conexión: retoma justo donde se quedó.');
+            } finally {
+                enviando = false;
+                this.dataset.terminado = '1';
+                this.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Recargar historial';
+                this.disabled = false;
+                actualizarContadores();
+            }
+        });
     });
 });
 </script>

@@ -184,6 +184,10 @@ urlpatterns = [
          clinica_views.whatsapp_toggle_automatizacion, name='whatsapp_toggle_automatizacion'),
     path('api/whatsapp/conversacion/',
          clinica_views.whatsapp_conversacion, name='whatsapp_conversacion'),
+    # Sirve los adjuntos de los dos paneles (clínico y Mensajes Masivos), por
+    # eso cuelga de /api/whatsapp/ y no del portal comercial.
+    path('api/whatsapp/media/<str:media_id>/',
+         clinica_views.whatsapp_media, name='whatsapp_media'),
     path('api/whatsapp/conversacion/atendido/',
          clinica_views.whatsapp_marcar_atendido, name='whatsapp_marcar_atendido'),
 
