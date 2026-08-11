@@ -101,8 +101,8 @@ TEMPLATE_BODIES = {
 
     # --- Campañas masivas de Academia (panel Dirección Comercial) ---
     # La clave es el nombre EXACTO con el que la plantilla quedó aprobada en
-    # Meta ('masivos1'); si no coincide, la API responde 132001. El nombre
-    # legible para el panel va en CAMPANAS_MASIVAS['titulo'].
+    # Meta ('masivos1', 'ddh'); si no coincide, la API responde 132001. El
+    # nombre legible para el panel va en CAMPANAS_MASIVAS['titulo'].
     # Sin variables a propósito: el mismo texto para todos, aprueba más rápido en
     # Meta y no hay riesgo de parámetro vacío en un envío de ~250 mensajes.
     'masivos1':
@@ -118,6 +118,15 @@ TEMPLATE_BODIES = {
         '📞 Contáctanos al 844 236 9864.\n\n'
         '¡No dejes pasar esta oportunidad de fortalecer tu formación profesional en '
         'Psicoterapia Infantil!',
+    'ddh':
+        '🚨 ¡ÚLTIMOS LUGARES! 🚨\n'
+        '✨ Diplomado en Desarrollo Humano ✨\n'
+        'Esta semana tenemos una promoción exclusiva:\n'
+        '💰 Inscripción: $500\n'
+        '💰 Mensualidad: $500\n'
+        '¡Aprovecha esta oportunidad para iniciar tu formación en Desarrollo Humano!\n'
+        '📲 ¿Te interesa? Mándanos mensaje al 844 236 98 64 y recibe más información.\n'
+        '⏳ Promoción válida exclusivamente durante esta semana. ¡Últimos lugares!',
 }
 
 # Plantillas ofrecidas en el panel de Mensajes Masivos (Dirección Comercial).
@@ -128,6 +137,12 @@ CAMPANAS_MASIVAS = {
     'masivos1': {
         'titulo': 'Promoción — Diplomado en Psicoterapia Infantil',
         'descripcion': 'Últimos lugares, inscripción y mensualidad a $500. Inicio 15 de agosto.',
+        'campos': [],
+        'idioma': 'es_MX',
+    },
+    'ddh': {
+        'titulo': 'Promoción — Diplomado en Desarrollo Humano',
+        'descripcion': 'Últimos lugares, inscripción y mensualidad a $500. Válida solo esta semana.',
         'campos': [],
         'idioma': 'es_MX',
     },
