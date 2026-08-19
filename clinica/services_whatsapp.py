@@ -127,6 +127,14 @@ TEMPLATE_BODIES = {
         '¡Aprovecha esta oportunidad para iniciar tu formación en Desarrollo Humano!\n'
         '📲 ¿Te interesa? Mándanos mensaje al 844 236 98 64 y recibe más información.\n'
         '⏳ Promoción válida exclusivamente durante esta semana. ¡Últimos lugares!',
+    'ddh2':
+        '🚨 ¡ÚLTIMOS 2 LUGARES! 🚨\n'
+        '🎓 Este sábado iniciamos nuestro Diplomado en Desarrollo Humano\n'
+        '🔥 Y tenemos una PROMOCIÓN ÚNICA para esta generación:\n'
+        '💰 INSCRIPCIÓN: $450\n'
+        '📚 MENSUALIDAD: $450\n'
+        '✨ ¡TODO TU DIPLOMADO CON ESTA PROMOCIÓN!\n'
+        'Si te interesa, manda mensaje al: 844 236 9864',
 }
 
 # Plantillas ofrecidas en el panel de Mensajes Masivos (Dirección Comercial).
@@ -143,6 +151,12 @@ CAMPANAS_MASIVAS = {
     'ddh': {
         'titulo': 'Promoción — Diplomado en Desarrollo Humano',
         'descripcion': 'Últimos lugares, inscripción y mensualidad a $500. Válida solo esta semana.',
+        'campos': [],
+        'idioma': 'es_MX',
+    },
+    'ddh2': {
+        'titulo': 'Promoción — Diplomado en Desarrollo Humano (últimos 2 lugares)',
+        'descripcion': 'Últimos 2 lugares, inicia este sábado. Inscripción y mensualidad a $450.',
         'campos': [],
         'idioma': 'es_MX',
     },
