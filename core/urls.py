@@ -40,6 +40,7 @@ urlpatterns = [
     path('portal-medico/expedientes/', clinica_views.expedientes_terapeuta, name='expedientes_terapeuta'),
     path('portal-medico/expedientes/nuevo/', clinica_views.registrar_paciente_terapeuta, name='registrar_paciente_terapeuta'),
     path('portal-medico/expedientes/<int:paciente_id>/', clinica_views.expediente_terapeuta_detalle, name='expediente_terapeuta_detalle'),
+    path('portal-medico/expedientes/<int:paciente_id>/codigos/', clinica_views.administrar_codigos_paciente, name='administrar_codigos_paciente'),
     path('portal-medico/expedientes/<int:paciente_id>/instrumentos/generar/', clinica_views.generar_envio_instrumento, name='generar_envio_instrumento'),
     path('portal-medico/expedientes/<int:paciente_id>/instrumentos/raven/', clinica_views.registrar_resultado_raven, name='registrar_resultado_raven'),
     path('portal-medico/expedientes/<int:paciente_id>/instrumentos/<int:envio_id>/resultado/', clinica_views.resultado_envio_instrumento, name='resultado_envio_instrumento'),

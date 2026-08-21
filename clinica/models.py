@@ -575,6 +575,118 @@ class PacienteTerapeutaAcceso(models.Model):
         ordering = ['-creado_en']
 
 
+CODIGOS_INSTITUCIONALES = {
+    'C100-B': {
+        'nombre': 'Código 100 – Bajo',
+        'descripcion': 'Riesgo suicida bajo',
+        'color': '#F4DC74',
+        'orden': 10,
+    },
+    'C100-M': {
+        'nombre': 'Código 100 – Medio',
+        'descripcion': 'Riesgo suicida medio',
+        'color': '#F7CF00',
+        'orden': 20,
+    },
+    'C100-A': {
+        'nombre': 'Código 100 – Alto',
+        'descripcion': 'Riesgo suicida alto',
+        'color': '#F2A000',
+        'orden': 30,
+    },
+    'MOR': {
+        'nombre': 'Código Morado',
+        'descripcion': 'Violencia doméstica',
+        'color': '#7B00C9',
+        'orden': 40,
+    },
+    'VIO': {
+        'nombre': 'Código Violeta',
+        'descripcion': 'Violencia general',
+        'color': '#A45AF3',
+        'orden': 50,
+    },
+    'VIH': {
+        'nombre': 'Código VIH',
+        'descripcion': 'Atención relacionada con VIH',
+        'color': '#FFFFFF',
+        'orden': 60,
+    },
+    'GRI': {
+        'nombre': 'Código Gris',
+        'descripcion': 'Persona violenta',
+        'color': '#9A9A9A',
+        'orden': 70,
+    },
+    'AZI': {
+        'nombre': 'Código Azul INTRA',
+        'descripcion': 'Paciente especial',
+        'color': '#1F63F2',
+        'orden': 80,
+    },
+    'ROS': {
+        'nombre': 'Código Rosa',
+        'descripcion': 'Movilidad',
+        'color': '#F47DBA',
+        'orden': 90,
+    },
+}
+
+
+class CodigoInstitucionalPaciente(models.Model):
+    paciente = models.ForeignKey(
+        Paciente,
+        on_delete=models.CASCADE,
+        related_name='codigos_institucionales',
+    )
+    codigo = models.CharField(
+        max_length=10,
+        choices=[
+            (codigo, datos['nombre'])
+            for codigo, datos in CODIGOS_INSTITUCIONALES.items()
+        ],
+    )
+    activo = models.BooleanField(default=True)
+    asignado_por = models.ForeignKey(
+        Terapeuta,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='codigos_asignados',
+    )
+    fecha_asignacion = models.DateTimeField(auto_now_add=True)
+    retirado_por = models.ForeignKey(
+        Terapeuta,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='codigos_retirados',
+    )
+    fecha_retiro = models.DateTimeField(null=True, blank=True)
+    observacion = models.CharField(max_length=255, blank=True)
+
+    @property
+    def catalogo(self):
+        return CODIGOS_INSTITUCIONALES[self.codigo]
+
+    @property
+    def tooltip(self):
+        return f"{self.catalogo['nombre']} – {self.catalogo['descripcion']}"
+
+    @property
+    def nombre_corto(self):
+        return self.catalogo['nombre'].replace('Código ', '')
+
+    class Meta:
+        ordering = ['codigo', '-fecha_asignacion']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['paciente', 'codigo'],
+                condition=models.Q(activo=True),
+                name='codigo_activo_unico_paciente',
+            ),
+        ]
+
+
 class AccesoDirectoPortal(models.Model):
     CLAVE_MANUAL_PORTAL_MEDICO = 'manual_portal_medico'
 

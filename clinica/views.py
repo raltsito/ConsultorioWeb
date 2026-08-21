@@ -18,7 +18,17 @@ from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.db import transaction
-from django.db.models import Q, Sum, Count, Max, Min, Prefetch
+from django.db.models import (
+    Case,
+    Count,
+    IntegerField,
+    Max,
+    Min,
+    Prefetch,
+    Q,
+    Sum,
+    When,
+)
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, Http404
@@ -55,6 +65,8 @@ from .models import (
     NotaExpedienteGrupal,
     Paciente,
     PacienteTerapeutaAcceso,
+    CodigoInstitucionalPaciente,
+    CODIGOS_INSTITUCIONALES,
     NotaTerapeutaPaciente,
     ReporteSesion,
     Terapeuta,
@@ -121,6 +133,25 @@ def quitar_tildes(texto):
         return ""
     return ''.join(c for c in unicodedata.normalize('NFD', str(texto))
                    if unicodedata.category(c) != 'Mn').lower()
+
+
+def _prefetch_codigos_activos():
+    return Prefetch(
+        'codigos_institucionales',
+        queryset=_codigos_activos_queryset(),
+        to_attr='codigos_activos',
+    )
+
+
+def _codigos_activos_queryset():
+    orden = Case(
+        *[
+            When(codigo=codigo, then=datos['orden'])
+            for codigo, datos in CODIGOS_INSTITUCIONALES.items()
+        ],
+        output_field=IntegerField(),
+    )
+    return CodigoInstitucionalPaciente.objects.filter(activo=True).order_by(orden)
 
 
 def resolver_paciente_por_nombre(nombre):
@@ -448,7 +479,12 @@ def home(request):
     ).select_related(
         'division', 'servicio', 'terapeuta', 'consultorio', 'paciente'
     ).prefetch_related(
-        'pacientes_adicionales'
+        'pacientes_adicionales',
+        Prefetch(
+            'paciente__codigos_institucionales',
+            queryset=_codigos_activos_queryset(),
+            to_attr='codigos_activos',
+        ),
     ).order_by('fecha', 'hora')
 
     reagendos_pendientes = SolicitudReagendo.objects.filter(
@@ -804,7 +840,9 @@ def lista_pacientes(request):
 
     # select_related evita una query extra por fila para servicio_inicial y
     # division (ambos FK), que la tabla de lista_pacientes.html muestra siempre.
-    pacientes = pacientes.select_related('servicio_inicial', 'division')
+    pacientes = pacientes.select_related('servicio_inicial', 'division').prefetch_related(
+        _prefetch_codigos_activos()
+    )
 
     divisiones = Division.objects.all().order_by('nombre')
     return render(request, 'clinica/lista_pacientes.html', {
@@ -1076,7 +1114,9 @@ def _generar_pdf_apertura(apertura):
 
 
 def detalle_paciente(request, paciente_id):
-    paciente = get_object_or_404(Paciente, id=paciente_id)
+    paciente = get_object_or_404(
+        Paciente.objects.prefetch_related(_prefetch_codigos_activos()), id=paciente_id
+    )
 
     can_subir_documentos = request.user.is_authenticated and request.user.is_superuser
     if request.method == 'POST':
@@ -1218,7 +1258,13 @@ def expediente_terapeuta_detalle(request, paciente_id):
         messages.error(request, 'Solo puedes abrir expedientes de pacientes agendados contigo.')
         return redirect('expedientes_terapeuta')
 
-    paciente = get_object_or_404(Paciente.objects.prefetch_related('expedientes_grupales'), id=paciente_id)
+    paciente = get_object_or_404(
+        Paciente.objects.prefetch_related(
+            'expedientes_grupales',
+            _prefetch_codigos_activos(),
+        ),
+        id=paciente_id,
+    )
     historial = Cita.objects.filter(
         terapeuta=terapeuta
     ).filter(
@@ -1443,7 +1489,61 @@ def expediente_terapeuta_detalle(request, paciente_id):
         'form_apertura': form_apertura,
         'instrumentos_disponibles': instrumentos_disponibles,
         'envios_instrumento': envios_instrumento,
+        'catalogo_codigos': CODIGOS_INSTITUCIONALES,
+        'codigos_activos_claves': {
+            item.codigo
+            for item in paciente.codigos_activos
+        },
     })
+
+
+@login_required
+@require_POST
+def administrar_codigos_paciente(request, paciente_id):
+    if not hasattr(request.user, 'perfil_terapeuta'):
+        return HttpResponse('No tienes permisos para modificar códigos.', status=403)
+
+    terapeuta = request.user.perfil_terapeuta
+    if paciente_id not in _pacientes_ids_terapeuta(terapeuta):
+        return HttpResponse('No tienes acceso a este paciente.', status=403)
+
+    paciente = get_object_or_404(Paciente, id=paciente_id)
+    seleccionados = set(request.POST.getlist('codigos')) & set(
+        CODIGOS_INSTITUCIONALES
+    )
+    niveles_c100 = seleccionados & {'C100-B', 'C100-M', 'C100-A'}
+    if len(niveles_c100) > 1:
+        messages.error(request, 'Selecciona solamente un nivel de Código 100.')
+        return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
+
+    ahora = timezone.now()
+    with transaction.atomic():
+        activos = list(
+            CodigoInstitucionalPaciente.objects
+            .select_for_update()
+            .filter(paciente=paciente, activo=True)
+        )
+        codigos_activos = {item.codigo for item in activos}
+        for item in activos:
+            if item.codigo not in seleccionados:
+                item.activo = False
+                item.fecha_retiro = ahora
+                item.retirado_por = terapeuta
+                item.save(update_fields=['activo', 'fecha_retiro', 'retirado_por'])
+        for codigo in seleccionados - codigos_activos:
+            CodigoInstitucionalPaciente.objects.create(
+                paciente=paciente, codigo=codigo, asignado_por=terapeuta
+            )
+
+    _registrar_actividad(
+        request,
+        'codigos_paciente_actualizados',
+        'paciente',
+        f'{terapeuta.nombre} actualizó los códigos institucionales de {paciente.nombre}.',
+        terapeuta=terapeuta, paciente=paciente,
+    )
+    messages.success(request, 'Códigos institucionales actualizados.')
+    return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
 
 @login_required
 def catalogo_instrumentos(request):

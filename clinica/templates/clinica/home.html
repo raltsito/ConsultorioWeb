@@ -810,6 +810,7 @@
                                 <th>Tipo</th>
                                 <th>División</th>
                                 <th>Paciente</th>
+                                <th>Código</th>
                                 <th>Servicio</th>
                                 <th>Terapeuta</th>
                                 <th>Situación</th>
@@ -835,6 +836,9 @@
                                 </td>
                                 <td>{{ cita.division|default:"-" }}</td>
                                 <td class="fw-semibold">{{ cita.pacientes_display_natural }}</td>
+                                <td>
+                                    {% include 'clinica/partials/_patient_code_dots.html' with patient=cita.paciente %}
+                                </td>
                                 <td>{{ cita.servicio|default:"-" }}</td>
                                 <td>{{ cita.terapeuta|default:"-" }}</td>
                                 <td>
@@ -866,7 +870,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="10" class="text-center py-4 text-muted">No hay citas registradas.</td>
+                                <td colspan="11" class="text-center py-4 text-muted">No hay citas registradas.</td>
                             </tr>
                             {% endfor %}
                         </tbody>

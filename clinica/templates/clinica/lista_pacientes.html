@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'clinica/css/patient_codes.css' %}">
     
     <style>
         /* Reutilizamos tus variables para consistencia */
@@ -125,6 +126,7 @@
                 <thead>
                     <tr>
                         <th>Nombre</th>
+                        <th>Código</th>
                         <th>Servicio</th>
                         <th>Teléfono</th>
                         <th>Contacto</th>
@@ -136,6 +138,9 @@
                     {% for paciente in pacientes %}
                     <tr>
                         <td class="fw-bold">{{ paciente.nombre }}</td>
+                        <td>
+                            {% include 'clinica/partials/_patient_code_dots.html' with patient=paciente %}
+                        </td>
                         <td><span class="badge-servicio">{{ paciente.servicio_inicial }}</span></td>
                         <td class="text-muted">{{ paciente.telefono }}</td>
                         <td>

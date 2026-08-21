@@ -1,0 +1,32 @@
+.patient-code-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 14px;
+}
+
+.patient-code-dot {
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    display: inline-block;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    background: var(--patient-code-color);
+}
+
+.patient-code-dot--VIH {
+    border-color: #000;
+}
+
+.patient-code-summary {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .45rem;
+}
+
+.patient-code-names {
+    font-size: .82rem;
+    font-weight: 600;
+}

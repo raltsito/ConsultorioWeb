@@ -1,0 +1,13 @@
+<span
+  class="patient-code-dots"
+  aria-label="Códigos institucionales activos"
+>
+  {% for asignacion in patient.codigos_activos %}
+    <span
+      class="patient-code-dot patient-code-dot--{{ asignacion.codigo }}"
+      style="--patient-code-color:{{ asignacion.catalogo.color }}"
+      title="{{ asignacion.tooltip }}"
+      aria-label="{{ asignacion.tooltip }}"
+    ></span>
+  {% endfor %}
+</span>

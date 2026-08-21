@@ -332,6 +332,27 @@
       <p class="val">{{ paciente.servicio_inicial|default:"—" }}</p>
     </div>
     <div class="hero-pill">
+      <p class="lbl">CÓDIGOS</p>
+      <div class="val patient-code-summary">
+        {% include 'clinica/partials/_patient_code_dots.html' with patient=paciente %}
+        {% if paciente.codigos_activos %}
+          <span class="patient-code-names">
+            {% for item in paciente.codigos_activos %}
+              {{ item.nombre_corto }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+          </span>
+        {% endif %}
+      </div>
+      <button
+        type="button"
+        class="btn-hero-back mt-1"
+        data-bs-toggle="modal"
+        data-bs-target="#modalCodigos"
+      >
+        Administrar códigos
+      </button>
+    </div>
+    <div class="hero-pill">
       <p class="lbl">Contacto</p>
       <p class="val">{{ paciente.identidad_contacto|default:"—" }}</p>
     </div>
@@ -340,6 +361,75 @@
 </div>
 
 <!-- ══ BODY ══════════════════════════════════════════════════ -->
+<div
+  class="modal fade"
+  id="modalCodigos"
+  tabindex="-1"
+  aria-labelledby="modalCodigosTitulo"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <form
+        method="post"
+        action="{% url 'administrar_codigos_paciente' paciente.id %}"
+      >
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold" id="modalCodigosTitulo">
+            Administrar códigos
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Cerrar"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small">
+            Selecciona los códigos institucionales activos. Solo puede existir
+            un nivel de Código 100.
+          </p>
+          {% for codigo, datos in catalogo_codigos.items %}
+          <label
+            class="d-flex align-items-center gap-2 border rounded-3 p-2 mb-2"
+          >
+            <input
+              class="form-check-input m-0"
+              type="checkbox"
+              name="codigos"
+              value="{{ codigo }}"
+              {% if codigo in codigos_activos_claves %}checked{% endif %}
+            >
+            <span
+              class="patient-code-dot patient-code-dot--{{ codigo }}"
+              style="--patient-code-color:{{ datos.color }}"
+            ></span>
+            <span>
+              <strong>{{ datos.nombre }}</strong><br>
+              <small class="text-muted">{{ datos.descripcion }}</small>
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            data-bs-dismiss="modal"
+          >
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Guardar códigos
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <div class="row g-4">
 
   <!-- ════ COLUMNA CLÍNICA ════ -->
