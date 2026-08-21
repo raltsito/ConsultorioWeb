@@ -1,0 +1,76 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <p class="text-uppercase text-primary fw-bold small mb-1">Ventas</p>
+      <h2 class="mb-0">Captadores</h2>
+    </div>
+
+    <a href="{% url 'ventas:captador_nuevo' %}" class="btn btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>
+      Nuevo captador
+    </a>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Captador</th>
+            <th>Tipo</th>
+            <th>Contacto</th>
+            <th>Estado</th>
+            <th>Código</th>
+            <th>QR</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for captador in captadores %}
+            <tr>
+              <td class="fw-semibold">{{ captador.nombre_display }}</td>
+              <td>{{ captador.get_tipo_display }}</td>
+              <td>{{ captador.contacto_display }}</td>
+              <td>
+                {% if captador.activo %}
+                  <span class="badge text-bg-success">Activo</span>
+                {% else %}
+                  <span class="badge text-bg-secondary">Inactivo</span>
+                {% endif %}
+              </td>
+              <td>
+                <code>{{ captador.codigo_activo.token|truncatechars:15 }}</code>
+              </td>
+              <td>
+                <img
+                  src="{% url 'ventas:captador_qr' captador.id %}"
+                  alt="QR"
+                  width="54"
+                  height="54"
+                >
+              </td>
+              <td>
+                <a
+                  class="btn btn-sm btn-outline-primary"
+                  href="{% url 'ventas:captador_detalle' captador.id %}"
+                >
+                  Ver
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-5">
+                No hay captadores registrados.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

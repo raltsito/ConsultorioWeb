@@ -17,6 +17,7 @@ from .models import (
     obtener_bloqueo_terapeuta_en_fecha,
 )
 from .models import Terapeuta, Consultorio, Division, Servicio
+from .pricing import calcular_importe_servicio_con_captacion
 
 
 def verificar_empalme_paciente(paciente, fecha, hora, excluir_cita_id=None):
@@ -348,6 +349,23 @@ class CitaForm(forms.ModelForm):
                         f"No se puede empalmar."
                     )
                     self.add_error('pacientes_extra', msg)
+
+        servicio = cleaned_data.get('servicio')
+        estatus = cleaned_data.get('estatus')
+        tiene_descuento_legacy = cleaned_data.get('tiene_descuento')
+        if (
+            paciente
+            and servicio
+            and estatus != Cita.ESTATUS_NO_ASISTIO
+            and not tiene_descuento_legacy
+            and self.instance.importe_servicio_snapshot is None
+        ):
+            calculo = calcular_importe_servicio_con_captacion(
+                paciente=paciente,
+                servicio=servicio,
+            )
+            if calculo.aplica_descuento and calculo.importe_final is not None:
+                cleaned_data['costo'] = calculo.importe_final
 
         return cleaned_data
 

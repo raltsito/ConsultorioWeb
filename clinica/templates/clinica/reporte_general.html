@@ -75,7 +75,11 @@
         </div>
         <div class="reporte-stat reporte-stat--gold">
             <span class="reporte-stat-val">${{ monto_total|floatformat:0 }}</span>
-            <span class="reporte-stat-lbl">ingreso total</span>
+            <span class="reporte-stat-lbl">pagos registrados</span>
+        </div>
+        <div class="reporte-stat">
+            <span class="reporte-stat-val">${{ importe_citas_atendidas|floatformat:0 }}</span>
+            <span class="reporte-stat-lbl">importe citas atendidas</span>
         </div>
     </div>
 
@@ -107,8 +111,8 @@
                         <th>División</th>
                         <th>Consultorio</th>
                         <th>Estatus</th>
-                        <th>Método Pago</th>
-                        <th class="text-end">Costo</th>
+                        <th>Método registrado en cita</th>
+                        <th class="text-end">Importe cita</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -185,7 +189,7 @@
                 <tfoot>
                     <tr class="table-light fw-bold">
                         <td colspan="10" class="text-end px-4 text-secondary small">
-                            Ingreso total (sesiones completadas):
+                            Pagos confirmados por fecha de registro:
                         </td>
                         <td class="text-end text-success px-4">
                             ${{ monto_total|floatformat:0 }}

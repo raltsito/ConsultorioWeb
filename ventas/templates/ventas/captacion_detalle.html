@@ -1,0 +1,144 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <p class="text-uppercase text-primary fw-bold small mb-1">Ventas</p>
+      <h2 class="mb-0">Captación</h2>
+    </div>
+    <a
+      href="{% url 'ventas:captaciones_lista' %}"
+      class="btn btn-outline-secondary"
+    >
+      Volver
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4 p-md-5">
+      <h4 class="mb-4">Datos de captación</h4>
+      <dl class="row mb-0">
+        <dt class="col-sm-4 py-2">Paciente</dt>
+        <dd class="col-sm-8 py-2">{{ captacion.paciente.nombre }}</dd>
+
+        <dt class="col-sm-4 py-2">Captador</dt>
+        <dd class="col-sm-8 py-2">
+          {{ captacion.captador_nombre_snapshot }}
+        </dd>
+
+        <dt class="col-sm-4 py-2">Tipo</dt>
+        <dd class="col-sm-8 py-2">{{ captacion.captador_tipo_snapshot }}</dd>
+
+        <dt class="col-sm-4 py-2">Código utilizado</dt>
+        <dd class="col-sm-8 py-2"><code>{{ captacion.codigo.token }}</code></dd>
+
+        <dt class="col-sm-4 py-2">Fecha de registro</dt>
+        <dd class="col-sm-8 py-2">
+          {{ captacion.fecha_captacion|date:'d/m/Y H:i' }}
+        </dd>
+
+        <dt class="col-sm-4 py-2">Registrado por</dt>
+        <dd class="col-sm-8 py-2">
+          {{ captacion.registrado_por|default:'—' }}
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4 p-md-5">
+      <h4 class="mb-4">Estado</h4>
+
+      {% if captacion.estado == 'aprobada' %}
+        <span class="badge text-bg-success fs-6 mb-4">Aprobada</span>
+        <dl class="row mb-0">
+          <dt class="col-sm-4 py-2">Comisión autorizada</dt>
+          <dd class="col-sm-8 py-2">{{ captacion.porcentaje_comision }}%</dd>
+          <dt class="col-sm-4 py-2">Aprobada por</dt>
+          <dd class="col-sm-8 py-2">{{ captacion.decidido_por|default:'—' }}</dd>
+          <dt class="col-sm-4 py-2">Fecha</dt>
+          <dd class="col-sm-8 py-2">
+            {{ captacion.decidido_en|date:'d/m/Y H:i' }}
+          </dd>
+        </dl>
+        <div class="alert alert-info mt-4 mb-0">
+          La comisión económica todavía no ha sido generada. Se generará en una
+          fase posterior cuando se definan y cumplan sus condiciones.
+        </div>
+      {% elif captacion.estado == 'rechazada' %}
+        <span class="badge text-bg-danger fs-6 mb-4">Rechazada</span>
+        <dl class="row mb-0">
+          <dt class="col-sm-4 py-2">Rechazada por</dt>
+          <dd class="col-sm-8 py-2">{{ captacion.decidido_por|default:'—' }}</dd>
+          <dt class="col-sm-4 py-2">Fecha</dt>
+          <dd class="col-sm-8 py-2">
+            {{ captacion.decidido_en|date:'d/m/Y H:i' }}
+          </dd>
+          <dt class="col-sm-4 py-2">Motivo</dt>
+          <dd class="col-sm-8 py-2">{{ captacion.motivo_rechazo }}</dd>
+        </dl>
+      {% else %}
+        <span class="badge text-bg-warning fs-6">Pendiente</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if puede_revisar and captacion.estado == 'pendiente' %}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4 p-md-5">
+        <h4 class="mb-4">Revisión de Dirección</h4>
+
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="border rounded p-4 h-100">
+              <h5 class="text-success">Aprobar</h5>
+              <form
+                method="post"
+                action="{% url 'ventas:captacion_aprobar' captacion.pk %}"
+              >
+                {% csrf_token %}
+                <label
+                  class="form-label"
+                  for="{{ aprobar_form.porcentaje_comision.id_for_label }}"
+                >
+                  Porcentaje de comisión
+                </label>
+                <div class="input-group mb-3">
+                  {{ aprobar_form.porcentaje_comision }}
+                  <span class="input-group-text">%</span>
+                </div>
+                <button type="submit" class="btn btn-success">
+                  Aprobar captación
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="border rounded p-4 h-100">
+              <h5 class="text-danger">Rechazar</h5>
+              <form
+                method="post"
+                action="{% url 'ventas:captacion_rechazar' captacion.pk %}"
+              >
+                {% csrf_token %}
+                <label
+                  class="form-label"
+                  for="{{ rechazar_form.motivo_rechazo.id_for_label }}"
+                >
+                  Motivo del rechazo
+                </label>
+                <div class="mb-3">{{ rechazar_form.motivo_rechazo }}</div>
+                <button type="submit" class="btn btn-outline-danger">
+                  Rechazar captación
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -184,6 +184,34 @@
     {# ── Columna derecha: bonos + total + acciones ── #}
     <div class="col-lg-5">
 
+        {% if lineas_comision %}
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header px-4 py-3 bg-primary-subtle border-0">
+                <h5 class="fw-bold mb-0 text-primary-emphasis">
+                    <i class="bi bi-person-check-fill me-2"></i>Comisiones de captación
+                </h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for linea in lineas_comision %}
+                <li class="list-group-item px-4 py-3 d-flex justify-content-between gap-2">
+                    <div>
+                        <span class="fw-semibold small">{{ linea.concepto }}</span>
+                        <span class="d-block text-muted small">
+                            {{ linea.comision_captacion.paciente_nombre_snapshot }}
+                        </span>
+                        {% if linea.comision_captacion.estado == 'suspendida' %}
+                        <span class="badge text-bg-warning mt-1">Actualmente suspendida</span>
+                        {% endif %}
+                    </div>
+                    <span class="font-monospace fw-bold text-primary">
+                        +${{ linea.monto|floatformat:2 }}
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
         {# Bonos #}
         {% if lineas_bono or bonos_extra %}
         <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
@@ -226,6 +254,12 @@
                 <span class="lbl">Total bonos</span>
                 <span class="amt text-warning">+${{ corte.total_bonos|floatformat:2 }}</span>
             </div>
+            {% if total_comisiones %}
+            <div class="total-conf-row">
+                <span class="lbl">Comisiones de captación</span>
+                <span class="amt">+${{ total_comisiones|floatformat:2 }}</span>
+            </div>
+            {% endif %}
             <div class="total-conf-divider"></div>
             <div class="total-conf-row total-conf-final">
                 <span>TOTAL A RECIBIR</span>

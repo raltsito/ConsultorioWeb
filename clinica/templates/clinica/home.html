@@ -457,6 +457,18 @@
             </div>
             <div class="dock-grid-full">
 
+                {% if perms.ventas.manage_captadores or perms.ventas.validate_codigo or perms.ventas.view_codigo_propio %}
+                <a href="{% url 'ventas:inicio' %}" class="dock-tile">
+                    <span class="dock-chip" style="--c1:#2563EB;--c2:#1E3A8A;">
+                        <i class="bi bi-qr-code-scan"></i>
+                    </span>
+                    <span class="dock-text">
+                        <span class="dock-label">Ventas</span>
+                        <span class="dock-sub">Captación y comisiones</span>
+                    </span>
+                </a>
+                {% endif %}
+
                 <a href="{% url 'registrar_paciente' %}" class="dock-tile">
                     <span class="dock-chip" style="--c1:#26C6DA;--c2:#00838F;">
                         <i class="bi bi-person-plus-fill"></i>

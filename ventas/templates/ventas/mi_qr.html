@@ -1,0 +1,31 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 650px;">
+  <div class="card shadow border-0 text-center">
+    <div class="card-body p-5">
+      <p class="text-uppercase text-primary fw-bold small">
+        Mi QR de captación
+      </p>
+      <h2>{{ captador.nombre_display }}</h2>
+      <img
+        class="img-fluid my-3"
+        style="max-width: 300px;"
+        src="{% url 'ventas:captador_qr' captador.id %}"
+        alt="Mi QR"
+      >
+      <p><code>{{ codigo.token }}</code></p>
+
+      {% if captador.activo %}
+        <span class="badge text-bg-success">Activo</span>
+      {% else %}
+        <span class="badge text-bg-secondary">Inactivo</span>
+      {% endif %}
+
+      <p class="text-muted small mt-3 mb-0">
+        Este código no contiene porcentajes, descuentos ni comisiones.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

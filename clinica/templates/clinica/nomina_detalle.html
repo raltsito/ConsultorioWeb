@@ -213,8 +213,57 @@
         </div>
     </div>
 
-    {# ── COLUMNA DERECHA: Bonos + BonoExtra form ── #}
+    {# ── COLUMNA DERECHA: comisiones, bonos y BonoExtra ── #}
     <div class="col-lg-5">
+
+        {% if lineas_comision %}
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+            <div class="card-header bg-primary-subtle border-0 px-4 py-3">
+                <h6 class="fw-bold mb-0 text-primary-emphasis">
+                    <i class="bi bi-person-check-fill me-2"></i>Comisiones de captación
+                </h6>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for linea in lineas_comision %}
+                <li class="list-group-item px-4 py-3">
+                    <div class="d-flex justify-content-between gap-3">
+                        <div>
+                            <span class="fw-semibold">{{ linea.concepto }}</span>
+                            <span class="d-block small text-muted">
+                                {{ linea.comision_captacion.paciente_nombre_snapshot }} ·
+                                {{ linea.comision_captacion.generada_en|date:'d/m/Y H:i' }}
+                            </span>
+                            {% if linea.comision_captacion.estado == 'suspendida' %}
+                            <span class="badge text-bg-warning mt-1">
+                                Suspendida / no elegible actualmente
+                            </span>
+                            {% else %}
+                            <span class="badge text-bg-success mt-1">Elegible</span>
+                            {% endif %}
+                            {% if perms.ventas.view_comisiones_captacion %}
+                            <a
+                                class="small ms-2"
+                                href="{% url 'ventas:comision_detalle' linea.comision_captacion_id %}"
+                            >
+                                Ver comisión
+                            </a>
+                            {% endif %}
+                        </div>
+                        <span class="font-monospace fw-bold text-primary">
+                            +${{ linea.monto|floatformat:2 }}
+                        </span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            <div class="card-footer bg-primary-subtle border-0 px-4 py-2 d-flex justify-content-between">
+                <span class="fw-semibold small text-primary-emphasis">Total comisiones:</span>
+                <span class="font-monospace fw-bold text-primary-emphasis">
+                    +${{ total_comisiones|floatformat:2 }}
+                </span>
+            </div>
+        </div>
+        {% endif %}
 
         {# Card Bonos automáticos #}
         <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
@@ -353,6 +402,12 @@
                 <span class="total-card-label">Total bonos</span>
                 <span class="total-card-amount text-warning-emphasis">+${{ total_bonos|floatformat:2 }}</span>
             </div>
+            {% if total_comisiones %}
+            <div class="total-card-row">
+                <span class="total-card-label">Comisiones de captación</span>
+                <span class="total-card-amount">+${{ total_comisiones|floatformat:2 }}</span>
+            </div>
+            {% endif %}
             <div class="total-card-divider"></div>
             <div class="total-card-row total-card-row--total">
                 <span>TOTAL A PAGAR</span>

@@ -1,0 +1,226 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 850px;">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <p class="text-uppercase text-primary fw-bold small mb-1">Ventas</p>
+      <h2 class="mb-1">Nueva captación</h2>
+      <p class="text-muted mb-0">
+        Relaciona un paciente nuevo con el captador que lo refirió.
+      </p>
+    </div>
+    <a
+      href="{% url 'ventas:captaciones_lista' %}"
+      class="btn btn-outline-secondary"
+    >
+      Cancelar
+    </a>
+  </div>
+
+  {% if confirmacion %}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h4 class="mb-4">Confirma la captación</h4>
+        <dl class="row">
+          <dt class="col-sm-4">Paciente</dt>
+          <dd class="col-sm-8">{{ form.cleaned_data.paciente.nombre }}</dd>
+
+          <dt class="col-sm-4">Captador</dt>
+          <dd class="col-sm-8">{{ codigo.captador.nombre_display }}</dd>
+
+          <dt class="col-sm-4">Tipo</dt>
+          <dd class="col-sm-8">{{ codigo.captador.clasificacion_display }}</dd>
+
+          <dt class="col-sm-4">Código</dt>
+          <dd class="col-sm-8"><code>{{ codigo.token }}</code></dd>
+
+          <dt class="col-sm-4">Estado inicial</dt>
+          <dd class="col-sm-8">
+            <span class="badge text-bg-warning">Pendiente</span>
+          </dd>
+        </dl>
+
+        <form method="post">
+          {% csrf_token %}
+          <input
+            type="hidden"
+            name="paciente"
+            value="{{ form.cleaned_data.paciente.pk }}"
+          >
+          <input type="hidden" name="codigo" value="{{ codigo.token }}">
+          <input type="hidden" name="accion" value="registrar">
+          <button class="btn btn-primary">Registrar captación</button>
+          <a href="{% url 'ventas:captacion_nueva' %}" class="btn btn-link">
+            Corregir
+          </a>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <form method="post" class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label
+            class="form-label"
+            for="{{ form.paciente.id_for_label }}"
+          >
+            {{ form.paciente.label }}
+          </label>
+          {{ form.paciente }}
+
+          {% for error in form.paciente.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+          {% endfor %}
+
+          <div id="elegibilidad" class="small mt-2"></div>
+        </div>
+
+        <div class="mb-3">
+          <label
+            class="form-label"
+            for="{{ form.codigo.id_for_label }}"
+          >
+            {{ form.codigo.label }}
+          </label>
+          <div class="input-group">
+            {{ form.codigo }}
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              id="abrir-escaner"
+            >
+              <i class="bi bi-qr-code-scan"></i>
+              Escanear QR
+            </button>
+          </div>
+
+          {% for error in form.codigo.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <div id="lector-qr" class="border rounded p-3 mb-3 d-none">
+          <video
+            id="video-qr"
+            class="w-100 rounded"
+            style="max-height: 320px;"
+            playsinline
+          ></video>
+          <p id="estado-qr" class="small text-muted mb-0 mt-2">
+            Apunta la cámara al código QR.
+          </p>
+        </div>
+
+        <button class="btn btn-primary" name="accion" value="validar">
+          Validar y continuar
+        </button>
+      </div>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if not confirmacion %}
+<script>
+  (function () {
+    const paciente = document.getElementById("id_paciente");
+    const estadoElegibilidad = document.getElementById("elegibilidad");
+
+    async function revisarPaciente() {
+      if (!paciente.value) {
+        estadoElegibilidad.textContent = "";
+        return;
+      }
+
+      const plantilla = "{% url 'ventas:elegibilidad_paciente' 999999999 %}";
+      const url = plantilla.replace("999999999", paciente.value);
+      const respuesta = await fetch(url, {
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+
+      if (!respuesta.ok) {
+        return;
+      }
+
+      const datos = await respuesta.json();
+      estadoElegibilidad.className = datos.elegible
+        ? "small mt-2 text-success"
+        : "small mt-2 text-danger";
+      estadoElegibilidad.textContent =
+        (datos.elegible ? "✓ " : "✕ ") + datos.mensaje;
+    }
+
+    paciente.addEventListener("change", revisarPaciente);
+    revisarPaciente();
+
+    const boton = document.getElementById("abrir-escaner");
+    const lector = document.getElementById("lector-qr");
+    const video = document.getElementById("video-qr");
+    const estado = document.getElementById("estado-qr");
+    const campoCodigo = document.getElementById("id_codigo");
+    let stream;
+
+    boton.addEventListener("click", async function () {
+      if (!("BarcodeDetector" in window)) {
+        estado.textContent =
+          "Este navegador no permite escanear directamente. " +
+          "Introduce el código manualmente.";
+        lector.classList.remove("d-none");
+        return;
+      }
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "environment",
+          },
+        });
+        lector.classList.remove("d-none");
+        video.srcObject = stream;
+        await video.play();
+
+        const detector = new BarcodeDetector({
+          formats: ["qr_code"],
+        });
+
+        const leer = async () => {
+          if (!stream) {
+            return;
+          }
+
+          const codigos = await detector.detect(video);
+          if (codigos.length) {
+            const valor = codigos[0].rawValue;
+            campoCodigo.value = valor.split("/").filter(Boolean).pop();
+            stream.getTracks().forEach((track) => track.stop());
+            stream = null;
+            lector.classList.add("d-none");
+            return;
+          }
+
+          requestAnimationFrame(leer);
+        };
+
+        leer();
+      } catch (error) {
+        lector.classList.remove("d-none");
+        estado.textContent =
+          "No fue posible usar la cámara. Introduce el código manualmente.";
+      }
+    });
+  })();
+</script>
+{% endif %}
+{% endblock %}

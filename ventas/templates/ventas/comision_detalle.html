@@ -1,0 +1,174 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
+    <div>
+      <p class="text-uppercase text-primary fw-bold small mb-1">
+        Comisión de captación #{{ comision.pk }}
+      </p>
+      <h2 class="mb-1">Detalle de la obligación</h2>
+      <p class="text-muted mb-0">
+        Información histórica y contexto financiero actual de sólo lectura.
+      </p>
+    </div>
+    <a href="{% url 'ventas:comisiones_panel' %}" class="btn btn-outline-secondary align-self-start">
+      Volver al panel
+    </a>
+  </div>
+
+  {% if comision.estado == 'suspendida' %}
+    <div class="alert alert-warning">
+      <strong>Comisión suspendida.</strong>
+      Conserva su registro histórico, pero actualmente no cuenta con un pago
+      confirmado vigente en su cita generadora y no debe liquidarse.
+    </div>
+  {% else %}
+    <div class="alert alert-success">
+      <strong>Pendiente de futura liquidación.</strong>
+      Esta comisión conserva evidencia financiera vigente. Este panel no permite pagarla.
+    </div>
+  {% endif %}
+
+  <div class="row g-4">
+    {% if comision.liquidacion_activa_id and perms.ventas.view_liquidaciones %}
+      <div class="col-12"><div class="alert alert-info mb-0">
+        Esta comisión forma parte de la <a href="{% url 'ventas:liquidacion_detalle' comision.liquidacion_activa_id %}" class="alert-link">liquidación #{{ comision.liquidacion_activa_id }}</a>.
+      </div></div>
+    {% endif %}
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h4>Datos de la comisión</h4>
+          <dl class="row mb-0">
+            <dt class="col-sm-6">Estado</dt>
+            <dd class="col-sm-6">{{ comision.get_estado_display }}</dd>
+            <dt class="col-sm-6">Generada</dt>
+            <dd class="col-sm-6">{{ comision.generada_en|date:'d/m/Y H:i' }}</dd>
+            <dt class="col-sm-6">Base histórica utilizada</dt>
+            <dd class="col-sm-6">${{ comision.base_calculo|floatformat:'2u' }}</dd>
+            <dt class="col-sm-6">Porcentaje histórico</dt>
+            <dd class="col-sm-6">{{ comision.porcentaje_aplicado }}%</dd>
+            <dt class="col-sm-6">Monto histórico</dt>
+            <dd class="col-sm-6 fw-bold">${{ comision.monto_calculado|floatformat:'2u' }}</dd>
+            <dt class="col-sm-6">Moneda</dt>
+            <dd class="col-sm-6">{{ comision.moneda }}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h4>Origen</h4>
+          <dl class="row mb-0">
+            <dt class="col-sm-5">Captador</dt>
+            <dd class="col-sm-7">{{ comision.captador_nombre_snapshot }}</dd>
+            <dt class="col-sm-5">Tipo</dt>
+            <dd class="col-sm-7">{{ comision.captacion.captador.clasificacion_display }}</dd>
+            <dt class="col-sm-5">Paciente principal</dt>
+            <dd class="col-sm-7">{{ comision.paciente_nombre_snapshot }}</dd>
+            <dt class="col-sm-5">Cita generadora</dt>
+            <dd class="col-sm-7">#{{ comision.cita_generadora_id }}</dd>
+            <dt class="col-sm-5">Servicio</dt>
+            <dd class="col-sm-7">{{ comision.cita_generadora.servicio.nombre|default:'Sin servicio' }}</dd>
+            <dt class="col-sm-5">Fecha de cita</dt>
+            <dd class="col-sm-7">
+              {{ comision.cita_generadora.fecha|date:'d/m/Y' }}
+              {{ comision.cita_generadora.hora|time:'H:i' }}
+            </dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h4>Captación</h4>
+          <dl class="row mb-0">
+            <dt class="col-sm-6">Identificador</dt>
+            <dd class="col-sm-6">#{{ comision.captacion_id }}</dd>
+            <dt class="col-sm-6">Registrada</dt>
+            <dd class="col-sm-6">{{ comision.captacion.fecha_captacion|date:'d/m/Y H:i' }}</dd>
+            <dt class="col-sm-6">Aprobada</dt>
+            <dd class="col-sm-6">{{ comision.captacion.decidido_en|date:'d/m/Y H:i'|default:'—' }}</dd>
+            <dt class="col-sm-6">Porcentaje aprobado</dt>
+            <dd class="col-sm-6">{{ comision.captacion.porcentaje_comision }}%</dd>
+            <dt class="col-sm-6">Decidida por</dt>
+            <dd class="col-sm-6">
+              {% if comision.captacion.decidido_por %}
+                {{ comision.captacion.decidido_por.get_full_name|default:comision.captacion.decidido_por.username }}
+              {% else %}
+                —
+              {% endif %}
+            </dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h4>Evidencia financiera actual</h4>
+          <dl class="row mb-0">
+            <dt class="col-sm-7">Pago confirmado vigente</dt>
+            <dd class="col-sm-5">{% if detalle.tiene_pago_vigente %}Sí{% else %}No{% endif %}</dd>
+            <dt class="col-sm-7">Importe histórico del servicio</dt>
+            <dd class="col-sm-5">${{ comision.cita_generadora.importe_servicio_snapshot|floatformat:'2u' }}</dd>
+            <dt class="col-sm-7">Total registrado</dt>
+            <dd class="col-sm-5">${{ detalle.total_recibido|floatformat:'2u' }}</dd>
+          </dl>
+          <p class="small text-muted mt-3 mb-0">
+            Estos datos son contexto actual y no recalculan la comisión histórica.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h4>Historial de la comisión</h4>
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Evento</th>
+                  <th>Usuario</th>
+                  <th>Detalle</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for evento in detalle.eventos %}
+                  <tr>
+                    <td>{{ evento.creado_en|date:'d/m/Y H:i' }}</td>
+                    <td>{{ evento.get_accion_display }}</td>
+                    <td>
+                      {% if evento.usuario %}
+                        {{ evento.usuario.get_full_name|default:evento.usuario.username }}
+                      {% else %}
+                        Proceso administrativo
+                      {% endif %}
+                    </td>
+                    <td>{{ evento.motivo|default:'—' }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-center text-muted py-4">
+                      No hay eventos de comisión registrados.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

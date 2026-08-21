@@ -1,0 +1,239 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
+    <div>
+      <p class="text-uppercase text-primary fw-bold small mb-1">
+        Liquidación #{{ liquidacion.pk }}
+      </p>
+      <h2 class="mb-1">Detalle de liquidación</h2>
+      <p class="text-muted mb-0">
+        {{ liquidacion.beneficiario_nombre_snapshot }} · {{ liquidacion.get_estado_display }}
+      </p>
+    </div>
+    <a href="{% url 'ventas:liquidaciones_panel' %}" class="btn btn-outline-secondary align-self-start">
+      Volver al histórico
+    </a>
+  </div>
+
+  {% if tiene_no_elegibles %}
+    <div class="alert alert-warning">
+      <strong>Borrador no apto para pago.</strong>
+      Contiene comisiones suspendidas o que ya no son elegibles. Las líneas se
+      conservan y pueden retirarse manualmente.
+    </div>
+  {% endif %}
+
+  {% if liquidacion.estado == 'pagada' and lineas_incidencia %}
+    <div class="alert alert-warning">
+      <strong>Incidencia posterior al pago.</strong>
+      Una o más comisiones incluidas fueron suspendidas después de confirmarse esta
+      liquidación. El sistema conserva la evidencia, informa la incidencia y la deja
+      disponible para revisión administrativa; no genera automáticamente adeudos,
+      recuperaciones ni ajustes.
+    </div>
+  {% endif %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100"><div class="card-body">
+        <span class="text-muted">Captador</span>
+        <strong class="d-block">{{ liquidacion.captador.nombre_display }}</strong>
+        <small>Snapshot: {{ liquidacion.beneficiario_nombre_snapshot }}</small>
+        <small class="d-block text-muted">{{ clasificacion_captador }}</small>
+      </div></div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100"><div class="card-body">
+        <span class="text-muted">Creada</span>
+        <strong class="d-block">{{ liquidacion.creada_en|date:'d/m/Y H:i' }}</strong>
+        <small>{{ liquidacion.creada_por|default:'Proceso administrativo' }}</small>
+      </div></div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100"><div class="card-body">
+        {% if liquidacion.estado == 'pagada' %}
+          <span class="text-muted">Monto pagado</span>
+          <strong class="d-block fs-3">${{ liquidacion.monto_total_snapshot|floatformat:'2u' }} MXN</strong>
+          <small>Monto histórico congelado.</small>
+        {% else %}
+          <span class="text-muted">Total provisional</span>
+          <strong class="d-block fs-3">${{ total_provisional|floatformat:'2u' }} MXN</strong>
+          <small>No representa un pago confirmado.</small>
+        {% endif %}
+      </div></div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white"><h4 class="mb-0">Comisiones activas</h4></div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead><tr><th>ID</th><th>Paciente / servicio</th><th>Generada</th><th>Base</th><th>%</th><th>Monto</th><th>Estado actual</th><th></th></tr></thead>
+        <tbody>
+          {% for linea in lineas_activas %}
+            <tr class="{% if linea.comision.estado == 'suspendida' %}table-warning{% endif %}">
+              <td>#{{ linea.comision_id }}</td>
+              <td>
+                {{ linea.comision.paciente_nombre_snapshot }}
+                <small class="d-block text-muted">
+                  {{ linea.comision.cita_generadora.servicio.nombre|default:'Sin servicio' }} · cita #{{ linea.comision.cita_generadora_id }}
+                </small>
+              </td>
+              <td>{{ linea.comision.generada_en|date:'d/m/Y H:i' }}</td>
+              <td>${{ linea.comision.base_calculo|floatformat:'2u' }}</td>
+              <td>{{ linea.comision.porcentaje_aplicado }}%</td>
+              <td class="fw-semibold">
+                {% if liquidacion.estado == 'pagada' %}
+                  ${{ linea.monto_liquidado_snapshot|floatformat:'2u' }}
+                {% else %}
+                  ${{ linea.comision.monto_calculado|floatformat:'2u' }}
+                {% endif %}
+              </td>
+              <td>
+                {% if linea.comision.estado == 'suspendida' %}
+                  <span class="badge text-bg-warning">Suspendida / no elegible</span>
+                {% else %}
+                  <span class="badge text-bg-success">Pendiente</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if liquidacion.estado == 'borrador' and perms.ventas.change_draft_liquidacion %}
+                  <form method="post" action="{% url 'ventas:liquidacion_retirar' liquidacion.pk linea.comision_id %}" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <input name="motivo" class="form-control form-control-sm" placeholder="Motivo" required>
+                    <button class="btn btn-sm btn-outline-danger">Retirar</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8" class="text-center text-muted py-4">Sin comisiones activas.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if liquidacion.estado == 'pagada' %}
+    <div class="card border-primary shadow-sm mb-4">
+      <div class="card-body">
+        <h4>Evidencia del pago</h4>
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Estado</dt><dd class="col-sm-8">Pagada</dd>
+          <dt class="col-sm-4">Monto pagado</dt><dd class="col-sm-8">${{ liquidacion.monto_total_snapshot|floatformat:'2u' }} MXN</dd>
+          <dt class="col-sm-4">Método</dt><dd class="col-sm-8">{{ liquidacion.get_metodo_pago_display }}</dd>
+          <dt class="col-sm-4">Referencia</dt><dd class="col-sm-8">{{ liquidacion.referencia }}</dd>
+          <dt class="col-sm-4">Fecha</dt><dd class="col-sm-8">{{ liquidacion.pagada_en|date:'d/m/Y H:i' }}</dd>
+          <dt class="col-sm-4">Registrado por</dt><dd class="col-sm-8">{{ liquidacion.pagada_por|default:'—' }}</dd>
+          <dt class="col-sm-4">Beneficiario</dt><dd class="col-sm-8">{{ liquidacion.beneficiario_nombre_snapshot }}</dd>
+        </dl>
+      </div>
+    </div>
+  {% elif liquidacion.estado == 'cancelada' %}
+    <div class="card border-secondary shadow-sm mb-4">
+      <div class="card-body">
+        <h4>Evidencia de cancelación</h4>
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Fecha</dt><dd class="col-sm-8">{{ liquidacion.cancelada_en|date:'d/m/Y H:i' }}</dd>
+          <dt class="col-sm-4">Cancelada por</dt><dd class="col-sm-8">{{ liquidacion.cancelada_por|default:'Proceso administrativo' }}</dd>
+          <dt class="col-sm-4">Motivo</dt><dd class="col-sm-8">{{ liquidacion.motivo_cancelacion }}</dd>
+        </dl>
+      </div>
+    </div>
+  {% elif liquidacion.estado == 'borrador' and perms.ventas.pay_liquidacion %}
+    {% if tiene_no_elegibles %}
+      <div class="alert alert-warning">
+        La liquidación contiene una o más comisiones que actualmente no son
+        elegibles. Revísalas antes de registrar el pago.
+      </div>
+    {% else %}
+      <div class="d-flex justify-content-end mb-4">
+        <a href="{% url 'ventas:liquidacion_registrar_pago' liquidacion.pk %}" class="btn btn-primary">
+          Registrar pago
+        </a>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  {% if liquidacion.estado == 'pagada' and lineas_incidencia %}
+    <div class="card border-warning shadow-sm mb-4">
+      <div class="card-header bg-warning-subtle"><h4 class="mb-0">Comisiones con incidencia activa</h4></div>
+      <div class="table-responsive"><table class="table align-middle mb-0">
+        <thead><tr><th>Comisión</th><th>Paciente / cita</th><th>Servicio</th><th>Monto liquidado</th><th>Situación actual</th></tr></thead>
+        <tbody>{% for linea in lineas_incidencia %}<tr>
+          <td><a href="{% url 'ventas:comision_detalle' linea.comision_id %}">#{{ linea.comision_id }}</a></td>
+          <td>{{ linea.comision.paciente_nombre_snapshot }}<small class="d-block text-muted">Cita #{{ linea.comision.cita_generadora_id }}</small></td>
+          <td>{{ linea.comision.cita_generadora.servicio.nombre|default:'Sin servicio' }}</td>
+          <td>${{ linea.monto_liquidado_snapshot|floatformat:'2u' }}</td>
+          <td><span class="badge text-bg-warning">Suspendida</span></td>
+        </tr>{% endfor %}</tbody>
+      </table></div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4"><div class="card-body">
+      <h4>Eventos relacionados con la incidencia</h4>
+      <div class="table-responsive"><table class="table mb-0"><thead><tr><th>Fecha</th><th>Captación</th><th>Evento</th><th>Usuario</th><th>Motivo</th></tr></thead><tbody>
+        {% for evento in eventos_incidencia %}<tr><td>{{ evento.creado_en|date:'d/m/Y H:i' }}</td><td>#{{ evento.captacion_id }}</td><td>{{ evento.get_accion_display }}</td><td>{{ evento.usuario|default:'Proceso administrativo' }}</td><td>{{ evento.motivo|default:'—' }}</td></tr>
+        {% empty %}<tr><td colspan="5" class="text-center text-muted py-3">No hay eventos relacionados registrados.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </div></div>
+  {% endif %}
+
+  {% if liquidacion.estado == 'borrador' and perms.ventas.change_draft_liquidacion and disponibles %}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <h4>Agregar comisiones del mismo captador</h4>
+        <form method="post" action="{% url 'ventas:liquidacion_agregar' liquidacion.pk %}">
+          {% csrf_token %}
+          {{ form_agregar.comisiones }}
+          <button class="btn btn-outline-primary mt-3">Agregar seleccionadas</button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white"><h4 class="mb-0">Histórico de líneas retiradas</h4></div>
+    <div class="table-responsive"><table class="table mb-0">
+      <thead><tr><th>Comisión</th><th>Retirada</th><th>Usuario</th><th>Motivo</th></tr></thead>
+      <tbody>
+        {% for linea in lineas_retiradas %}
+          <tr><td>#{{ linea.comision_id }}</td><td>{{ linea.retirada_en|date:'d/m/Y H:i' }}</td><td>{{ linea.retirada_por|default:'—' }}</td><td>{{ linea.motivo_retiro }}</td></tr>
+        {% empty %}<tr><td colspan="4" class="text-center text-muted py-3">Sin retiros.</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <h4>Auditoría</h4>
+      <ul class="list-group list-group-flush">
+        {% for evento in eventos %}
+          <li class="list-group-item px-0">
+            <strong>{{ evento.get_accion_display }}</strong>
+            · {{ evento.creado_en|date:'d/m/Y H:i' }}
+            · {{ evento.usuario|default:'Proceso administrativo' }}
+            <code class="d-block mt-1">{{ evento.detalle }}</code>
+          </li>
+        {% empty %}<li class="list-group-item px-0 text-muted">Sin eventos.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  {% if liquidacion.estado == 'borrador' and perms.ventas.cancel_draft_liquidacion %}
+    <div class="card border-danger mb-4">
+      <div class="card-body">
+        <h4>Cancelar borrador</h4>
+        <p class="text-muted">Las líneas activas se liberarán conservando el histórico.</p>
+        <form method="post" action="{% url 'ventas:liquidacion_cancelar' liquidacion.pk %}">
+          {% csrf_token %}
+          {{ form_cancelar.motivo }}
+          <button class="btn btn-danger mt-3">Cancelar borrador</button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

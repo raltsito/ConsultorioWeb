@@ -8,6 +8,8 @@ venv/
 
 # Local runtime/data
 db.sqlite3
+db.backup.sqlite3
+db_antes_eliminar_finanzas*.sqlite3
 media/
 staticfiles/
 

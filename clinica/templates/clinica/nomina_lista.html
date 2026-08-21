@@ -75,7 +75,7 @@
             <div class="nom-stat-icon nom-ic-teal"><i class="bi bi-bank"></i></div>
             <div>
                 <div class="nom-stat-val">${{ total_clinica_global|floatformat:0 }}</div>
-                <div class="nom-stat-lbl">Ingreso clínica</div>
+                <div class="nom-stat-lbl">Valor de citas atendidas</div>
             </div>
         </div>
     </div>
@@ -115,7 +115,7 @@
                     <tr>
                         <th>Terapeuta</th>
                         <th class="text-center">Citas atendidas</th>
-                        <th class="text-end">Ingreso Clínica</th>
+                        <th class="text-end">Valor citas atendidas</th>
                         <th class="text-end">Total a Pagar</th>
                         <th class="text-center">Estado Corte</th>
                         <th class="text-center">Confirmación T.</th>
@@ -139,7 +139,7 @@
                         </td>
 
                         <td class="text-end font-monospace fw-semibold text-secondary">
-                            ${{ fila.ingreso_clinica|floatformat:0 }}
+                            ${{ fila.valor_citas_atendidas|floatformat:0 }}
                         </td>
 
                         <td class="text-end">

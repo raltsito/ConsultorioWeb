@@ -10,18 +10,368 @@ Funciones principales:
   - preview_nomina_semanal()   → retorna un dict con el cálculo SIN persistir en BD
 """
 
+from dataclasses import dataclass
 from decimal import Decimal
-from django.db import transaction
-from django.db.models import Sum
 
-from datetime import timedelta
+from django.db import IntegrityError, transaction
+from django.core.exceptions import ValidationError
+from django.db.models import Sum
+from django.utils import timezone
+
+from datetime import datetime, time, timedelta
 
 from .models import (
     Cita,
     CorteSemanal,
     LineaNomina,
+    MovimientoEconomicoCita,
     ReglaTerapeuta,
 )
+from .pricing import calcular_importe_servicio_con_captacion
+
+
+def movimientos_confirmados_cita(cita):
+    return MovimientoEconomicoCita.objects.filter(
+        cita=cita,
+        estado=MovimientoEconomicoCita.ESTADO_CONFIRMADO,
+    )
+
+
+def cita_tiene_movimiento_confirmado(cita):
+    return movimientos_confirmados_cita(cita).filter(
+        importe__gt=Decimal("0.00"),
+    ).exists()
+
+
+def total_recibido_cita(cita):
+    resultado = movimientos_confirmados_cita(cita).aggregate(
+        total=Sum("importe"),
+    )
+    return resultado["total"] or Decimal("0.00")
+
+
+def total_movimientos_confirmados_en_rango(
+    fecha_inicio,
+    fecha_fin,
+    *,
+    terapeuta_id=None,
+    paciente_division_ids=None,
+):
+    zona_horaria = timezone.get_current_timezone()
+    instante_inicio = timezone.make_aware(
+        datetime.combine(fecha_inicio, time.min),
+        zona_horaria,
+    )
+    instante_fin = timezone.make_aware(
+        datetime.combine(fecha_fin + timedelta(days=1), time.min),
+        zona_horaria,
+    )
+    movimientos = MovimientoEconomicoCita.objects.filter(
+        estado=MovimientoEconomicoCita.ESTADO_CONFIRMADO,
+        registrado_en__gte=instante_inicio,
+        registrado_en__lt=instante_fin,
+    )
+    if terapeuta_id:
+        movimientos = movimientos.filter(
+            cita__terapeuta_id=terapeuta_id,
+        )
+    if paciente_division_ids is not None:
+        movimientos = movimientos.filter(
+            cita__paciente__division_id__in=paciente_division_ids,
+        )
+    resultado = movimientos.aggregate(total=Sum("importe"))
+    return resultado["total"] or Decimal("0.00")
+
+
+def _guardar_snapshots_servicio(cita):
+    if cita.importe_servicio_snapshot is not None:
+        return cita
+
+    calculo = calcular_importe_servicio_con_captacion(
+        paciente=cita.paciente,
+        servicio=cita.servicio,
+    )
+    if calculo.importe_final is None:
+        return cita
+
+    cita.precio_servicio_base_snapshot = calculo.precio_general
+    cita.descuento_captacion_porcentaje_snapshot = (
+        calculo.porcentaje_descuento
+    )
+    cita.importe_servicio_snapshot = calculo.importe_final
+    cita.save(
+        update_fields=[
+            "precio_servicio_base_snapshot",
+            "descuento_captacion_porcentaje_snapshot",
+            "importe_servicio_snapshot",
+        ]
+    )
+    return cita
+
+
+@transaction.atomic
+def registrar_movimiento_economico(
+    *,
+    cita,
+    importe,
+    metodo,
+    usuario,
+    referencia="",
+    clave_idempotencia=None,
+):
+    importe_decimal = Decimal(importe)
+    if importe_decimal <= Decimal("0.00"):
+        raise ValidationError("El importe debe ser mayor a cero.")
+
+    datos_movimiento = {
+        "cita": cita,
+        "tipo": MovimientoEconomicoCita.TIPO_COBRO,
+        "importe": importe_decimal,
+        "metodo": metodo,
+        "referencia": (referencia or "").strip(),
+        "registrado_por": usuario,
+    }
+    if clave_idempotencia is not None:
+        movimiento_existente = MovimientoEconomicoCita.objects.filter(
+            clave_idempotencia=clave_idempotencia,
+        ).first()
+        if movimiento_existente is not None:
+            return movimiento_existente, False
+        datos_movimiento["clave_idempotencia"] = clave_idempotencia
+
+    movimiento = MovimientoEconomicoCita(**datos_movimiento)
+    movimiento.full_clean()
+    movimiento.save()
+    return movimiento, True
+
+
+@transaction.atomic
+def registrar_movimiento_recepcion_desde_cita(*, cita, usuario):
+    cita_bloqueada = (
+        Cita.objects.select_for_update()
+        .select_related(
+            "paciente",
+            "servicio",
+        )
+        .get(pk=cita.pk)
+    )
+
+    if cita_bloqueada.estatus != Cita.ESTATUS_SI_ASISTIO:
+        raise ValidationError(
+            "El movimiento de Recepción sólo corresponde a una cita asistida."
+        )
+    if cita_bloqueada.costo is None:
+        raise ValidationError("La cita no tiene un importe registrado.")
+    if cita_bloqueada.costo <= Decimal("0.00"):
+        raise ValidationError("El importe registrado debe ser mayor a cero.")
+
+    metodos_validos = {valor for valor, _ in Cita.PAGO_CHOICES}
+    if cita_bloqueada.metodo_pago not in metodos_validos:
+        raise ValidationError(
+            "Selecciona un método de pago antes de confirmar la asistencia."
+        )
+
+    movimiento_existente = (
+        movimientos_confirmados_cita(cita_bloqueada)
+        .order_by("registrado_en", "id")
+        .first()
+    )
+    if movimiento_existente is not None:
+        return movimiento_existente, False
+
+    _guardar_snapshots_servicio(cita_bloqueada)
+
+    movimiento = MovimientoEconomicoCita(
+        cita=cita_bloqueada,
+        tipo=MovimientoEconomicoCita.TIPO_COBRO,
+        importe=cita_bloqueada.costo,
+        metodo=cita_bloqueada.metodo_pago,
+        referencia="Registrado desde el flujo existente de Recepción",
+        registrado_por=usuario,
+    )
+    movimiento.full_clean()
+    movimiento.save()
+    return movimiento, True
+
+
+@transaction.atomic
+def anular_movimiento_economico(*, movimiento, usuario, motivo):
+    movimiento_bloqueado = MovimientoEconomicoCita.objects.select_for_update().get(
+        pk=movimiento.pk,
+    )
+    if movimiento_bloqueado.estado == MovimientoEconomicoCita.ESTADO_ANULADO:
+        return movimiento_bloqueado, False
+
+    motivo_limpio = (motivo or "").strip()
+    if not motivo_limpio:
+        raise ValidationError("El motivo de anulación es obligatorio.")
+
+    movimiento_bloqueado.estado = MovimientoEconomicoCita.ESTADO_ANULADO
+    movimiento_bloqueado.anulado_en = timezone.now()
+    movimiento_bloqueado.anulado_por = usuario
+    movimiento_bloqueado.motivo_anulacion = motivo_limpio
+    movimiento_bloqueado.save(
+        update_fields=[
+            "estado",
+            "anulado_en",
+            "anulado_por",
+            "motivo_anulacion",
+        ]
+    )
+    return movimiento_bloqueado, True
+
+
+@dataclass(frozen=True)
+class ResultadoIncorporacionComision:
+    estado: str
+    linea: LineaNomina | None
+
+
+def _fecha_local_comision(comision):
+    return timezone.localtime(comision.generada_en).date()
+
+
+def actualizar_totales_corte(corte):
+    """Actualiza snapshots sin mezclar comisiones de captación con bonos."""
+    subtotal_sesiones = (
+        corte.lineas.filter(tipo=LineaNomina.TIPO_SESION)
+        .aggregate(total=Sum("monto"))["total"]
+        or Decimal("0.00")
+    )
+    total_bonos_automaticos = (
+        corte.lineas.filter(
+            tipo__in=(
+                LineaNomina.TIPO_BONO_UMBRAL,
+                LineaNomina.TIPO_BONO_POR_PACIENTE,
+                LineaNomina.TIPO_PENALIZACION,
+            )
+        ).aggregate(total=Sum("monto"))["total"]
+        or Decimal("0.00")
+    )
+    total_expositor = (
+        corte.lineas.filter(tipo=LineaNomina.TIPO_EXPOSITOR)
+        .aggregate(total=Sum("monto"))["total"]
+        or Decimal("0.00")
+    )
+    total_comisiones = (
+        corte.lineas.filter(tipo=LineaNomina.TIPO_COMISION_CAPTACION)
+        .aggregate(total=Sum("monto"))["total"]
+        or Decimal("0.00")
+    )
+    bonos_extra = (
+        corte.bonos_extra.aggregate(total=Sum("monto"))["total"]
+        or Decimal("0.00")
+    )
+    corte.subtotal_sesiones = subtotal_sesiones
+    corte.total_bonos = total_bonos_automaticos + bonos_extra
+    corte.total_pago = (
+        subtotal_sesiones
+        + total_bonos_automaticos
+        + bonos_extra
+        + total_expositor
+        + total_comisiones
+    )
+    corte.save(
+        update_fields=(
+            "subtotal_sesiones",
+            "total_bonos",
+            "total_pago",
+        )
+    )
+    return corte
+
+
+@transaction.atomic
+def incorporar_comision_captacion_a_corte(comision, *, corte_destino=None):
+    """Incorpora una comisión de terapeuta una sola vez a un corte borrador."""
+    from ventas.classification import captador_es_terapeuta
+    from ventas.models import ComisionCaptacion, LineaLiquidacionComision
+
+    comision = (
+        ComisionCaptacion.objects.select_for_update()
+        .select_related(
+            "captacion__captador__usuario__perfil_terapeuta",
+        )
+        .get(pk=comision.pk)
+    )
+    captador = comision.captacion.captador
+    if not captador_es_terapeuta(captador):
+        raise ValueError("La comisión no pertenece a un captador terapeuta.")
+    if LineaLiquidacionComision.objects.select_for_update().filter(
+        comision=comision,
+        activa=True,
+    ).exists():
+        raise ValueError("La comisión ya tiene un destino activo en liquidaciones.")
+
+    linea_existente = (
+        LineaNomina.objects.select_for_update()
+        .filter(comision_captacion=comision)
+        .first()
+    )
+    if linea_existente:
+        return ResultadoIncorporacionComision("ya_incorporada", linea_existente)
+    if comision.estado != ComisionCaptacion.ESTADO_PENDIENTE_PAGO:
+        raise ValueError("La comisión está suspendida y no puede incorporarse.")
+
+    terapeuta = captador.usuario.perfil_terapeuta
+    fecha_referencia = _fecha_local_comision(comision)
+    if corte_destino is None:
+        corte = (
+            CorteSemanal.objects.select_for_update()
+            .filter(
+                terapeuta=terapeuta,
+                estatus=CorteSemanal.ESTATUS_BORRADOR,
+                fecha_fin__gte=fecha_referencia,
+            )
+            .order_by("fecha_inicio", "id")
+            .first()
+        )
+    else:
+        corte = CorteSemanal.objects.select_for_update().get(pk=corte_destino.pk)
+        if corte.terapeuta_id != terapeuta.pk or corte.fecha_fin < fecha_referencia:
+            raise ValueError("El corte no corresponde al terapeuta o al periodo disponible.")
+
+    if corte is None:
+        return ResultadoIncorporacionComision("sin_corte_disponible", None)
+    if corte.estatus != CorteSemanal.ESTATUS_BORRADOR:
+        raise ValueError("Sólo se pueden incorporar comisiones a cortes en borrador.")
+
+    try:
+        with transaction.atomic():
+            linea = LineaNomina.objects.create(
+                corte=corte,
+                cita=None,
+                comision_captacion=comision,
+                tipo=LineaNomina.TIPO_COMISION_CAPTACION,
+                concepto=f"Comisión de captación #{comision.pk}",
+                monto=comision.monto_calculado,
+            )
+    except IntegrityError:
+        linea = LineaNomina.objects.get(comision_captacion=comision)
+        return ResultadoIncorporacionComision("ya_incorporada", linea)
+
+    actualizar_totales_corte(corte)
+    return ResultadoIncorporacionComision("incorporada", linea)
+
+
+def incorporar_comisiones_captacion_pendientes(corte):
+    """Incorpora al corte las comisiones elegibles generadas hasta su cierre."""
+    from ventas.queries import comisiones_captacion_terapeutas_pendientes
+
+    comisiones = comisiones_captacion_terapeutas_pendientes().filter(
+        captacion__captador__usuario__perfil_terapeuta=corte.terapeuta,
+    )
+    resultados = []
+    for comision in comisiones:
+        if _fecha_local_comision(comision) > corte.fecha_fin:
+            continue
+        resultados.append(
+            incorporar_comision_captacion_a_corte(
+                comision,
+                corte_destino=corte,
+            )
+        )
+    return resultados
 
 
 # =============================================================================
@@ -190,6 +540,7 @@ def calcular_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
             fecha_inicio=fecha_inicio,
             defaults={"fecha_fin": fecha_fin, "estatus": CorteSemanal.ESTATUS_BORRADOR},
         )
+        corte = CorteSemanal.objects.select_for_update().get(pk=corte.pk)
 
         if corte.estatus != CorteSemanal.ESTATUS_BORRADOR:
             raise ValueError(
@@ -201,7 +552,11 @@ def calcular_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
         # Borrar líneas automáticas (sesión y bonos).
         # Las líneas de penalización y expositor se conservan — son pagos ya
         # registrados manualmente y no deben recalcularse.
-        PRESERVAR = [LineaNomina.TIPO_PENALIZACION, LineaNomina.TIPO_EXPOSITOR]
+        PRESERVAR = [
+            LineaNomina.TIPO_PENALIZACION,
+            LineaNomina.TIPO_EXPOSITOR,
+            LineaNomina.TIPO_COMISION_CAPTACION,
+        ]
         corte.lineas.exclude(tipo__in=PRESERVAR).delete()
 
         # Crear líneas de sesión
@@ -228,26 +583,13 @@ def calcular_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
             for b in lineas_bono
         ])
 
-        # Sumar BonoExtra manuales existentes en este corte
-        bonos_extra = corte.bonos_extra.aggregate(total=Sum("monto"))["total"] or Decimal("0.00")
+        incorporar_comisiones_captacion_pendientes(corte)
 
-        # Sumar líneas de penalización y expositor ya registradas (sobreviven al recalculo)
-        total_penalizaciones = (
-            corte.lineas.filter(tipo=LineaNomina.TIPO_PENALIZACION)
-            .aggregate(total=Sum("monto"))["total"] or Decimal("0.00")
-        )
-        total_expositor = (
-            corte.lineas.filter(tipo=LineaNomina.TIPO_EXPOSITOR)
-            .aggregate(total=Sum("monto"))["total"] or Decimal("0.00")
-        )
-
-        # Actualizar snapshot del corte
+        # Actualizar snapshots del periodo y del total económico.
         corte.fecha_fin = fecha_fin
         corte.total_sesiones = total_sesiones
-        corte.subtotal_sesiones = subtotal_sesiones
-        corte.total_bonos = total_bonos_automaticos + bonos_extra + total_penalizaciones
-        corte.total_pago = subtotal_sesiones + total_bonos_automaticos + bonos_extra + total_penalizaciones + total_expositor
-        corte.save()
+        corte.save(update_fields=("fecha_fin", "total_sesiones"))
+        actualizar_totales_corte(corte)
 
     return corte
 
@@ -322,6 +664,7 @@ def preview_nomina_semanal(terapeuta, fecha_inicio, fecha_fin):
 # APROBACIÓN DE CORTE
 # =============================================================================
 
+@transaction.atomic
 def aprobar_corte_semanal(corte, aprobado_por):
     """
     Cambia el estatus del CorteSemanal de 'borrador' a 'aprobado'.
@@ -336,10 +679,21 @@ def aprobar_corte_semanal(corte, aprobado_por):
     """
     from django.utils import timezone
 
+    corte = CorteSemanal.objects.select_for_update().get(pk=corte.pk)
     if corte.estatus != CorteSemanal.ESTATUS_BORRADOR:
         raise ValueError(
             f"Solo se pueden aprobar cortes en borrador. "
             f"Este corte está en estatus '{corte.get_estatus_display()}'."
+        )
+
+    comisiones_suspendidas = corte.lineas.filter(
+        tipo=LineaNomina.TIPO_COMISION_CAPTACION,
+        comision_captacion__estado="suspendida",
+    )
+    if comisiones_suspendidas.exists():
+        raise ValueError(
+            "El corte contiene comisiones de captación suspendidas. "
+            "Debe revisarlas antes de aprobar."
         )
 
     corte.estatus = CorteSemanal.ESTATUS_APROBADO

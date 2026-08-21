@@ -1,0 +1,67 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
+    <div>
+      <p class="text-uppercase text-primary fw-bold small mb-1">Finanzas / Ventas</p>
+      <h2 class="mb-1">Histórico de liquidaciones</h2>
+      <p class="text-muted mb-0">Consulta administrativa de borradores, pagos confirmados, cancelaciones e incidencias.</p>
+    </div>
+    <a href="{% url 'ventas:comisiones_panel' %}" class="btn btn-outline-secondary align-self-start">Volver a comisiones</a>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <span class="text-muted">Borradores</span><strong class="d-block fs-3">{{ resumen.cantidad_borradores }}</strong>
+      <span>${{ resumen.total_provisional_borradores|floatformat:'2u' }} MXN provisionales</span>
+    </div></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <span class="text-muted">Pagadas</span><strong class="d-block fs-3 text-success">{{ resumen.cantidad_pagadas }}</strong>
+      <span>${{ resumen.monto_historico_pagado|floatformat:'2u' }} MXN históricos</span>
+    </div></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <span class="text-muted">Canceladas</span><strong class="d-block fs-3 text-secondary">{{ resumen.cantidad_canceladas }}</strong>
+      <span class="text-muted">Conservan su trazabilidad</span>
+    </div></div></div>
+    <div class="col-md-3"><div class="card border-warning shadow-sm h-100"><div class="card-body">
+      <span class="text-muted">Con incidencia activa</span><strong class="d-block fs-3 text-warning">{{ resumen.cantidad_con_incidencia }}</strong>
+      <span class="text-muted">Pagos que requieren revisión</span>
+    </div></div></div>
+  </div>
+
+  <form method="get" class="card border-0 shadow-sm mb-4"><div class="card-body row g-3 align-items-end">
+    <div class="col-md-3"><label class="form-label">ID, beneficiario o referencia</label><input class="form-control" name="q" value="{{ filtros.q }}"></div>
+    <div class="col-md-2"><label class="form-label">Estado</label><select class="form-select" name="estado"><option value="">Todos</option>{% for valor, etiqueta in estados %}<option value="{{ valor }}" {% if filtros.estado == valor %}selected{% endif %}>{{ etiqueta }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label">Captador</label><select class="form-select" name="captador"><option value="">Todos</option>{% for captador in captadores %}<option value="{{ captador.pk }}" {% if filtros.captador == captador.pk|stringformat:'s' %}selected{% endif %}>{{ captador.nombre_display }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label">Tipo</label><select class="form-select" name="tipo"><option value="">Todos</option>{% for valor, etiqueta in tipos_captador %}<option value="{{ valor }}" {% if filtros.tipo == valor %}selected{% endif %}>{{ etiqueta }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label">Incidencia</label><select class="form-select" name="incidencia"><option value="">Todas</option><option value="si" {% if filtros.incidencia == 'si' %}selected{% endif %}>Con incidencia</option><option value="no" {% if filtros.incidencia == 'no' %}selected{% endif %}>Sin incidencia</option></select></div>
+    <div class="col-md-2"><label class="form-label">Creada desde</label><input type="date" class="form-control" name="creada_desde" value="{{ filtros.creada_desde }}"></div>
+    <div class="col-md-2"><label class="form-label">Creada hasta</label><input type="date" class="form-control" name="creada_hasta" value="{{ filtros.creada_hasta }}"></div>
+    <div class="col-md-2"><label class="form-label">Pagada desde</label><input type="date" class="form-control" name="pagada_desde" value="{{ filtros.pagada_desde }}"></div>
+    <div class="col-md-2"><label class="form-label">Pagada hasta</label><input type="date" class="form-control" name="pagada_hasta" value="{{ filtros.pagada_hasta }}"></div>
+    <div class="col-md-2"><label class="form-label">Método</label><select class="form-select" name="metodo"><option value="">Todos</option>{% for valor, etiqueta in metodos_pago %}<option value="{{ valor }}" {% if filtros.metodo == valor %}selected{% endif %}>{{ etiqueta }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><button class="btn btn-outline-primary w-100">Filtrar</button></div>
+    <div class="col-md-2"><a href="{% url 'ventas:liquidaciones_panel' %}" class="btn btn-outline-secondary w-100">Limpiar</a></div>
+  </div></form>
+
+  <div class="card border-0 shadow-sm overflow-hidden"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead class="table-light"><tr><th>ID</th><th>Captador / snapshot</th><th>Clasificación</th><th>Estado</th><th>Comisiones</th><th class="text-end">Total</th><th>Creada</th><th>Pago</th><th>Método / referencia</th><th>Incidencia</th><th></th></tr></thead>
+    <tbody>{% for liquidacion in pagina %}<tr>
+      <td>#{{ liquidacion.pk }}</td><td>{{ liquidacion.captador.nombre_display }}<small class="d-block text-muted">Snapshot: {{ liquidacion.beneficiario_nombre_snapshot }}</small></td>
+      <td>{{ liquidacion.clasificacion_panel }}</td><td><span class="badge {% if liquidacion.estado == 'pagada' %}text-bg-success{% elif liquidacion.estado == 'cancelada' %}text-bg-secondary{% else %}text-bg-info{% endif %}">{{ liquidacion.get_estado_display }}</span></td>
+      <td>{{ liquidacion.cantidad_comisiones }}</td><td class="text-end fw-semibold">{% if liquidacion.estado == 'pagada' %}${{ liquidacion.monto_total_snapshot|floatformat:'2u' }}{% elif liquidacion.estado == 'borrador' %}${{ liquidacion.total_provisional|default_if_none:0|floatformat:'2u' }} <small class="d-block text-muted">provisional</small>{% else %}—{% endif %}</td>
+      <td>{{ liquidacion.creada_en|date:'d/m/Y H:i' }}</td><td>{{ liquidacion.pagada_en|date:'d/m/Y H:i'|default:'—' }}</td>
+      <td>{% if liquidacion.estado == 'pagada' %}{{ liquidacion.get_metodo_pago_display }}<small class="d-block text-muted">{{ liquidacion.referencia }}</small>{% else %}—{% endif %}</td>
+      <td>{% if liquidacion.estado == 'pagada' and liquidacion.tiene_incidencia_activa %}<span class="badge text-bg-warning">Requiere revisión</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+      <td><a class="btn btn-sm btn-outline-primary" href="{% url 'ventas:liquidacion_detalle' liquidacion.pk %}">Ver detalle</a></td>
+    </tr>{% empty %}<tr><td colspan="11" class="text-center text-muted py-5">No hay liquidaciones con estos filtros.</td></tr>{% endfor %}</tbody>
+  </table></div></div>
+
+  {% if pagina.paginator.num_pages > 1 %}<nav class="mt-4"><ul class="pagination justify-content-center">
+    {% if pagina.has_previous %}<li class="page-item"><a class="page-link" href="?{% if parametros_paginacion %}{{ parametros_paginacion }}&{% endif %}page={{ pagina.previous_page_number }}">Anterior</a></li>{% endif %}
+    <li class="page-item disabled"><span class="page-link">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span></li>
+    {% if pagina.has_next %}<li class="page-item"><a class="page-link" href="?{% if parametros_paginacion %}{{ parametros_paginacion }}&{% endif %}page={{ pagina.next_page_number }}">Siguiente</a></li>{% endif %}
+  </ul></nav>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between gap-3 mb-4">
+    <div>
+      <p class="text-uppercase text-primary fw-bold small mb-1">Liquidación #{{ liquidacion.pk }}</p>
+      <h2>Registrar pago</h2>
+      <p class="text-muted mb-0">{{ liquidacion.beneficiario_nombre_snapshot }}</p>
+    </div>
+    <a href="{% url 'ventas:liquidacion_detalle' liquidacion.pk %}" class="btn btn-outline-secondary align-self-start">Volver</a>
+  </div>
+
+  <div class="alert alert-warning">
+    El pago se registrará por el total completo de la liquidación. No se
+    permiten pagos parciales.
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h4>Comisiones incluidas</h4>
+          <table class="table align-middle">
+            <thead><tr><th>Comisión</th><th>Paciente</th><th class="text-end">Monto</th></tr></thead>
+            <tbody>
+              {% for linea in lineas %}
+                <tr><td>#{{ linea.comision_id }}</td><td>{{ linea.comision.paciente_nombre_snapshot }}</td><td class="text-end">${{ linea.comision.monto_calculado|floatformat:'2u' }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <div class="text-end fs-4 fw-bold">Total a pagar: ${{ total|floatformat:'2u' }} MXN</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h4>Confirmación administrativa</h4>
+          <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">{{ form.metodo_pago.label_tag }}{{ form.metodo_pago }}{{ form.metodo_pago.errors }}</div>
+            <div class="mb-3">{{ form.referencia.label_tag }}{{ form.referencia }}{{ form.referencia.errors }}</div>
+            <button class="btn btn-primary w-100">Registrar pago completo</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

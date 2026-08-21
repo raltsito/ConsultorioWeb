@@ -1,7 +1,9 @@
 import unicodedata
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -836,6 +838,34 @@ class Cita(models.Model):
     )
 
     # Marcas de envío de recordatorios/encuesta por WhatsApp (evitan reenvíos del cron)
+    precio_servicio_base_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text="Precio público histórico de referencia del servicio.",
+    )
+    descuento_captacion_porcentaje_snapshot = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text="Descuento histórico de captación aplicado al servicio.",
+    )
+    importe_servicio_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text=(
+            "Importe histórico del servicio usado como base de comisión. "
+            "No representa dinero recibido."
+        ),
+    )
+
     recordatorio_5d_enviado_en = models.DateTimeField(null=True, blank=True)
     recordatorio_3d_enviado_en = models.DateTimeField(null=True, blank=True)
     recordatorio_1d_enviado_en = models.DateTimeField(null=True, blank=True)
@@ -882,6 +912,118 @@ class Cita(models.Model):
         verbose_name = "Cita"
         verbose_name_plural = "Citas"
         ordering = ['-fecha', '-hora']
+
+
+class MovimientoEconomicoCita(models.Model):
+    TIPO_COBRO = "cobro"
+    TIPO_CHOICES = [
+        (TIPO_COBRO, "Cobro registrado por Recepción"),
+    ]
+
+    ESTADO_CONFIRMADO = "confirmado"
+    ESTADO_ANULADO = "anulado"
+    ESTADO_CHOICES = [
+        (ESTADO_CONFIRMADO, "Confirmado"),
+        (ESTADO_ANULADO, "Anulado"),
+    ]
+
+    cita = models.ForeignKey(
+        Cita,
+        on_delete=models.PROTECT,
+        related_name="movimientos_economicos",
+    )
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_CHOICES,
+        default=TIPO_COBRO,
+    )
+    importe = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    metodo = models.CharField(max_length=50)
+    referencia = models.CharField(max_length=150, blank=True)
+    registrado_en = models.DateTimeField(default=timezone.now)
+    registrado_por = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="movimientos_economicos_registrados",
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=ESTADO_CHOICES,
+        default=ESTADO_CONFIRMADO,
+    )
+    anulado_en = models.DateTimeField(null=True, blank=True)
+    anulado_por = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="movimientos_economicos_anulados",
+    )
+    motivo_anulacion = models.TextField(blank=True)
+    clave_idempotencia = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+    )
+
+    class Meta:
+        ordering = ["-registrado_en", "-id"]
+        verbose_name = "Movimiento económico de cita"
+        verbose_name_plural = "Movimientos económicos de citas"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(importe__gt=0),
+                name="clinica_movimiento_importe_positivo",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        estado="confirmado",
+                        anulado_en__isnull=True,
+                        anulado_por__isnull=True,
+                        motivo_anulacion="",
+                    )
+                    | models.Q(
+                        estado="anulado",
+                        anulado_en__isnull=False,
+                        anulado_por__isnull=False,
+                    )
+                ),
+                name="clinica_movimiento_anulacion_consistente",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            original = type(self).objects.get(pk=self.pk)
+            campos_inmutables = (
+                "cita_id",
+                "tipo",
+                "importe",
+                "metodo",
+                "referencia",
+                "registrado_en",
+                "registrado_por_id",
+                "clave_idempotencia",
+            )
+            if any(
+                getattr(self, campo) != getattr(original, campo)
+                for campo in campos_inmutables
+            ):
+                raise ValidationError(
+                    "Los datos confirmados del movimiento no pueden editarse."
+                )
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return (
+            f"Movimiento {self.pk or 'nuevo'} — cita {self.cita_id}: "
+            f"${self.importe}"
+        )
 
 
 class MensajeWhatsApp(models.Model):
@@ -1480,6 +1622,7 @@ class LineaNomina(models.Model):
     TIPO_BONO_POR_PACIENTE = 'bono_por_paciente'
     TIPO_PENALIZACION = 'penalizacion'
     TIPO_EXPOSITOR = 'expositor'
+    TIPO_COMISION_CAPTACION = 'comision_captacion'
 
     TIPO_CHOICES = [
         (TIPO_SESION, 'Sesión'),
@@ -1487,12 +1630,24 @@ class LineaNomina(models.Model):
         (TIPO_BONO_POR_PACIENTE, 'Bono por paciente'),
         (TIPO_PENALIZACION, 'Penalización inasistencia'),
         (TIPO_EXPOSITOR, 'Horas Expositor'),
+        (TIPO_COMISION_CAPTACION, 'Comisión de captación'),
     ]
 
     corte = models.ForeignKey(CorteSemanal, on_delete=models.CASCADE, related_name='lineas')
     cita = models.ForeignKey(
         'Cita', on_delete=models.PROTECT, null=True, blank=True,
         help_text="Nulo únicamente en líneas de bono global (bono de volumen)."
+    )
+    comision_captacion = models.OneToOneField(
+        'ventas.ComisionCaptacion',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='linea_nomina',
+        help_text=(
+            "Comisión histórica que origina esta línea. Sólo se utiliza para "
+            "líneas de comisión de captación."
+        ),
     )
     tipo = models.CharField(max_length=30, choices=TIPO_CHOICES, default=TIPO_SESION)
     concepto = models.CharField(max_length=200, help_text="Descripción legible del concepto calculado.")
@@ -1504,6 +1659,22 @@ class LineaNomina(models.Model):
     class Meta:
         verbose_name = "Línea de Nómina"
         verbose_name_plural = "Líneas de Nómina"
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        tipo='comision_captacion',
+                        comision_captacion__isnull=False,
+                        cita__isnull=True,
+                    )
+                    | models.Q(
+                        ~models.Q(tipo='comision_captacion'),
+                        comision_captacion__isnull=True,
+                    )
+                ),
+                name='clinica_linea_nomina_comision_coherente',
+            ),
+        ]
 
 
 class BonoExtra(models.Model):

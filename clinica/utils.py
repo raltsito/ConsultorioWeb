@@ -3,6 +3,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 
 def sincronizar_google_sheet(cita):
+    """Exporta contexto de la cita; no confirma un movimiento económico."""
    
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     
@@ -27,12 +28,12 @@ def sincronizar_google_sheet(cita):
         str(cita.servicio),             # Columna G: Servicio
         str(cita.terapeuta),            # Columna H: Terapeuta
         str(cita.consultorio),          # Columna I: Consultorio
-        float(cita.costo),              # Columna J: Pago
-        cita.metodo_pago,               # Columna K: Método
+        float(cita.costo),              # Columna J legacy: importe de cita
+        cita.metodo_pago,               # Columna K: método registrado en cita
         "",                             # Columna L: Tarjeta (Vacío por ahora)
         cita.folio_fiscal or "NA",      # Columna M: Folio
         cita.notas or "",               # Columna N: Notas
-        str(cita.fecha)                 # Columna O: Fecha de pago
+        str(cita.fecha)                 # Columna O legacy: fecha de cita
     ]
 
    

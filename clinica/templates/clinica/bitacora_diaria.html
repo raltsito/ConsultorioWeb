@@ -98,7 +98,7 @@
         </div>
         <div class="bita-stat__body">
             <span class="bita-stat__num">${{ monto_dia|floatformat:0 }}</span>
-            <span class="bita-stat__lbl">Ingreso del día</span>
+            <span class="bita-stat__lbl">Pagos registrados del día</span>
         </div>
     </div>
 
@@ -146,7 +146,7 @@
                     <th>Servicio</th>
                     <th>Estatus</th>
                     <th>Pago</th>
-                    <th class="text-end">Costo</th>
+                    <th class="text-end">Importe cita</th>
                     <th class="text-center">Seguimiento</th>
                     <th class="text-center">Acciones</th>
                 </tr>
@@ -201,11 +201,27 @@
                     </td>
 
                     <td>
-                        <span class="bita-pago">{{ cita.metodo_pago|default:"—" }}</span>
+                        {% if cita.total_movimiento_confirmado > 0 %}
+                            <span class="ep ep--green">
+                                ${{ cita.total_movimiento_confirmado|floatformat:2 }} recibido
+                            </span>
+                        {% else %}
+                            <span class="ep ep--gray">Sin movimiento registrado</span>
+                        {% endif %}
                     </td>
 
                     <td class="text-end">
-                        {% if cita.costo is not None %}
+                        {% if cita.descuento_captacion_mostrado == 25 and cita.importe_servicio_mostrado is not None %}
+                            <span class="bita-costo">
+                                ${{ cita.importe_servicio_mostrado|floatformat:2 }}
+                            </span>
+                            <small class="d-block text-success">Captación -25%</small>
+                            {% if cita.precio_base_mostrado is not None %}
+                                <small class="d-block text-muted">
+                                    General ${{ cita.precio_base_mostrado|floatformat:2 }}
+                                </small>
+                            {% endif %}
+                        {% elif cita.costo is not None %}
                             <span class="bita-costo">${{ cita.costo|floatformat:0 }}</span>
                         {% else %}
                             <span class="text-muted">—</span>

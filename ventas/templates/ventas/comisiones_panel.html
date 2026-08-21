@@ -1,0 +1,298 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
+    <div>
+      <p class="text-uppercase text-primary fw-bold small mb-1">
+        Finanzas / Ventas
+      </p>
+      <h2 class="mb-1">Comisiones de captación</h2>
+      <p class="text-muted mb-0">
+        Obligaciones generadas a favor de captadores. Este panel es de consulta.
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      {% if perms.ventas.view_liquidaciones %}<a href="{% url 'ventas:liquidaciones_panel' %}" class="btn btn-outline-primary">Ver liquidaciones</a>{% endif %}
+      <a href="{% url 'ventas:inicio' %}" class="btn btn-outline-secondary">Volver</a>
+    </div>
+  </div>
+
+  <div class="alert alert-light border mb-4">
+    <strong>Pendiente de pago</strong> significa que la comisión es válida y
+    espera una futura liquidación al captador.
+    <strong>Suspendida</strong> significa que conserva su histórico, pero no es
+    pagadera actualmente porque su cita no mantiene evidencia financiera vigente.
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <span class="text-muted">Comisiones pendientes</span>
+          <strong class="d-block fs-3 text-success">
+            {{ resumen.cantidad_pendiente }}
+          </strong>
+          <span class="fw-semibold">
+            ${{ resumen.monto_pendiente|floatformat:'2u' }} MXN
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <span class="text-muted">Comisiones suspendidas</span>
+          <strong class="d-block fs-3 text-warning">
+            {{ resumen.cantidad_suspendida }}
+          </strong>
+          <span class="fw-semibold text-muted">
+            ${{ resumen.monto_suspendido|floatformat:'2u' }} MXN no pagaderos
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <span class="text-muted">Histórico total generado</span>
+          <strong class="d-block fs-3 text-primary">
+            {{ resumen.cantidad_total }}
+          </strong>
+          <span class="fw-semibold">
+            ${{ resumen.monto_total|floatformat:'2u' }} MXN
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form method="get" class="card border-0 shadow-sm mb-4">
+    <div class="card-body row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Buscar captador o paciente</label>
+        <input class="form-control" name="q" value="{{ filtros.q }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Estado</label>
+        <select class="form-select" name="estado">
+          <option value="">Todos</option>
+          {% for valor, etiqueta in estados %}
+            <option value="{{ valor }}" {% if filtros.estado == valor %}selected{% endif %}>
+              {{ etiqueta }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Captador</label>
+        <select class="form-select" name="captador">
+          <option value="">Todos</option>
+          {% for captador in captadores %}
+            <option
+              value="{{ captador.pk }}"
+              {% if filtros.captador == captador.pk|stringformat:'s' %}selected{% endif %}
+            >
+              {{ captador.nombre_display }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Tipo de captador</label>
+        <select class="form-select" name="tipo">
+          <option value="">Todos</option>
+          {% for valor, etiqueta in tipos_captador %}
+            <option value="{{ valor }}" {% if filtros.tipo == valor %}selected{% endif %}>
+              {{ etiqueta }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Paciente</label>
+        <input class="form-control" name="paciente" value="{{ filtros.paciente }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Servicio</label>
+        <select class="form-select" name="servicio">
+          <option value="">Todos</option>
+          {% for servicio in servicios %}
+            <option
+              value="{{ servicio.pk }}"
+              {% if filtros.servicio == servicio.pk|stringformat:'s' %}selected{% endif %}
+            >
+              {{ servicio.nombre }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Generada desde</label>
+        <input type="date" class="form-control" name="fecha_desde" value="{{ filtros.fecha_desde }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Generada hasta</label>
+        <input type="date" class="form-control" name="fecha_hasta" value="{{ filtros.fecha_hasta }}">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-outline-primary w-100">Filtrar</button>
+      </div>
+      <div class="col-md-2">
+        <a href="{% url 'ventas:comisiones_panel' %}" class="btn btn-outline-secondary w-100">
+          Limpiar
+        </a>
+      </div>
+    </div>
+  </form>
+
+  {% if puede_crear_liquidacion %}
+    <form method="post" action="{% url 'ventas:liquidacion_crear' %}">
+      {% csrf_token %}
+  {% endif %}
+  <div class="card border-0 shadow-sm overflow-hidden">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            {% if puede_crear_liquidacion %}<th>Seleccionar</th>{% endif %}
+            <th>Generada</th>
+            <th>Captador</th>
+            <th>Tipo</th>
+            <th>Paciente principal</th>
+            <th>Servicio / cita</th>
+            <th class="text-end">Base</th>
+            <th class="text-end">%</th>
+            <th class="text-end">Comisión</th>
+            <th>Estado</th>
+            <th>Liquidación</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for comision in pagina %}
+            <tr class="{% if comision.estado == 'suspendida' %}table-warning{% endif %}">
+              {% if puede_crear_liquidacion %}
+                <td>
+                  {% if comision.disponible_para_liquidacion %}
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      name="comisiones"
+                      value="{{ comision.pk }}"
+                      aria-label="Seleccionar comisión {{ comision.pk }}"
+                    >
+                  {% else %}
+                    <span class="text-muted" title="No disponible">—</span>
+                  {% endif %}
+                </td>
+              {% endif %}
+              <td>{{ comision.generada_en|date:'d/m/Y H:i' }}</td>
+              <td>{{ comision.captador_nombre_snapshot }}</td>
+              <td>{{ comision.captacion.captador.clasificacion_display }}</td>
+              <td>{{ comision.paciente_nombre_snapshot }}</td>
+              <td>
+                <span class="d-block">
+                  {{ comision.cita_generadora.servicio.nombre|default:'Sin servicio' }}
+                </span>
+                <small class="text-muted">
+                  {{ comision.cita_generadora.fecha|date:'d/m/Y' }}
+                </small>
+              </td>
+              <td>
+                {% if comision.liquidacion_activa_id and perms.ventas.view_liquidaciones %}
+                  <a href="{% url 'ventas:liquidacion_detalle' comision.liquidacion_activa_id %}">#{{ comision.liquidacion_activa_id }}</a>
+                {% else %}—{% endif %}
+              </td>
+              <td class="text-end">${{ comision.base_calculo|floatformat:'2u' }}</td>
+              <td class="text-end">{{ comision.porcentaje_aplicado }}%</td>
+              <td class="text-end fw-semibold">
+                ${{ comision.monto_calculado|floatformat:'2u' }}
+              </td>
+              <td>
+                {% if comision.estado_visual == 'pagada_suspendida' %}
+                  <span class="badge text-bg-primary">Pagada / actualmente suspendida</span>
+                {% elif comision.estado_visual == 'pagada' %}
+                  <span class="badge text-bg-primary">Pagada</span>
+                {% elif comision.estado_visual == 'reservada' %}
+                  <span class="badge text-bg-info">Reservada</span>
+                {% elif comision.estado_visual == 'suspendida' %}
+                  <span class="badge text-bg-warning">Suspendida</span>
+                {% else %}
+                  <span class="badge text-bg-success">Disponible</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <a
+                  href="{% url 'ventas:comision_detalle' comision.pk %}"
+                  class="btn btn-sm btn-outline-primary"
+                >
+                  Ver detalle
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="12" class="text-center text-muted py-5">
+                No hay comisiones con estos filtros.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% if puede_crear_liquidacion %}
+      <div class="d-flex justify-content-end mt-3">
+        <button type="submit" class="btn btn-primary">
+          Crear liquidación
+        </button>
+      </div>
+    </form>
+  {% endif %}
+
+  {% if pagina.paginator.num_pages > 1 %}
+    <nav class="mt-4" aria-label="Paginación de comisiones">
+      <ul class="pagination justify-content-center">
+        {% if pagina.has_previous %}
+          <li class="page-item">
+            {% if parametros_paginacion %}
+              <a
+                class="page-link"
+                href="?{{ parametros_paginacion }}&page={{ pagina.previous_page_number }}"
+              >
+                Anterior
+              </a>
+            {% else %}
+              <a class="page-link" href="?page={{ pagina.previous_page_number }}">
+                Anterior
+              </a>
+            {% endif %}
+          </li>
+        {% endif %}
+        <li class="page-item disabled">
+          <span class="page-link">
+            Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}
+          </span>
+        </li>
+        {% if pagina.has_next %}
+          <li class="page-item">
+            {% if parametros_paginacion %}
+              <a
+                class="page-link"
+                href="?{{ parametros_paginacion }}&page={{ pagina.next_page_number }}"
+              >
+                Siguiente
+              </a>
+            {% else %}
+              <a class="page-link" href="?page={{ pagina.next_page_number }}">
+                Siguiente
+              </a>
+            {% endif %}
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
+</div>
+{% endblock %}

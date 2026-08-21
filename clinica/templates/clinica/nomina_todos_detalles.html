@@ -140,6 +140,25 @@
         </div>
         {% endif %}
 
+        {% if bloque.lineas_comision %}
+        <div class="px-4 py-2 border-top bg-primary-subtle bg-opacity-25">
+            {% for linea in bloque.lineas_comision %}
+            <div class="d-flex justify-content-between align-items-center py-1 gap-2">
+                <span class="small flex-grow-1">
+                    <span class="badge text-bg-primary me-1">Comisión de captación</span>
+                    {{ linea.concepto }}
+                    {% if linea.comision_captacion.estado == 'suspendida' %}
+                    <span class="badge text-bg-warning ms-1">Actualmente suspendida</span>
+                    {% endif %}
+                </span>
+                <span class="font-monospace fw-bold text-primary small">
+                    +${{ linea.monto|floatformat:2 }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         {# ── Comentarios de descuento/estudio socioeconómico ── #}
         {% for linea in bloque.lineas_sesion %}
             {% if linea.cita and linea.cita.tiene_descuento %}
@@ -205,6 +224,12 @@
         <div class="card-footer bg-white border-top d-flex justify-content-end align-items-center px-4 py-2 gap-3">
             {% if bloque.total_bonos > 0 %}
             <span class="small text-muted">Bonos: <strong class="text-warning-emphasis">+${{ bloque.total_bonos|floatformat:2 }}</strong></span>
+            {% endif %}
+            {% if bloque.total_comisiones %}
+            <span class="small text-muted">
+                Comisiones:
+                <strong class="text-primary">+${{ bloque.total_comisiones|floatformat:2 }}</strong>
+            </span>
             {% endif %}
             <span class="fw-bold text-dark">Total a pagar: <span class="font-monospace text-success fs-6">${{ bloque.total_pago|floatformat:2 }}</span></span>
         </div>

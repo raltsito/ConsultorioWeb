@@ -15,6 +15,7 @@ from urllib.parse import urlencode
 
 #Herramientas base de Django
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.db import transaction
@@ -39,6 +40,10 @@ from django.views.decorators.csrf import csrf_exempt
 from clinica.utils import sincronizar_google_sheet
 from .api_auth import api_key_required
 from django.urls import reverse
+from .services import (
+    registrar_movimiento_recepcion_desde_cita,
+    total_movimientos_confirmados_en_rango,
+)
 
 #Excel
 import openpyxl
@@ -108,11 +113,21 @@ from .forms import (
     CheckoutCitaForm,
     ReporteSesionForm,
 )
-from .services import calcular_nomina_semanal, preview_nomina_semanal, aprobar_corte_semanal, registrar_pago_penalizacion_terapeuta
+from .services import (
+    actualizar_totales_corte,
+    calcular_nomina_semanal,
+    preview_nomina_semanal,
+    aprobar_corte_semanal,
+    registrar_pago_penalizacion_terapeuta,
+)
 from .services_instrumentos import (calcular_resultado_instrumento, calcular_raven,
                                      _RAVEN_SERIES, _RAVEN_ESPERADOS,
                                      _SCL90_REF, _SCL90_REF_SUMMARY)
 from . import services_whatsapp as wa
+from .pricing import (
+    aplicar_costo_captacion_a_cita,
+    calcular_importe_servicio_con_captacion,
+)
 #from .utils import sincronizar_google_sheet
 
 def _registrar_actividad(request, accion, categoria, descripcion, terapeuta=None, paciente=None):
@@ -445,7 +460,7 @@ def home(request):
     if hasattr(request.user, 'perfil_supervisor_seguimiento'):
         return redirect('portal_supervisor_seguimiento')
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     mes_actual = timezone.now().month
 
     solicitudes_pendientes = SolicitudCita.objects.filter(estado='pendiente').order_by('fecha_creacion')
@@ -507,8 +522,6 @@ def home(request):
         'titulo': manual_portal.titulo if manual_portal else 'Manual del sistema',
     })
 
-    from collections import defaultdict
-    from django.db.models import Prefetch
     notas_raw = NotaRecepcion.objects.select_related('creado_por').prefetch_related(
         Prefetch('reacciones', queryset=ReaccionNota.objects.select_related('usuario')),
         Prefetch('comentarios', queryset=ComentarioNota.objects.select_related('creado_por')),
@@ -1816,6 +1829,7 @@ def agendar_cita(request, paciente_id):
         if form.is_valid():
             cita = form.save(commit=False)
             cita.paciente = paciente  # Aquí vinculamos la cita al paciente automáticamente
+            aplicar_costo_captacion_a_cita(cita)
             cita.save()
             if es_servicio_grupal(cita.servicio):
                 pacientes_extra = form.cleaned_data.get('pacientes_extra')
@@ -1878,6 +1892,7 @@ def agendar_cita(request, paciente_id):
             else:
                 cita = form.save(commit=False)
                 cita.paciente = paciente
+                aplicar_costo_captacion_a_cita(cita)
 
                 if penalizacion_pendiente:
                     costo_actual = cita.costo or 0
@@ -2341,7 +2356,28 @@ def editar_cita(request, cita_id):
                 return render(request, 'clinica/editar_cita.html', {'form': form, 'cita': cita})
 
             cita = nueva
-            cita.save()
+            try:
+                with transaction.atomic():
+                    estado_guardado = Cita.objects.select_for_update().values_list(
+                        'estatus', flat=True
+                    ).get(pk=cita.pk)
+                    cita.save()
+                    if (
+                        estado_guardado != Cita.ESTATUS_SI_ASISTIO
+                        and cita.estatus == Cita.ESTATUS_SI_ASISTIO
+                    ):
+                        registrar_movimiento_recepcion_desde_cita(
+                            cita=cita,
+                            usuario=request.user,
+                        )
+            except ValidationError as error:
+                form.add_error(None, error)
+                messages.error(request, str(error))
+                return render(
+                    request,
+                    'clinica/editar_cita.html',
+                    {'form': form, 'cita': cita},
+                )
             _registrar_actividad(request, 'cita_editada', 'cita',
                 f'Cita de {cita.paciente.nombre if cita.paciente else "?"} con '
                 f'{cita.terapeuta.nombre if cita.terapeuta else "Sin terapeuta"} '
@@ -3336,10 +3372,22 @@ def portal_direccion_comercial(request):
     citas_mes = citas_base.filter(fecha__gte=mes_inicio, fecha__lte=mes_fin)
     citas_mes_anterior = citas_base.filter(fecha__gte=mes_inicio_anterior, fecha__lte=mes_fin_anterior)
 
-    # --- Ingresos ---
-    ingreso_esperado = citas_mes.exclude(estatus=Cita.ESTATUS_CANCELO).aggregate(t=Sum('costo'))['t'] or Decimal('0')
-    ingreso_real = citas_mes.filter(estatus=Cita.ESTATUS_SI_ASISTIO).aggregate(t=Sum('costo'))['t'] or Decimal('0')
-    ingreso_real_anterior = citas_mes_anterior.filter(estatus=Cita.ESTATUS_SI_ASISTIO).aggregate(t=Sum('costo'))['t'] or Decimal('0')
+    # El valor programado sigue siendo una métrica operativa de citas. El
+    # dinero recibido procede exclusivamente de movimientos confirmados y de
+    # su fecha de registro.
+    ingreso_esperado = citas_mes.exclude(
+        estatus=Cita.ESTATUS_CANCELO
+    ).aggregate(t=Sum('costo'))['t'] or Decimal('0')
+    ingreso_real = total_movimientos_confirmados_en_rango(
+        mes_inicio,
+        mes_fin,
+        paciente_division_ids=division_ids,
+    )
+    ingreso_real_anterior = total_movimientos_confirmados_en_rango(
+        mes_inicio_anterior,
+        mes_fin_anterior,
+        paciente_division_ids=division_ids,
+    )
 
     ingreso_pct = round(float(ingreso_real) / float(ingreso_esperado) * 100, 1) if ingreso_esperado else 0.0
     if ingreso_real_anterior:
@@ -3412,7 +3460,7 @@ def portal_direccion_comercial(request):
         citas_mes_p = [c for c in todas_citas if mes_inicio <= c.fecha <= mes_fin]
         asistidas_p = sum(1 for c in citas_mes_p if c.estatus == Cita.ESTATUS_SI_ASISTIO)
         no_asistidas_p = sum(1 for c in citas_mes_p if c.estatus == Cita.ESTATUS_NO_ASISTIO)
-        ingreso_p = sum(
+        valor_servicios_p = sum(
             (c.costo or Decimal('0')) for c in citas_mes_p if c.estatus == Cita.ESTATUS_SI_ASISTIO
         )
         ultima_cita = todas_citas[0] if todas_citas else None
@@ -3446,14 +3494,14 @@ def portal_direccion_comercial(request):
             'asistidas': asistidas_p,
             'no_asistidas': no_asistidas_p,
             'sin_seguimiento': sin_seguimiento_p,
-            'ingreso': ingreso_p,
+            'valor_servicios': valor_servicios_p,
             'historial': todas_citas,
         })
 
     if orden_filtro == 'sin_seguimiento':
         pacientes.sort(key=lambda p: (not p['sin_seguimiento'], p['nombre']))
     elif orden_filtro == 'ingreso':
-        pacientes.sort(key=lambda p: p['ingreso'], reverse=True)
+        pacientes.sort(key=lambda p: p['valor_servicios'], reverse=True)
     # 'nombre' ya queda ordenado alfabeticamente desde pacientes_qs.order_by('nombre')
 
     filtros_actuales = {
@@ -3471,12 +3519,24 @@ def portal_direccion_comercial(request):
         response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
         response['Content-Disposition'] = f'attachment; filename="direccion_comercial_{mes_actual}.csv"'
         writer = csv.writer(response)
-        writer.writerow(['Paciente', 'Telefono', 'Division', 'Sede', 'Terapeuta', 'Citas', 'Asistio', 'No asistio', 'Sin seguimiento', 'Ingreso'])
+        writer.writerow([
+            'Paciente',
+            'Telefono',
+            'Division',
+            'Sede',
+            'Terapeuta',
+            'Citas',
+            'Asistio',
+            'No asistio',
+            'Sin seguimiento',
+            'Valor de servicios',
+        ])
         for p in pacientes:
             writer.writerow([
                 p['nombre'], p['telefono'], p['division'], p['sede'], p['terapeuta'],
                 p['citas_tomadas'], p['asistidas'], p['no_asistidas'],
-                'Si' if p['sin_seguimiento'] else 'No', p['ingreso'],
+                'Si' if p['sin_seguimiento'] else 'No',
+                p['valor_servicios'],
             ])
         return response
 
@@ -4584,6 +4644,7 @@ def checkout_cita(request, cita_id):
             cita.metodo_pago = metodo
         if costo is not None:
             cita.costo = costo
+        aplicar_costo_captacion_a_cita(cita)
         cita.save()
         estatus_display = dict(Cita.ESTATUS_CHOICES).get(cita.estatus, cita.estatus)
         _registrar_actividad(request, 'cita_checkout', 'cita',
@@ -4635,7 +4696,23 @@ def bitacora_diaria(request):
     citas_qs = (
         Cita.objects
         .filter(fecha=fecha)
-        .select_related('paciente', 'terapeuta', 'servicio', 'consultorio', 'division')
+        .annotate(
+            total_movimiento_confirmado=Sum(
+                'movimientos_economicos__importe',
+                filter=Q(
+                    movimientos_economicos__estado='confirmado'
+                ),
+                default=Decimal('0.00'),
+            ),
+        )
+        .select_related(
+            'paciente',
+            'paciente__captacion_ventas',
+            'terapeuta',
+            'servicio',
+            'consultorio',
+            'division',
+        )
         .prefetch_related('pacientes_adicionales')
         .order_by('hora', 'terapeuta__nombre')
     )
@@ -4652,14 +4729,37 @@ def bitacora_diaria(request):
     for cita in citas:
         key = (cita.terapeuta_id, cita.paciente.nombre if cita.paciente else '')
         cita.solicito_seguimiento = key in sol_set
+        cita.calculo_precio_captacion = (
+            calcular_importe_servicio_con_captacion(
+                paciente=cita.paciente,
+                servicio=cita.servicio,
+            )
+        )
+        if cita.importe_servicio_snapshot is not None:
+            cita.importe_servicio_mostrado = cita.importe_servicio_snapshot
+            cita.precio_base_mostrado = cita.precio_servicio_base_snapshot
+            cita.descuento_captacion_mostrado = (
+                cita.descuento_captacion_porcentaje_snapshot
+            )
+        else:
+            cita.importe_servicio_mostrado = (
+                cita.calculo_precio_captacion.importe_final
+            )
+            cita.precio_base_mostrado = (
+                cita.calculo_precio_captacion.precio_general
+            )
+            cita.descuento_captacion_mostrado = (
+                cita.calculo_precio_captacion.porcentaje_descuento
+            )
 
     # Stats del día
     total         = len(citas)
     asistieron    = sum(1 for c in citas if c.estatus == Cita.ESTATUS_SI_ASISTIO)
     no_asistieron = sum(1 for c in citas if c.estatus in (Cita.ESTATUS_NO_ASISTIO, Cita.ESTATUS_CANCELO))
     por_cerrar    = sum(1 for c in citas if c.es_finalizable)
-    monto_dia     = sum(
-        (c.costo or Decimal('0')) for c in citas if c.estatus == Cita.ESTATUS_SI_ASISTIO
+    monto_dia = total_movimientos_confirmados_en_rango(
+        fecha,
+        fecha,
     )
 
     solicitudes_pendientes_count = SolicitudCita.objects.filter(estado='pendiente').count()
@@ -4668,7 +4768,8 @@ def bitacora_diaria(request):
     if request.GET.get('export') == 'xlsx':
         bita_headers = [
             'Hora', 'Consultorio', 'Paciente', 'Terapeuta',
-            'Servicio', 'Estatus', 'Método de Pago', 'Costo ($)', 'Solicitó Seguimiento',
+            'Servicio', 'Estatus', 'Método registrado en cita',
+            'Importe de cita ($)', 'Solicitó Seguimiento',
         ]
         bita_rows = [
             [
@@ -4754,7 +4855,7 @@ def reporte_general(request):
         headers = [
             'Fecha', 'Hora', 'Tipo', 'Paciente', 'Terapeuta',
             'Servicio', 'División', 'Consultorio',
-            'Estatus', 'Método de Pago', 'Costo ($)',
+            'Estatus', 'Método registrado en cita', 'Importe de cita ($)',
         ]
         rows = [
             [
@@ -4792,9 +4893,14 @@ def reporte_general(request):
     # ── Stats del rango ───────────────────────────────────────────────────────
     total      = citas.count()
     asistieron = citas.filter(estatus=Cita.ESTATUS_SI_ASISTIO).count()
-    monto_total = (
+    importe_citas_atendidas = (
         citas.filter(estatus=Cita.ESTATUS_SI_ASISTIO)
              .aggregate(t=Sum('costo'))['t'] or Decimal('0')
+    )
+    total_pagos_registrados = total_movimientos_confirmados_en_rango(
+        fecha_inicio,
+        fecha_fin,
+        terapeuta_id=terapeuta_id or None,
     )
 
     terapeutas = Terapeuta.objects.filter(activo=True).order_by('nombre')
@@ -4809,7 +4915,8 @@ def reporte_general(request):
         'terapeutas':       terapeutas,
         'total':            total,
         'asistieron':       asistieron,
-        'monto_total':      monto_total,
+        'monto_total':      total_pagos_registrados,
+        'importe_citas_atendidas': importe_citas_atendidas,
     })
 
 
@@ -4926,7 +5033,7 @@ def nomina_lista(request):
             terapeuta__in=terapeutas,
         ).values('terapeuta_id').annotate(
             total_citas=Count('id'),
-            ingreso_clinica=Sum('costo'),
+            valor_citas_atendidas=Sum('costo'),
         )
     }
 
@@ -4939,7 +5046,7 @@ def nomina_lista(request):
         corte = cortes_map.get(t.id)
         stats = stats_map.get(t.id, {})
         citas_count   = stats.get('total_citas', 0)
-        ingreso       = stats.get('ingreso_clinica') or Decimal('0')
+        ingreso       = stats.get('valor_citas_atendidas') or Decimal('0')
         total_pago    = corte.total_pago if corte else None
 
         # Solo incluir terapeutas con actividad o con corte generado
@@ -4953,7 +5060,7 @@ def nomina_lista(request):
         filas.append({
             'terapeuta':      t,
             'citas_count':    citas_count,
-            'ingreso_clinica': ingreso,
+            'valor_citas_atendidas': ingreso,
             'total_pago':     total_pago,
             'corte':          corte,
         })
@@ -5035,8 +5142,9 @@ def nomina_exportar_reporte_general(request):
     # Fila 1: encabezados
     headers = [
         'Dia', 'Periodo', 'Hora', 'División', 'Paciente', 'Sexo', 'Servicio',
-        'Terapeuta', 'Consultorio', 'Pago', 'Método de pago', 'Tarjeta',
-        'Folio fiscal', 'Notas', 'Fecha de pago',
+        'Terapeuta', 'Consultorio', 'Importe de cita',
+        'Método registrado en cita', 'Tarjeta',
+        'Folio fiscal', 'Notas', 'Fecha de cita',
     ]
     for col_idx, h in enumerate(headers, start=1):
         cell = ws.cell(row=1, column=col_idx, value=h)
@@ -5064,7 +5172,7 @@ def nomina_exportar_reporte_general(request):
             '',                                              # Tarjeta (no en modelo)
             c.folio_fiscal     if c.folio_fiscal else '',
             c.notas            if c.notas        else '',
-            c.fecha,                                         # Fecha de pago = fecha cita
+            c.fecha,
         ]
         for col_idx, val in enumerate(valores, start=1):
             cell = ws.cell(row=row_idx, column=col_idx, value=val)
@@ -5072,7 +5180,7 @@ def nomina_exportar_reporte_general(request):
             if fill:
                 cell.fill = fill
 
-    # Formatear columna de Fecha de pago como fecha
+    # Formatear columna de Fecha de cita como fecha
     for row_idx in range(2, ws.max_row + 1):
         ws.cell(row=row_idx, column=15).number_format = 'DD/MM/YYYY'
 
@@ -5363,23 +5471,38 @@ def nomina_detalle(request, terapeuta_id):
                         .select_related('cita__paciente', 'cita__servicio')
                         .order_by('cita__fecha')
         )
+        lineas_comision = list(
+            corte.lineas.filter(tipo=LineaNomina.TIPO_COMISION_CAPTACION)
+            .select_related(
+                'comision_captacion__captacion',
+                'comision_captacion__cita_generadora',
+            )
+            .order_by('comision_captacion__generada_en', 'id')
+        )
         bonos_extra = list(corte.bonos_extra.select_related('registrado_por').order_by('creado_en'))
         subtotal    = corte.subtotal_sesiones
         total_bonos = corte.total_bonos
+        total_comisiones = sum(
+            (linea.monto for linea in lineas_comision),
+            Decimal('0.00'),
+        )
         total_pago  = corte.total_pago
     else:
         preview = preview_nomina_semanal(terapeuta, fecha_inicio, fecha_fin)
         if 'error' in preview:
             error_preview = preview['error']
             lineas_sesion = lineas_bono = lineas_penalizacion = bonos_extra = []
-            subtotal = total_bonos = total_pago = Decimal('0')
+            lineas_comision = []
+            subtotal = total_bonos = total_comisiones = total_pago = Decimal('0')
         else:
             lineas_sesion       = [l for l in preview['lineas'] if l['tipo'] == LineaNomina.TIPO_SESION]
             lineas_bono         = [l for l in preview['lineas'] if l['tipo'] in (LineaNomina.TIPO_BONO_UMBRAL, LineaNomina.TIPO_BONO_POR_PACIENTE)]
             lineas_penalizacion = []
+            lineas_comision     = []
             bonos_extra         = []
             subtotal      = preview['subtotal_sesiones']
             total_bonos   = preview['total_bonos']
+            total_comisiones = Decimal('0.00')
             total_pago    = preview['total_pago']
 
     puede_editar  = corte and corte.estatus == CorteSemanal.ESTATUS_BORRADOR
@@ -5410,6 +5533,15 @@ def nomina_detalle(request, terapeuta_id):
         for l in lineas_bono:
             monto = float(l['monto'] if isinstance(l, dict) else l.monto)
             nom_rows.append(['Bono automático', l['concepto'] if isinstance(l, dict) else l.concepto, '—', '—', '—', monto])
+        for linea in lineas_comision:
+            nom_rows.append([
+                'Comisión de captación',
+                linea.concepto,
+                linea.comision_captacion.generada_en.strftime('%d/%m/%Y'),
+                '—',
+                linea.comision_captacion.paciente_nombre_snapshot,
+                float(linea.monto),
+            ])
         for b in bonos_extra:
             nom_rows.append(['Bono extra', b.concepto, '—', '—', '—', float(b.monto)])
         return _build_excel_response(
@@ -5427,9 +5559,11 @@ def nomina_detalle(request, terapeuta_id):
         'lineas_sesion':       lineas_sesion,
         'lineas_bono':         lineas_bono,
         'lineas_penalizacion': lineas_penalizacion,
+        'lineas_comision':     lineas_comision,
         'bonos_extra':         bonos_extra,
         'subtotal':            subtotal,
         'total_bonos':         total_bonos,
+        'total_comisiones':    total_comisiones,
         'total_pago':          total_pago,
         'fecha_inicio':        fecha_inicio,
         'fecha_fin':           fecha_fin,
@@ -5504,6 +5638,15 @@ def confirmar_nomina_terapeuta(request, corte_id):
             tipo__in=[LineaNomina.TIPO_BONO_UMBRAL, LineaNomina.TIPO_BONO_POR_PACIENTE]
         )
     )
+    lineas_comision = list(
+        corte.lineas.filter(tipo=LineaNomina.TIPO_COMISION_CAPTACION)
+        .select_related('comision_captacion')
+        .order_by('comision_captacion__generada_en', 'id')
+    )
+    total_comisiones = sum(
+        (linea.monto for linea in lineas_comision),
+        Decimal('0.00'),
+    )
     bonos_extra = list(corte.bonos_extra.order_by('creado_en'))
 
     meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -5518,6 +5661,8 @@ def confirmar_nomina_terapeuta(request, corte_id):
         'corte': corte,
         'lineas_sesion': lineas_sesion,
         'lineas_bono': lineas_bono,
+        'lineas_comision': lineas_comision,
+        'total_comisiones': total_comisiones,
         'bonos_extra': bonos_extra,
         'semana_label': semana_label,
     })
@@ -5671,7 +5816,25 @@ def nomina_todos_detalles(request):
                             .select_related('cita__paciente', 'cita__servicio')
                             .order_by('cita__fecha', 'cita__hora')
             )
-            lineas_bono  = list(corte.lineas.exclude(tipo=LineaNomina.TIPO_SESION))
+            lineas_bono = list(
+                corte.lineas.filter(
+                    tipo__in=(
+                        LineaNomina.TIPO_BONO_UMBRAL,
+                        LineaNomina.TIPO_BONO_POR_PACIENTE,
+                        LineaNomina.TIPO_PENALIZACION,
+                        LineaNomina.TIPO_EXPOSITOR,
+                    )
+                )
+            )
+            lineas_comision = list(
+                corte.lineas.filter(
+                    tipo=LineaNomina.TIPO_COMISION_CAPTACION
+                ).select_related('comision_captacion')
+            )
+            total_comisiones = sum(
+                (linea.monto for linea in lineas_comision),
+                Decimal('0.00'),
+            )
             bonos_extra  = list(corte.bonos_extra.all())
             subtotal     = corte.subtotal_sesiones
             total_bonos  = corte.total_bonos
@@ -5683,13 +5846,15 @@ def nomina_todos_detalles(request):
                 continue
             lineas_sesion = [l for l in prev['lineas'] if l['tipo'] == LineaNomina.TIPO_SESION]
             lineas_bono   = [l for l in prev['lineas'] if l['tipo'] != LineaNomina.TIPO_SESION]
+            lineas_comision = []
+            total_comisiones = Decimal('0.00')
             bonos_extra   = []
             subtotal      = prev['subtotal_sesiones']
             total_bonos   = prev['total_bonos']
             total_pago    = prev['total_pago']
             puede_editar  = False
 
-        if not lineas_sesion and not lineas_bono:
+        if not lineas_sesion and not lineas_bono and not lineas_comision:
             continue
 
         total_global += total_pago or Decimal('0')
@@ -5699,6 +5864,8 @@ def nomina_todos_detalles(request):
             'corte':        corte,
             'lineas_sesion': lineas_sesion,
             'lineas_bono':  lineas_bono,
+            'lineas_comision': lineas_comision,
+            'total_comisiones': total_comisiones,
             'bonos_extra':  bonos_extra,
             'subtotal':     subtotal,
             'total_bonos':  total_bonos,
@@ -5733,6 +5900,14 @@ def nomina_editar_linea(request, linea_id):
         url = reverse('nomina_todos_detalles')
         return redirect(f'{url}?fecha_inicio={fi_str}&fecha_fin={ff_str}')
 
+    if linea.tipo == LineaNomina.TIPO_COMISION_CAPTACION:
+        messages.error(
+            request,
+            'El monto histórico de una comisión de captación no puede editarse.',
+        )
+        url = reverse('nomina_detalle', args=[corte.terapeuta_id])
+        return redirect(f'{url}?fecha_inicio={fi_str}&fecha_fin={ff_str}')
+
     from decimal import InvalidOperation
     monto_str = request.POST.get('monto', '').replace(',', '.')
     try:
@@ -5747,14 +5922,7 @@ def nomina_editar_linea(request, linea_id):
     linea.monto = nuevo_monto
     linea.save()
 
-    # Recalcular snapshot del corte
-    subtotal    = corte.lineas.filter(tipo=LineaNomina.TIPO_SESION).aggregate(t=Sum('monto'))['t'] or Decimal('0')
-    bonos_auto  = corte.lineas.exclude(tipo=LineaNomina.TIPO_SESION).aggregate(t=Sum('monto'))['t'] or Decimal('0')
-    bonos_extra = corte.bonos_extra.aggregate(t=Sum('monto'))['t'] or Decimal('0')
-    corte.subtotal_sesiones = subtotal
-    corte.total_bonos       = bonos_auto + bonos_extra
-    corte.total_pago        = subtotal + bonos_auto + bonos_extra
-    corte.save()
+    actualizar_totales_corte(corte)
 
     messages.success(request, f'Monto actualizado a ${nuevo_monto:,.2f}.')
     next_view = request.POST.get('next_view', '')
@@ -5798,14 +5966,7 @@ def nomina_editar_bono_extra(request, bono_id):
     bono.monto = nuevo_monto
     bono.save()
 
-    # Recalcular snapshot del corte
-    subtotal    = corte.lineas.filter(tipo=LineaNomina.TIPO_SESION).aggregate(t=Sum('monto'))['t'] or Decimal('0')
-    bonos_auto  = corte.lineas.exclude(tipo=LineaNomina.TIPO_SESION).aggregate(t=Sum('monto'))['t'] or Decimal('0')
-    bonos_extra = corte.bonos_extra.aggregate(t=Sum('monto'))['t'] or Decimal('0')
-    corte.subtotal_sesiones = subtotal
-    corte.total_bonos       = bonos_auto + bonos_extra
-    corte.total_pago        = subtotal + bonos_auto + bonos_extra
-    corte.save()
+    actualizar_totales_corte(corte)
 
     messages.success(request, f'Bono actualizado a ${nuevo_monto:,.2f}.')
     next_view = request.POST.get('next_view', '')
@@ -6967,14 +7128,22 @@ def citas_tardias(request):
         cita_id   = request.POST.get('cita_id')
         nuevo_est = request.POST.get('estatus')
         if nuevo_est in ESTATUS_VALIDOS:
-            cita_obj = get_object_or_404(Cita, id=cita_id)
-            cita_obj.estatus  = nuevo_est
-            cita_obj.sin_bono = True
-            cita_obj.save(update_fields=['estatus', 'sin_bono'])
-            messages.success(
-                request,
-                f'Cita de {cita_obj.paciente} actualizada a "{ESTATUS_VALIDOS[nuevo_est]}" (sin bono).',
-            )
+            try:
+                with transaction.atomic():
+                    cita_obj = get_object_or_404(
+                        Cita.objects.select_for_update(),
+                        id=cita_id,
+                    )
+                    cita_obj.estatus = nuevo_est
+                    cita_obj.sin_bono = True
+                    cita_obj.save(update_fields=['estatus', 'sin_bono'])
+            except ValidationError as error:
+                messages.error(request, str(error))
+            else:
+                messages.success(
+                    request,
+                    f'Cita de {cita_obj.paciente} actualizada a "{ESTATUS_VALIDOS[nuevo_est]}" (sin bono).',
+                )
         else:
             messages.error(request, 'Estatus no válido.')
         return redirect('citas_tardias')
@@ -7298,7 +7467,10 @@ def api_reporte_general(request):
         'consultorio': str(c.consultorio) if c.consultorio_id else '',
         'estatus': c.estatus,
         'metodo_pago': c.metodo_pago or '',
+        # Compatibilidad temporal para consumidores existentes. ``costo`` no
+        # representa dinero recibido y debe considerarse una clave legacy.
         'costo': float(c.costo) if c.costo is not None else 0.0,
+        'importe_cita': float(c.costo) if c.costo is not None else 0.0,
     } for c in citas]
     return JsonResponse(data, safe=False)
 

@@ -103,7 +103,7 @@
     <div class="dc-card">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px;">
             <div>
-                <div class="dc-label">Ingresos esperado vs real</div>
+                <div class="dc-label">Pagos registrados vs valor programado</div>
                 <div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:1.9rem; color:#37474F;">${{ ingreso_real|floatformat:0 }}</div>
             </div>
             <div style="padding:6px 12px; border-radius:999px; font-size:.8rem; font-weight:700; {% if ingreso_delta_pct is None %}background:#ECEFF1;color:#78909C;{% elif ingreso_delta_pct >= 0 %}background:#EAF7F1;color:#2E7D32;{% else %}background:#FEF1F1;color:#EF5350;{% endif %}"
@@ -112,11 +112,11 @@
             </div>
         </div>
         <div style="margin-bottom:10px;">
-            <div style="display:flex; justify-content:space-between; font-size:.82rem; color:#90A4AE; margin-bottom:5px;"><span>Real</span><span>${{ ingreso_real|floatformat:0 }}</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:.82rem; color:#90A4AE; margin-bottom:5px;"><span>Pagos registrados</span><span>${{ ingreso_real|floatformat:0 }}</span></div>
             <div class="dc-bar-track"><div class="dc-bar-fill" data-target-width="{{ ingreso_pct }}" style="background:linear-gradient(90deg,#26C6DA,#00ACC1);"></div></div>
         </div>
         <div>
-            <div style="display:flex; justify-content:space-between; font-size:.82rem; color:#90A4AE; margin-bottom:5px;"><span>Esperado</span><span>${{ ingreso_esperado|floatformat:0 }}</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:.82rem; color:#90A4AE; margin-bottom:5px;"><span>Valor programado</span><span>${{ ingreso_esperado|floatformat:0 }}</span></div>
             <div class="dc-bar-track"><div class="dc-bar-fill" data-target-width="100" style="background:#CFD8DC;"></div></div>
         </div>
     </div>
@@ -196,7 +196,7 @@
         <select name="orden" onchange="this.form.submit()">
             <option value="nombre" {% if filtros_actuales.orden == 'nombre' %}selected{% endif %}>Ordenar: Nombre A-Z</option>
             <option value="sin_seguimiento" {% if filtros_actuales.orden == 'sin_seguimiento' %}selected{% endif %}>Ordenar: Sin seguimiento primero</option>
-            <option value="ingreso" {% if filtros_actuales.orden == 'ingreso' %}selected{% endif %}>Ordenar: Mayor ingreso</option>
+            <option value="ingreso" {% if filtros_actuales.orden == 'ingreso' %}selected{% endif %}>Ordenar: Mayor valor de servicios</option>
         </select>
     </div>
 </form>
@@ -212,7 +212,7 @@
                 <tr>
                     <th>Paciente</th><th>División / Sede</th><th>Terapeuta</th>
                     <th style="text-align:center;">Citas</th><th style="text-align:center;">Asistió / No</th>
-                    <th>Estado</th><th style="text-align:right;">Ingreso</th>
+                    <th>Estado</th><th style="text-align:right;">Valor de servicios</th>
                 </tr>
             </thead>
             <tbody>
@@ -243,7 +243,7 @@
                         <span class="dc-badge-estado ok">Al día</span>
                         {% endif %}
                     </td>
-                    <td style="text-align:right; font-weight:700; color:#37474F; font-family:'Poppins',sans-serif;">${{ p.ingreso|floatformat:2 }}</td>
+                    <td style="text-align:right; font-weight:700; color:#37474F; font-family:'Poppins',sans-serif;">${{ p.valor_servicios|floatformat:2 }}</td>
                 </tr>
                 <tr>
                     <td colspan="7" style="padding:0;">
@@ -254,7 +254,7 @@
                                     <thead>
                                         <tr>
                                             <th>Fecha</th><th>Terapeuta</th><th>Servicio</th>
-                                            <th>Estatus</th><th style="text-align:right;">Costo</th>
+                                            <th>Estatus</th><th style="text-align:right;">Importe cita</th>
                                         </tr>
                                     </thead>
                                     <tbody>

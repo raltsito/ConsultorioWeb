@@ -1,0 +1,110 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <p class="text-uppercase text-primary fw-bold small mb-1">Captador</p>
+      <h2 class="mb-0">{{ captador.nombre_display }}</h2>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a
+        class="btn btn-outline-primary"
+        href="{% url 'ventas:captador_editar' captador.id %}"
+      >
+        Editar contacto
+      </a>
+      <a
+        class="btn btn-outline-secondary"
+        href="{% url 'ventas:captadores_lista' %}"
+      >
+        Volver
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body p-4">
+          <dl class="row mb-0">
+            <dt class="col-sm-4">Tipo</dt>
+            <dd class="col-sm-8">{{ captador.get_tipo_display }}</dd>
+
+            <dt class="col-sm-4">Contacto</dt>
+            <dd class="col-sm-8">{{ captador.contacto_display }}</dd>
+
+            <dt class="col-sm-4">Estado</dt>
+            <dd class="col-sm-8">
+              {% if captador.activo %}
+                <span class="badge text-bg-success">Activo</span>
+              {% else %}
+                <span class="badge text-bg-secondary">Inactivo</span>
+              {% endif %}
+            </dd>
+
+            <dt class="col-sm-4">Fecha de alta</dt>
+            <dd class="col-sm-8">
+              {{ captador.creado_en|date:'d/m/Y H:i' }}
+            </dd>
+
+            <dt class="col-sm-4">Creado por</dt>
+            <dd class="col-sm-8">{{ captador.creado_por|default:'—' }}</dd>
+
+            <dt class="col-sm-4">Código</dt>
+            <dd class="col-sm-8"><code>{{ codigo.token }}</code></dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card shadow-sm border-0 text-center">
+        <div class="card-body p-4">
+          <img
+            class="img-fluid"
+            style="max-width: 260px;"
+            src="{% url 'ventas:captador_qr' captador.id %}"
+            alt="QR de {{ captador.nombre_display }}"
+          >
+          <p class="text-muted small mt-2">
+            El QR no contiene datos financieros.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0 mt-4">
+    <div class="card-body p-4">
+      {% if captador.activo %}
+        <h5>Desactivar captador</h5>
+        <form
+          method="post"
+          action="{% url 'ventas:captador_desactivar' captador.id %}"
+        >
+          {% csrf_token %}
+          {{ desactivar_form.motivo.label_tag }}
+          {{ desactivar_form.motivo }}
+          <button class="btn btn-outline-danger mt-3" type="submit">
+            Desactivar
+          </button>
+        </form>
+      {% else %}
+        <h5>Captador inactivo</h5>
+        <p class="text-muted">El código y el histórico se conservaron.</p>
+        <form
+          method="post"
+          action="{% url 'ventas:captador_reactivar' captador.id %}"
+        >
+          {% csrf_token %}
+          <button class="btn btn-success" type="submit">
+            Reactivar con el mismo código
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
