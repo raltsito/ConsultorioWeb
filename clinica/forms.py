@@ -7,6 +7,7 @@ from .models import (
     AperturaExpedienteGrupal,
     BloqueoAgendaTerapeuta,
     Cita,
+    CODIGOS_INSTITUCIONALES,
     DocumentoPaciente,
     Horario,
     NotaTerapeutaPaciente,
@@ -18,6 +19,66 @@ from .models import (
 )
 from .models import Terapeuta, Consultorio, Division, Servicio
 from .pricing import calcular_importe_servicio_con_captacion
+
+
+CODIGOS_INSTITUCIONALES_CHOICES = [
+    ('', 'Sin código institucional'),
+    *[
+        (
+            codigo,
+            datos['nombre']
+            if codigo.startswith('C100-')
+            else f"{datos['nombre']} – {datos['descripcion']}",
+        )
+    for codigo, datos in CODIGOS_INSTITUCIONALES.items()
+    ],
+]
+
+
+class CodigoInstitucionalDropdownWidget(forms.HiddenInput):
+    template_name = 'clinica/widgets/codigo_institucional_dropdown.html'
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        valor_actual = value or ''
+        opciones = []
+        for codigo, etiqueta in CODIGOS_INSTITUCIONALES_CHOICES:
+            datos = CODIGOS_INSTITUCIONALES.get(codigo)
+            opciones.append({
+                'codigo': codigo,
+                'etiqueta': etiqueta,
+                'color': datos['color'] if datos else '',
+                'seleccionado': codigo == valor_actual,
+                'es_vih': codigo == 'VIH',
+            })
+        context['widget']['opciones_codigos'] = opciones
+        context['widget']['valor_actual'] = valor_actual
+        return context
+
+
+class CamposCodigosInstitucionalesMixin(forms.Form):
+    codigo_institucional = forms.ChoiceField(
+        choices=CODIGOS_INSTITUCIONALES_CHOICES,
+        required=False,
+        label='Código institucional',
+        widget=CodigoInstitucionalDropdownWidget(),
+    )
+
+    def codigos_seleccionados(self):
+        codigo = self.cleaned_data.get('codigo_institucional')
+        return {codigo} if codigo else set()
+
+
+class CodigoInstitucionalPacienteForm(CamposCodigosInstitucionalesMixin):
+    def __init__(self, *args, paciente=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if paciente and not self.is_bound:
+            activo = next(iter(paciente.codigos_activos), None)
+            self.initial['codigo_institucional'] = (
+                activo.codigo
+                if activo
+                else ''
+            )
 
 
 def verificar_empalme_paciente(paciente, fecha, hora, excluir_cita_id=None):
@@ -112,11 +173,16 @@ class ManualPortalForm(forms.Form):
     )
 
 
-class PacienteForm(forms.ModelForm):
+class PacienteForm(CamposCodigosInstitucionalesMixin, forms.ModelForm):
     fecha_nacimiento = forms.DateField(
         input_formats=['%Y-%m-%d'],
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
     )
+
+    def __init__(self, *args, incluir_codigos=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not incluir_codigos:
+            self.fields.pop('codigo_institucional', None)
 
     class Meta:
         model = Paciente

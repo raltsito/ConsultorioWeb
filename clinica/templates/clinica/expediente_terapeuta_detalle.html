@@ -332,13 +332,13 @@
       <p class="val">{{ paciente.servicio_inicial|default:"—" }}</p>
     </div>
     <div class="hero-pill">
-      <p class="lbl">CÓDIGOS</p>
+      <p class="lbl">CÓDIGO</p>
       <div class="val patient-code-summary">
         {% include 'clinica/partials/_patient_code_dots.html' with patient=paciente %}
         {% if paciente.codigos_activos %}
           <span class="patient-code-names">
             {% for item in paciente.codigos_activos %}
-              {{ item.nombre_corto }}{% if not forloop.last %}, {% endif %}
+              {{ item.catalogo.nombre }}
             {% endfor %}
           </span>
         {% endif %}
@@ -349,7 +349,7 @@
         data-bs-toggle="modal"
         data-bs-target="#modalCodigos"
       >
-        Administrar códigos
+        Editar código
       </button>
     </div>
     <div class="hero-pill">
@@ -377,7 +377,7 @@
         {% csrf_token %}
         <div class="modal-header">
           <h5 class="modal-title fw-bold" id="modalCodigosTitulo">
-            Administrar códigos
+            Editar código
           </h5>
           <button
             type="button"
@@ -388,30 +388,15 @@
         </div>
         <div class="modal-body">
           <p class="text-muted small">
-            Selecciona los códigos institucionales activos. Solo puede existir
-            un nivel de Código 100.
+            Selecciona el código institucional vigente del paciente.
           </p>
-          {% for codigo, datos in catalogo_codigos.items %}
           <label
-            class="d-flex align-items-center gap-2 border rounded-3 p-2 mb-2"
+            class="form-label fw-semibold"
+            for="{{ form_codigos.codigo_institucional.id_for_label }}"
           >
-            <input
-              class="form-check-input m-0"
-              type="checkbox"
-              name="codigos"
-              value="{{ codigo }}"
-              {% if codigo in codigos_activos_claves %}checked{% endif %}
-            >
-            <span
-              class="patient-code-dot patient-code-dot--{{ codigo }}"
-              style="--patient-code-color:{{ datos.color }}"
-            ></span>
-            <span>
-              <strong>{{ datos.nombre }}</strong><br>
-              <small class="text-muted">{{ datos.descripcion }}</small>
-            </span>
+            {{ form_codigos.codigo_institucional.label }}
           </label>
-          {% endfor %}
+          {{ form_codigos.codigo_institucional }}
         </div>
         <div class="modal-footer">
           <button
@@ -422,7 +407,7 @@
             Cancelar
           </button>
           <button type="submit" class="btn btn-primary">
-            Guardar códigos
+            Guardar código
           </button>
         </div>
       </form>

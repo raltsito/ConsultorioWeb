@@ -1,0 +1,125 @@
+<div
+  class="patient-code-selector"
+  id="{{ widget.attrs.id }}-selector"
+  data-patient-code-selector
+>
+  <input
+    type="hidden"
+    name="{{ widget.name }}"
+    value="{{ widget.valor_actual }}"
+    id="{{ widget.attrs.id }}"
+  >
+  <button
+    type="button"
+    class="patient-code-selector__toggle"
+    aria-expanded="false"
+    aria-haspopup="listbox"
+  >
+    {% for opcion in widget.opciones_codigos %}
+      {% if opcion.seleccionado %}
+        {% if opcion.codigo %}
+          <span
+            class="patient-code-dot{% if opcion.es_vih %} patient-code-dot--VIH{% endif %}"
+            style="--patient-code-color:{{ opcion.color }}"
+          ></span>
+        {% endif %}
+        <span data-selected-label>{{ opcion.etiqueta }}</span>
+      {% endif %}
+    {% endfor %}
+    <i class="bi bi-chevron-down ms-auto" aria-hidden="true"></i>
+  </button>
+  <div
+    class="patient-code-selector__menu"
+    role="listbox"
+    aria-label="Código institucional"
+    hidden
+  >
+    {% for opcion in widget.opciones_codigos %}
+    <button
+      type="button"
+      class="patient-code-selector__option"
+      role="option"
+      aria-selected="{% if opcion.seleccionado %}true{% else %}false{% endif %}"
+      data-code-value="{{ opcion.codigo }}"
+      data-code-label="{{ opcion.etiqueta }}"
+    >
+      {% if opcion.codigo %}
+        <span
+          class="patient-code-dot selector-code-option-dot{% if opcion.es_vih %} patient-code-dot--VIH{% endif %}"
+          style="--patient-code-color:{{ opcion.color }}"
+        ></span>
+      {% else %}
+        <span class="patient-code-selector__empty-dot"></span>
+      {% endif %}
+      <span>{{ opcion.etiqueta }}</span>
+    </button>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  (() => {
+    const root = document.getElementById("{{ widget.attrs.id }}-selector");
+    if (!root || root.dataset.initialized === "true") {
+      return;
+    }
+    root.dataset.initialized = "true";
+
+    const input = root.querySelector("input[type='hidden']");
+    const toggle = root.querySelector(".patient-code-selector__toggle");
+    const menu = root.querySelector(".patient-code-selector__menu");
+    const options = root.querySelectorAll(".patient-code-selector__option");
+
+    const closeMenu = () => {
+      menu.hidden = true;
+      toggle.setAttribute("aria-expanded", "false");
+    };
+
+    const updateToggle = (option) => {
+      const oldDot = toggle.querySelector(".patient-code-dot");
+      if (oldDot) {
+        oldDot.remove();
+      }
+
+      const optionDot = option.querySelector(".selector-code-option-dot");
+      if (optionDot) {
+        toggle.prepend(optionDot.cloneNode(true));
+      }
+
+      toggle.querySelector("[data-selected-label]").textContent =
+        option.dataset.codeLabel;
+    };
+
+    toggle.addEventListener("click", () => {
+      const willOpen = menu.hidden;
+      menu.hidden = !willOpen;
+      toggle.setAttribute("aria-expanded", String(willOpen));
+    });
+
+    options.forEach((option) => {
+      option.addEventListener("click", () => {
+        input.value = option.dataset.codeValue;
+        options.forEach((item) => {
+          item.setAttribute("aria-selected", String(item === option));
+        });
+        updateToggle(option);
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+        closeMenu();
+        toggle.focus();
+      });
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!root.contains(event.target)) {
+        closeMenu();
+      }
+    });
+
+    root.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeMenu();
+        toggle.focus();
+      }
+    });
+  })();
+</script>

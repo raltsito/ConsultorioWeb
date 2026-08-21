@@ -655,6 +655,13 @@ class CodigoInstitucionalPaciente(models.Model):
         null=True,
         related_name='codigos_asignados',
     )
+    asignado_por_usuario = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='codigos_institucionales_asignados',
+    )
     fecha_asignacion = models.DateTimeField(auto_now_add=True)
     retirado_por = models.ForeignKey(
         Terapeuta,
@@ -662,6 +669,13 @@ class CodigoInstitucionalPaciente(models.Model):
         null=True,
         blank=True,
         related_name='codigos_retirados',
+    )
+    retirado_por_usuario = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='codigos_institucionales_retirados',
     )
     fecha_retiro = models.DateTimeField(null=True, blank=True)
     observacion = models.CharField(max_length=255, blank=True)
@@ -682,9 +696,9 @@ class CodigoInstitucionalPaciente(models.Model):
         ordering = ['codigo', '-fecha_asignacion']
         constraints = [
             models.UniqueConstraint(
-                fields=['paciente', 'codigo'],
+                fields=['paciente'],
                 condition=models.Q(activo=True),
-                name='codigo_activo_unico_paciente',
+                name='un_codigo_institucional_activo_por_paciente',
             ),
         ]
 

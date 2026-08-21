@@ -20,6 +20,10 @@
       href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
       rel="stylesheet"
     />
+    <link
+      href="{% static 'clinica/css/patient_codes.css' %}?v=2"
+      rel="stylesheet"
+    />
 
     <style>
       /* Ajuste para que la caja tenga la altura correcta de Bootstrap */
@@ -176,6 +180,14 @@
 
             {{ form.pacientes_relacionados }}
           </div>
+          {% if form.codigo_institucional %}
+          <div class="border rounded-3 p-3 mb-3">
+            <label for="{{ form.codigo_institucional.id_for_label }}">
+              {{ form.codigo_institucional.label }}
+            </label>
+            {{ form.codigo_institucional }}
+          </div>
+          {% endif %}
           <div class="d-grid gap-2 mt-4">
             <button type="submit" class="btn btn-primary btn-lg shadow-sm">
               Guardar Paciente

@@ -104,6 +104,7 @@ from .forms import (
     AperturaExpedienteGrupalForm,
     BloqueoAgendaTerapeutaForm,
     CitaEmpresaForm,
+    CodigoInstitucionalPacienteForm,
     PacienteEmpresaForm,
     PacienteForm,
     CitaForm,
@@ -113,6 +114,7 @@ from .forms import (
     CheckoutCitaForm,
     ReporteSesionForm,
 )
+from .services_codigos import actualizar_codigos_institucionales
 from .services import (
     actualizar_totales_corte,
     calcular_nomina_semanal,
@@ -877,15 +879,29 @@ def asignar_division_paciente(request, paciente_id):
 @login_required
 def registrar_paciente(request):
     if request.method == 'POST':
-        form = PacienteForm(request.POST, request.FILES)
+        form = PacienteForm(
+            request.POST,
+            request.FILES,
+            incluir_codigos=True,
+        )
         if form.is_valid():
-            paciente = form.save()
-            _registrar_actividad(request, 'paciente_registrado', 'paciente',
+            with transaction.atomic():
+                paciente = form.save()
+                actualizar_codigos_institucionales(
+                    paciente=paciente,
+                    codigos=form.codigos_seleccionados(),
+                    usuario=request.user,
+                )
+            _registrar_actividad(
+                request,
+                'paciente_registrado',
+                'paciente',
                 f'Expediente de {paciente.nombre} registrado en el sistema.',
-                paciente=paciente)
+                paciente=paciente,
+            )
             return redirect('lista_pacientes')
     else:
-        form = PacienteForm()
+        form = PacienteForm(incluir_codigos=True)
     return render(request, 'clinica/registro_paciente.html', {
         'form': form,
         'cancel_url': reverse('lista_pacientes'),
@@ -1502,11 +1518,9 @@ def expediente_terapeuta_detalle(request, paciente_id):
         'form_apertura': form_apertura,
         'instrumentos_disponibles': instrumentos_disponibles,
         'envios_instrumento': envios_instrumento,
-        'catalogo_codigos': CODIGOS_INSTITUCIONALES,
-        'codigos_activos_claves': {
-            item.codigo
-            for item in paciente.codigos_activos
-        },
+        'form_codigos': CodigoInstitucionalPacienteForm(
+            paciente=paciente,
+        ),
     })
 
 
@@ -1520,33 +1534,24 @@ def administrar_codigos_paciente(request, paciente_id):
     if paciente_id not in _pacientes_ids_terapeuta(terapeuta):
         return HttpResponse('No tienes acceso a este paciente.', status=403)
 
-    paciente = get_object_or_404(Paciente, id=paciente_id)
-    seleccionados = set(request.POST.getlist('codigos')) & set(
-        CODIGOS_INSTITUCIONALES
+    paciente = get_object_or_404(
+        Paciente.objects.prefetch_related(_prefetch_codigos_activos()),
+        id=paciente_id,
     )
-    niveles_c100 = seleccionados & {'C100-B', 'C100-M', 'C100-A'}
-    if len(niveles_c100) > 1:
-        messages.error(request, 'Selecciona solamente un nivel de Código 100.')
+    form = CodigoInstitucionalPacienteForm(
+        request.POST,
+        paciente=paciente,
+    )
+    if not form.is_valid():
+        messages.error(request, 'Revisa la selección de códigos institucionales.')
         return redirect('expediente_terapeuta_detalle', paciente_id=paciente.id)
 
-    ahora = timezone.now()
-    with transaction.atomic():
-        activos = list(
-            CodigoInstitucionalPaciente.objects
-            .select_for_update()
-            .filter(paciente=paciente, activo=True)
-        )
-        codigos_activos = {item.codigo for item in activos}
-        for item in activos:
-            if item.codigo not in seleccionados:
-                item.activo = False
-                item.fecha_retiro = ahora
-                item.retirado_por = terapeuta
-                item.save(update_fields=['activo', 'fecha_retiro', 'retirado_por'])
-        for codigo in seleccionados - codigos_activos:
-            CodigoInstitucionalPaciente.objects.create(
-                paciente=paciente, codigo=codigo, asignado_por=terapeuta
-            )
+    actualizar_codigos_institucionales(
+        paciente=paciente,
+        codigos=form.codigos_seleccionados(),
+        usuario=request.user,
+        terapeuta=terapeuta,
+    )
 
     _registrar_actividad(
         request,
