@@ -149,10 +149,6 @@ def registrar_movimiento_economico(
 def registrar_movimiento_recepcion_desde_cita(*, cita, usuario):
     cita_bloqueada = (
         Cita.objects.select_for_update()
-        .select_related(
-            "paciente",
-            "servicio",
-        )
         .get(pk=cita.pk)
     )
 

@@ -1,5 +1,6 @@
 from datetime import date, datetime, time
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -10,6 +11,7 @@ from .models import Cita, MovimientoEconomicoCita
 from .services import (
     anular_movimiento_economico,
     registrar_movimiento_economico,
+    registrar_movimiento_recepcion_desde_cita,
 )
 from .tests_helpers import ClinicaTestDataMixin
 
@@ -55,6 +57,29 @@ class FlujoRecepcionMovimientoTests(ClinicaTestDataMixin, TestCase):
             MovimientoEconomicoCita.objects.filter(cita=cita).count(),
             1,
         )
+
+    def test_bloqueo_de_cita_no_incluye_select_related_nullable(self):
+        cita = self.crear_cita(
+            costo=Decimal("450.00"),
+            metodo_pago="Efectivo",
+            estatus=Cita.ESTATUS_SI_ASISTIO,
+        )
+
+        with patch.object(Cita.objects, "select_for_update") as bloquear:
+            queryset_bloqueado = bloquear.return_value
+            queryset_bloqueado.get.return_value = cita
+
+            movimiento, creado = registrar_movimiento_recepcion_desde_cita(
+                cita=cita,
+                usuario=self.staff,
+            )
+
+        bloquear.assert_called_once_with()
+        queryset_bloqueado.get.assert_called_once_with(pk=cita.pk)
+        queryset_bloqueado.select_related.assert_not_called()
+        self.assertTrue(creado)
+        self.assertEqual(movimiento.importe, Decimal("450.00"))
+        self.assertEqual(movimiento.metodo, "Efectivo")
 
     def test_checkout_no_crea_movimiento(self):
         cita = self.crear_cita(
