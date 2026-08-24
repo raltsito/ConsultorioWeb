@@ -99,6 +99,7 @@ from .forms import (
     AperturaExpedienteGrupalForm,
     BloqueoAgendaTerapeutaForm,
     CitaEmpresaForm,
+    PacienteConsultoriaForm,
     PacienteEmpresaForm,
     PacienteForm,
     CitaForm,
@@ -3117,8 +3118,24 @@ def expedientes_consultoria(request):
 def registrar_paciente_consultoria(request):
     if not hasattr(request.user, 'perfil_consultoria'):
         return redirect('home')
-    messages.info(request, 'El alta de pacientes de Consultoria usara una vista propia.')
-    return redirect('portal_consultoria')
+
+    mi_perfil = request.user.perfil_consultoria
+    divisiones = mi_perfil.divisiones.all().order_by('nombre')
+
+    if request.method == 'POST':
+        form = PacienteConsultoriaForm(request.POST, divisiones=divisiones)
+        if form.is_valid():
+            paciente = form.save()
+            messages.success(request, f'Aconsejado {paciente.nombre} registrado correctamente.')
+            return redirect('portal_consultoria')
+    else:
+        form = PacienteConsultoriaForm(divisiones=divisiones)
+
+    return render(request, 'clinica/registrar_paciente_consultoria.html', {
+        'form': form,
+        'consultoria': mi_perfil,
+        'divisiones': divisiones,
+    })
 
 
 @login_required

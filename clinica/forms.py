@@ -761,6 +761,33 @@ class PacienteEmpresaForm(forms.ModelForm):
         }
 
 
+# =============================================================================
+# FORMULARIOS CONSULTORIA
+# =============================================================================
+
+class PacienteConsultoriaForm(forms.ModelForm):
+    """Formulario simplificado para que Consultoria registre nuevos aconsejados."""
+
+    def __init__(self, *args, divisiones=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if divisiones is not None:
+            self.fields['division'].queryset = divisiones.order_by('nombre')
+        self.fields['division'].required = True
+
+    class Meta:
+        model = Paciente
+        fields = ['nombre', 'fecha_nacimiento', 'sexo', 'telefono', 'identidad_contacto', 'division', 'servicio_inicial']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre completo'}),
+            'fecha_nacimiento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'sexo': forms.Select(attrs={'class': 'form-select'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'WhatsApp'}),
+            'identidad_contacto': forms.Select(attrs={'class': 'form-select'}),
+            'division': forms.Select(attrs={'class': 'form-select'}),
+            'servicio_inicial': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+
 class CitaEmpresaForm(forms.ModelForm):
     """Formulario para que una Empresa agende citas directamente."""
 
