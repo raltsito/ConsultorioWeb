@@ -508,7 +508,6 @@ def home(request):
     })
 
     from collections import defaultdict
-    from django.db.models import Prefetch
     notas_raw = NotaRecepcion.objects.select_related('creado_por').prefetch_related(
         Prefetch('reacciones', queryset=ReaccionNota.objects.select_related('usuario')),
         Prefetch('comentarios', queryset=ComentarioNota.objects.select_related('creado_por')),
