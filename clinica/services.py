@@ -283,12 +283,15 @@ def incorporar_comision_captacion_a_corte(comision, *, corte_destino=None):
     from ventas.classification import captador_es_terapeuta
     from ventas.models import ComisionCaptacion, LineaLiquidacionComision
 
+    comision_bloqueada = ComisionCaptacion.objects.select_for_update().get(
+        pk=comision.pk
+    )
     comision = (
-        ComisionCaptacion.objects.select_for_update()
+        ComisionCaptacion.objects
         .select_related(
             "captacion__captador__usuario__perfil_terapeuta",
         )
-        .get(pk=comision.pk)
+        .get(pk=comision_bloqueada.pk)
     )
     captador = comision.captacion.captador
     if not captador_es_terapeuta(captador):

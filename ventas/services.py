@@ -170,13 +170,14 @@ def registrar_captacion(*, paciente, codigo, usuario, canal=""):
     if not elegibilidad.elegible:
         raise ValueError(elegibilidad.mensaje)
 
+    codigo_bloqueado = CodigoCaptacion.objects.select_for_update().get(pk=codigo.pk)
     codigo = (
-        CodigoCaptacion.objects.select_for_update()
+        CodigoCaptacion.objects
         .select_related(
             "captador__usuario",
             "captador__empresa",
         )
-        .get(pk=codigo.pk)
+        .get(pk=codigo_bloqueado.pk)
     )
     if not codigo.activo or not codigo.captador.activo:
         raise ValueError(
@@ -600,13 +601,19 @@ def _validar_captador_liquidable(captador):
 
 
 def _bloquear_y_validar_comisiones(*, ids, captador):
-    comisiones = list(
+    ids_bloqueados = list(
         ComisionCaptacion.objects.select_for_update()
+        .filter(pk__in=ids)
+        .order_by("pk")
+        .values_list("pk", flat=True)
+    )
+    comisiones = list(
+        ComisionCaptacion.objects
         .select_related(
             "captacion__captador__usuario",
             "captacion__captador__empresa",
         )
-        .filter(pk__in=ids)
+        .filter(pk__in=ids_bloqueados)
         .order_by("pk")
     )
     if len(comisiones) != len(ids):
@@ -682,10 +689,11 @@ def _crear_lineas(liquidacion, comisiones, usuario):
 @transaction.atomic
 def crear_borrador_liquidacion(*, captador, comisiones, usuario):
     ids = _ids_comisiones(comisiones)
+    captador_bloqueado = Captador.objects.select_for_update().get(pk=captador.pk)
     captador = (
-        Captador.objects.select_for_update()
+        Captador.objects
         .select_related("usuario", "empresa")
-        .get(pk=captador.pk)
+        .get(pk=captador_bloqueado.pk)
     )
     _validar_captador_liquidable(captador)
     comisiones = _bloquear_y_validar_comisiones(
@@ -723,10 +731,13 @@ def crear_borrador_liquidacion(*, captador, comisiones, usuario):
 
 
 def _bloquear_borrador(liquidacion):
+    liquidacion_bloqueada = (
+        LiquidacionComisiones.objects.select_for_update().get(pk=liquidacion.pk)
+    )
     liquidacion = (
-        LiquidacionComisiones.objects.select_for_update()
+        LiquidacionComisiones.objects
         .select_related("captador__usuario", "captador__empresa")
-        .get(pk=liquidacion.pk)
+        .get(pk=liquidacion_bloqueada.pk)
     )
     if liquidacion.estado != LiquidacionComisiones.ESTADO_BORRADOR:
         raise OperacionLiquidacionError(
