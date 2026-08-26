@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.contrib.auth.models import User
-from django.utils import timezone
+from django.utils import choices, timezone
 
 def quitar_tildes(texto):
     if not texto:
@@ -1896,6 +1896,80 @@ class AperturaExpediente(models.Model):
         ('union_libre', 'Unión libre'),
         ('otro', 'Otro'),
     ]
+    SEXO_CHOICES = [
+        ('m', 'Masculino'),
+        ('f', 'Femenino'),
+        ('o', 'Otro'),
+    ]
+    LATERALIDAD_CHOICES = [
+        ('', '---------'),
+        ('diestro', 'Diestro'),
+        ('zurdo', 'Zurdo'),
+        ('ambidiestro', 'Ambidiestro'),
+    ]
+
+    SANGRE_CHOICES = [
+        ('', '---------'),
+        ('a+', 'A+'),
+        ('a-', 'A-'),
+        ('b+', 'B+'),
+        ('b-', 'B-'),
+        ('ab+', 'AB+'),
+        ('ab-', 'AB-'),
+        ('o+', 'O+'),
+        ('o-', 'O-'),
+    ]
+
+    HEREDOFAMILIARES_CHOICES = [
+        ('', '---------'),
+        ('diabetes', 'Diabetes'),
+        ('hta', 'HTA'),
+        ('cardiopatias', 'Cardiopatías'),
+        ('cancer', 'Cáncer'),
+        ('epilepsia', 'Epilepsia'),
+        ('trast_psiquiatricos', 'Trast psiquiátricos'),
+        ('adicciones', 'Adicciones'),
+        ('suicidios', 'Suicidios'),
+        ('neuroogicos', 'Neurológicos'),
+    ]
+    TAXICOMANIAS_CHOICES = [
+        ('tabaco', 'Tabaco'),
+        ('alcohol', 'Alcohol'),
+        ('cannabis', 'Cannabis'),
+        ('Estimulantes', 'Estimulantes'),
+        ('otras', 'Otras'),
+        ('niega', 'Niega'),
+    ]
+    ANTECEDENTES_CHOICES = [
+        ('', '---------'),
+        ('cronicos', 'Crónico-degenerativo'),
+        ('quirurjicos', 'Quirúrgicos'),
+        ('traumaticos', 'Traumáticos'),
+        ('alergicos', 'Alergicos'),
+        ('transufionales', 'Transfusionales'),
+        ('hospitalizaciones', 'Hospitalizaciones'),
+        ('crisis', 'Crisis convulsivas'),
+        ('tce', 'TCE'),
+        ('niega', 'Niega'),
+    ]
+    IDEACION_CHOICES = [
+        ('ausente', 'Ausente'),
+        ('pasiva', 'Pasiva'),
+        ('activa', 'Activa'),
+        ('plan', 'Con plan'),
+        ('intento', 'Antecedente de intento'),
+    ]
+    HETEROAGRESION_CHOICES = [
+        ('bajo', 'Bajo'),
+        ('moderado', 'Moderado'),
+        ('alto', 'Alto'),
+    ]
+
+    PRONOSTICO_CHOICES = [
+        ('favorable', 'Favorable'),
+        ('reservado', 'Reservado'),
+        ('desfavorable', 'Desfavorable'),
+    ]
 
     paciente = models.OneToOneField(
         'Paciente',
@@ -1913,14 +1987,25 @@ class AperturaExpediente(models.Model):
     expediente_no       = models.CharField(max_length=50, blank=True, verbose_name='Expediente No.')
     apellido_paterno    = models.CharField(max_length=100, verbose_name='Apellido Paterno')
     apellido_materno    = models.CharField(max_length=100, blank=True, verbose_name='Apellido Materno')
+    edad                = models.PositiveIntegerField(null=True, blank=True, verbose_name='Edad')
     ocupacion           = models.CharField(max_length=150, blank=True, verbose_name='Ocupación')
     lugar_de_trabajo    = models.CharField(max_length=200, blank=True, verbose_name='Lugar de Trabajo')
     cargo               = models.CharField(max_length=150, blank=True, verbose_name='Cargo que desempeña')
     estado_civil        = models.CharField(max_length=20, choices=ESTADO_CIVIL_CHOICES, blank=True, verbose_name='Estado Civil')
+    sexo                = models.CharField(max_length=20, choices=SEXO_CHOICES, blank=True, verbose_name='Sexo')
+    genero              = models.CharField(max_length=100, blank=True, verbose_name='Género')
     calle               = models.CharField(max_length=200, blank=True, verbose_name='Calle')
+    curp                = models.CharField(max_length=20, blank=True, verbose_name='CURP')
+    nacimiento            = models.CharField(max_length=200, blank=True, verbose_name='Lugar de Nacimiento')
+    nacionalidad         = models.CharField(max_length=100, blank=True, verbose_name='Nacionalidad')
+    escolaridad          = models.CharField(max_length=100, blank=True, verbose_name='Escolaridad')
+    lateralidad          = models.CharField(max_length=100, choices=LATERALIDAD_CHOICES, blank=True, verbose_name='Lateralidad')
     num_exterior        = models.CharField(max_length=20, blank=True, verbose_name='Núm.')
     colonia             = models.CharField(max_length=150, blank=True, verbose_name='Col.')
     division            = models.ForeignKey('Division', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='División')
+    correo            = models.EmailField(max_length=200, blank=True, verbose_name='Correo electrónico')
+    referido            = models.CharField(max_length=200, blank=True, verbose_name='Referido por')
+    tipo_sangre         = models.CharField(max_length=20, choices=SANGRE_CHOICES, blank=True, verbose_name='Tipo de sangre')
     vive_con            = models.CharField(max_length=200, blank=True, verbose_name='Vive con')
     tiene_hijos         = models.BooleanField(default=False, verbose_name='Tiene hijos')
     num_hijos           = models.PositiveIntegerField(null=True, blank=True, verbose_name='No. de Hijos')
@@ -1928,11 +2013,21 @@ class AperturaExpediente(models.Model):
     hijo_2              = models.CharField(max_length=200, blank=True, verbose_name='Hijo 2')
     hijo_3              = models.CharField(max_length=200, blank=True, verbose_name='Hijo 3')
     hijo_4              = models.CharField(max_length=200, blank=True, verbose_name='Hijo 4')
-    religion            = models.CharField(max_length=100, blank=True, verbose_name='Religión')
-    motivo_consulta     = models.TextField(blank=True, verbose_name='Motivo de consulta')
-    emergencia_contacto = models.CharField(max_length=200, blank=True, verbose_name='En caso de emergencia llamar a')
-    emergencia_telefono = models.CharField(max_length=30, blank=True, verbose_name='Teléfono de contacto de emergencia')
+    religion            = models.CharField(max_length=100, blank=True, verbose_name='Religión/Creencias')
+    motivo_consulta     = models.TextField(blank=True, verbose_name='Motivo de consulta (en palabras del paciente / informante)')
+    padecimiento_actual = models.TextField(blank=True, verbose_name='Padecimiento actual (inicio, evolución, factores precipitantes, agravantes y atenuentes, tratamientos previos, repercusión funcional):')
+    emergencia_contacto = models.CharField(max_length=200, blank=True, verbose_name='Nombre')
+    emergencia_telefono = models.CharField(max_length=30, 
+    blank=True, verbose_name='Teléfono')
+    parentesco_emergencia  = models.CharField(max_length=100, blank=True, verbose_name='Parentesco')
     como_se_entero      = models.CharField(max_length=200, blank=True, verbose_name='¿Cómo se enteró de nosotros?')
+
+    #Datos de acompañante
+    viene_acompanante       = models.BooleanField(default=False, verbose_name='¿Viene acompañado?')
+    acompanante_nombre      = models.CharField(max_length=200, blank=True, verbose_name='Nombre del acompañante')
+    parentesco_acompanante  = models.CharField(max_length=200, blank=True, verbose_name='Parentesco del acompañante')
+    telefono_acompanante      = models.CharField(max_length=30, blank=True, verbose_name='Teléfono del acompañante')
+    confiabilidad_acompanante      = models.CharField(max_length=200, blank=True, verbose_name='Confiabilidad del informante')
 
     # Antecedentes médicos
     tiene_enfermedad        = models.BooleanField(default=False, verbose_name='¿Tiene alguna enfermedad?')
@@ -1950,18 +2045,6 @@ class AperturaExpediente(models.Model):
     terapia_duracion        = models.CharField(max_length=100, blank=True, verbose_name='¿Cuánto duró la terapia?')
     terapia_motivo          = models.TextField(blank=True, verbose_name='Motivo de la terapia anterior')
 
-    # Sustancias
-    fuma                    = models.BooleanField(default=False, verbose_name='¿Fuma?')
-    consume_alcohol         = models.BooleanField(default=False, verbose_name='¿Consume alcohol?')
-    consume_otras_sustancias = models.BooleanField(default=False, verbose_name='¿Consume o ha consumido otras sustancias?')
-    cuales_sustancias       = models.CharField(max_length=300, blank=True, verbose_name='¿Cuáles sustancias?')
-
-    # Hábitos
-    comidas_al_dia          = models.PositiveIntegerField(null=True, blank=True, verbose_name='Comidas al día')
-    horas_sueno             = models.PositiveIntegerField(null=True, blank=True, verbose_name='Horas de sueño al día')
-    actividad_fisica        = models.BooleanField(default=False, verbose_name='¿Realiza actividad física?')
-    cual_actividad_fisica   = models.CharField(max_length=200, blank=True, verbose_name='¿Cuál actividad física?')
-
     # Ideación/intento suicida
     intento_suicida         = models.BooleanField(default=False, verbose_name='¿Ha intentado quitarse la vida?')
     intento_suicida_hace_cuanto = models.CharField(max_length=100, blank=True, verbose_name='¿Hace cuánto? (Intento)')
@@ -1970,6 +2053,141 @@ class AperturaExpediente(models.Model):
 
     # Vida sexual
     vida_sexual_activa      = models.BooleanField(default=False, verbose_name='¿Tiene vida sexual activa?')
+
+    #Antecedentes heredo-familiares
+    fam_antecedentes        = models.TextField(blank=True, verbose_name='Familiares con antecedentes (marque y especifique parentesco)')
+    otros_antecedentes          = models.TextField(blank=True, verbose_name='Especificaciones y otros antecedentes relevantes')
+
+    #Antecedentes personales no patológicos
+    alimentacion             = models.CharField(max_length=300, blank=True, verbose_name='Alimentación')
+    hig_viv_servicios        = models.CharField(max_length=300, blank=True, verbose_name='Higiene / vivienda / servicios')
+    act_fisica_sueño         = models.CharField(max_length=300, blank=True, verbose_name='Actividad física / sueño')
+    inmunizaciones           = models.CharField(max_length=300, blank=True, verbose_name='Inmunizaciones')
+    taxicomanias             = models.TextField(blank=True, verbose_name='Toxicomanías')
+    det_conusmo              = models.TextField(blank=True, verbose_name='Detalle de consumo (sustancias, cantidad, frecuencia, tiempo de evolución, último consumo):')
+
+    # Antecedentes personales patológicos
+    antecedentes_patologicos = models.CharField(blank=True, verbose_name='Antecedentes')
+    detalle_diagnostico         = models.TextField(blank=True, verbose_name='Detalle')
+    diagnostico_previos         = models.TextField(blank=True, verbose_name='Diagnósticos previos hoapitalizaciones psiquiatricas, intentos suicidas/autolesiones, psicoterapias previas')
+    medicacion_actual          = models.TextField(blank=True, verbose_name='Medicación actual')
+
+    #antecedentes gineco-obstétricos
+    menarca                  = models.CharField(max_length=100, null=True, blank=True, verbose_name='Menarca')
+    ritmo              = models.CharField(max_length=200, blank=True, verbose_name='Ritmo / FUM')
+    gestas                  = models.CharField(null=True, blank=True, verbose_name='Gestas / Partos / Cesáreas / Abortos')
+    met_planificacin          = models.CharField(max_length=200, blank=True, verbose_name='Método de planificación')
+    embararazo_actual          = models.BooleanField(default=False, verbose_name='¿Está embarazada actualmente?')
+    lactancia_actual          = models.BooleanField(default=False, verbose_name='¿Está lactando actualmente?')  
+
+    #antecedentes perinatales
+    embarazo = models.CharField(blank=True, verbose_name='Embarazo (planeado, control, complicaciones)')
+    tipo_parto = models.CharField(max_length=200, blank=True, verbose_name='Tipo de parto / semanas de gestación')
+    peso_nacer = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name='Peso y talla al nacer (kg) / APGAR')
+    complicaiones = models.CharField(max_length=300, blank=True, verbose_name='Complicaciones perinatales')
+    sosten_cefalico = models.CharField(max_length=300, blank=True, verbose_name='Sostén cefálico / sedestación / marcha')
+    primeras_palabras = models.CharField(max_length=300, blank=True, verbose_name='Primeras palabras / lenguaje')
+    control_esfinteres = models.CharField(max_length=300, blank=True, verbose_name='Control de esfínteres')
+    socializacion = models.CharField(max_length=300, blank=True, verbose_name='Socialización')
+    desempeño_escolar = models.TextField(blank=True, verbose_name= 'Desempeño escolar, conducta, estructura y dinámica familiar, red de apoyo:')
+
+    # apartado medico
+    peso_kg               = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True, verbose_name='Peso (kg)')
+    talla_m               = models.DecimalField(max_digits=4, decimal_places=2, blank=True, null=True, verbose_name='Talla (m)')
+    imc                   = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True, verbose_name='IMC')
+    perimetro_cefalico    = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True, verbose_name='Perím. cefálico (cm)')
+    tension_arterial      = models.CharField(max_length=20, blank=True, verbose_name='T/A (mmHg)')
+    frecuencia_cardiaca   = models.IntegerField(blank=True, null=True, verbose_name='FC (lpm)')
+    frecuencia_respiratoria = models.IntegerField(blank=True, null=True, verbose_name='FR (rpm)')
+    temperatura           = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True, verbose_name='Temp. (°C)')
+    saturacion_oxigeno    = models.DecimalField(max_digits=5, decimal_places=1, blank=True, null=True, verbose_name='SatO₂ (%)')
+    glucosa               = models.DecimalField(max_digits=5, decimal_places=1, blank=True, null=True, verbose_name='Glucosa (mg/dL)')
+    dolor                 = models.IntegerField(blank=True, null=True, verbose_name='Dolor (0-10)')
+    otros_signos_vitales  = models.CharField(max_length=300, blank=True, verbose_name='Otro')
+    sistema_cardiovascular     = models.TextField(blank=True, verbose_name='Cardiovascular')
+    sistema_respiratorio       = models.TextField(blank=True, verbose_name='Respiratorio')
+    sistema_digestivo          = models.TextField(blank=True, verbose_name='Digestivo')
+    sistema_genitourinario     = models.TextField(blank=True, verbose_name='Genitourinario')
+    sistema_endocrino          = models.TextField(blank=True, verbose_name='Endocrino')
+    sistema_neurologico        = models.TextField(blank=True, verbose_name='Neurológico')
+    sistema_musculoesqueletico = models.TextField(blank=True, verbose_name='Musculoesquelético')
+    sistema_piel               = models.TextField(blank=True, verbose_name='Piel y faneras')
+    sistema_sentidos           = models.TextField(blank=True, verbose_name='Órganos de los sentidos')
+    sistema_hematologico       = models.TextField(blank=True, verbose_name='Hematológico')
+
+    #exploración física
+    habitus_exterior            = models.TextField(blank=True, verbose_name='Habitus exterior')
+    cabeza_cuello               = models.TextField(blank=True, verbose_name='Cabeza y cuello')
+    torax                       = models.TextField(blank=True, verbose_name='Tórax (cardiopulmonar)')
+    abdomen                     = models.TextField(blank=True, verbose_name='Abdomen')
+    extremidades                = models.TextField(blank=True, verbose_name='Extremidades')
+    genitales                   = models.TextField(blank=True, verbose_name='Genitales (cuando aplique)')
+    exploracion_neurologica     = models.TextField(blank=True, verbose_name='Exploración neurológica básica')
+
+    #apartado psicologico
+    aspecto_actitud              = models.TextField(blank=True, verbose_name='Aspecto y actitud')   
+    conciencia_orientacion       = models.TextField(blank=True, verbose_name='Conciencia y orientación')
+    atencion_concentracion       = models.TextField(blank=True, verbose_name='Atención y concentración')
+    lenguaje                     = models.TextField(blank=True, verbose_name='Lenguaje')
+    pensamiento                  = models.TextField(blank=True, verbose_name='Pensamiento (curso/contenido)')
+    sensopercepcion              = models.TextField(blank=True, verbose_name='Sensopercepción')
+    afecto_animo                 = models.TextField(blank=True, verbose_name='Afecto y estado de ánimo')
+    memoria                      = models.TextField(blank=True, verbose_name='Memoria')
+    juicio                       = models.TextField(blank=True, verbose_name='Juicio e introspección (insight)')
+    psicomoticidad               = models.TextField(blank=True, verbose_name='Psicomotricidad')
+    emocional_afectiva           = models.TextField(blank=True, verbose_name='Emocional / Afectiva')
+    conductual                   = models.TextField(blank=True, verbose_name='Conductual')
+    familiar_pareja              = models.TextField(blank=True, verbose_name='Familiar y de pareja')
+    social_interpersonal         = models.TextField(blank=True, verbose_name='Social / interpersonal')
+    escolar_laboral              = models.TextField(blank=True, verbose_name='Escolar / Laboral')
+    personalidad =models.TextField(blank=True, verbose_name='Personalidad / Afrontamiento')
+    ideacion = models.CharField(max_length=100, choices=IDEACION_CHOICES, blank=True, verbose_name='Ideación / Conducta suicida')
+    heteroagresion = models.CharField(max_length=100, choices=HETEROAGRESION_CHOICES, blank=True, verbose_name='Riesgo de auto / heteroagresión')
+    contencion = models.TextField(blank=True, verbose_name='Plan de seguridad / Contención (cuando aplique):')
+
+    #Apartado neuropsicologico
+    orientacion = models.TextField(blank=True, verbose_name='Orientación')
+    atencion = models.TextField(blank=True, verbose_name='Atención (sostenida, selectiva, alternante)')
+    velocidad = models.TextField(blank=True, verbose_name='Velocidad de procesamiento')
+    memoria_trabajo = models.TextField(blank=True, verbose_name='Memoria de trabajo')
+    memoria_verbal = models.TextField(blank=True, verbose_name='Memoria verbal')
+    memoria_visual = models.TextField(blank=True, verbose_name='Memoria visual')
+    lenguaje_neuro = models.TextField(blank=True, verbose_name='Lenguaje (expresivo/comprensivo)')
+    funciones_ejecutivas = models.TextField(blank=True, verbose_name='Funciones ejecutivas (planeación, inhibición, felxibilidad)')
+    gnosias = models.TextField(blank=True, verbose_name='Gnosias (visuales, táctiles, auditivas)')
+    praxias = models.TextField(blank=True, verbose_name='Praxias (ideomotora, construccional)')
+    habilidades_viso = models.TextField(blank=True, verbose_name='Habilidades visoespaciales')
+    cognicion_social = models.TextField(blank=True, verbose_name='Cognición social')
+    habilidades_academicas = models.TextField(blank=True, verbose_name='Cálculo y habilidades académicas')
+    analisis_cualitativo = models.TextField(blank=True, verbose_name='Analisis cualitativo e integración del perfil neuropsicológico:')
+
+    #integracion diagnostica
+    clinica_integradora = models.TextField(blank=True, verbose_name='Resumen e impresión clínica integradora:')
+    factores_contextuales =models.TextField(blank=True, 
+    verbose_name='Factores contextuales / psicosociales')
+    nivel_funcionamiento = models.TextField(blank=True, verbose_name='Nivel de funcionamiento (WHODAS / GAF)')
+    diagnostico_diferencial = models.TextField(blank=True, verbose_name='Diagnóstico diferencial')
+
+    #pronostico
+    pronostico = models.CharField(max_length=100, choices=PRONOSTICO_CHOICES, blank=True, verbose_name='Pronóstico')
+    factores_pronostico = models.TextField(blank=True, verbose_name='Justificación de factores que modifican el pronóstico:')
+
+    #plan de manejo e indicaiones terapeuticas
+    objetivos_terapeuticos = models.TextField(blank=True, verbose_name='Objetivos terapéuticos, intervenciones, enfoque, frecuencia, interconsultas y referencias')
+    proxima_cita_texto = models.CharField(max_length=200, blank=True, verbose_name='Próxima cita')
+    proxima_cita = models.TextField(blank=True, verbose_name='Frecuencia de sesiones')
+    duracion_estimada = models.TextField(blank=True, verbose_name='Duración estimada del tratamiento')
+    nombre_profesional = models.TextField(blank=True, verbose_name='Nombre del profesional')
+    profesion = models.TextField(blank=True, verbose_name='Profesión / cargo')
+    cedula_profesional = models.TextField(blank=True, verbose_name='Cédula profesional')
+
+    # Tablas de datos estructurados (JSON)
+    medicacion_tabla = models.JSONField(blank=True, null=True, verbose_name='Medicación actual (tabla)')
+    instrumentos_psi = models.JSONField(blank=True, null=True, verbose_name='Instrumentos psicométricos aplicados')
+    instrumentos_neuro = models.JSONField(blank=True, null=True, verbose_name='Instrumentos neuropsicológicos aplicados')
+    estudios_lab = models.JSONField(blank=True, null=True, verbose_name='Estudios de laboratorio y gabinete')
+    diagnosticos_tabla = models.JSONField(blank=True, null=True, verbose_name='Integración diagnóstica (tabla)')
+    
 
     creado_en      = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
@@ -1980,6 +2198,24 @@ class AperturaExpediente(models.Model):
     class Meta:
         verbose_name = 'Apertura de Expediente'
         verbose_name_plural = 'Aperturas de Expediente'
+
+
+class Medicacion(models.Model):
+    apertura = models.ForeignKey(
+        AperturaExpediente, on_delete=models.CASCADE, related_name='medicaciones'
+    )
+    nombre    = models.CharField(max_length=200, blank=True, verbose_name='Medicamento')
+    dosis     = models.CharField(max_length=100, blank=True, verbose_name='Dosis')
+    frecuencia = models.CharField(max_length=100, blank=True, verbose_name='Frecuencia')
+    observaciones = models.CharField(max_length=300, blank=True, verbose_name='Observaciones')
+
+    class Meta:
+        verbose_name = 'Medicación'
+        verbose_name_plural = 'Medicaciones'
+        ordering = ['id']
+
+    def __str__(self):
+        return self.nombre or f'Medicación #{self.pk}'
 
 
 def obtener_bloqueos_terapeuta_en_fecha(terapeuta_id, fecha_obj):
