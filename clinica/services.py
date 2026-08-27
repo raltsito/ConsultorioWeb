@@ -148,7 +148,7 @@ def registrar_movimiento_economico(
 @transaction.atomic
 def registrar_movimiento_recepcion_desde_cita(*, cita, usuario):
     cita_bloqueada = (
-        Cita.objects.select_for_update()
+        Cita.objects.select_for_update(of=("self",))
         .select_related(
             "paciente",
             "servicio",
