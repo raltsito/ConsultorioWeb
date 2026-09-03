@@ -1,8 +1,12 @@
+from datetime import date
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.utils import timezone
+
+from django.forms import inlineformset_factory
 
 from .models import (
     AperturaExpediente,
@@ -12,6 +16,7 @@ from .models import (
     CODIGOS_INSTITUCIONALES,
     DocumentoPaciente,
     Horario,
+    Medicacion,
     NotaTerapeutaPaciente,
     Paciente,
     PropuestaTarifaDetalle,
@@ -1039,14 +1044,25 @@ class AperturaExpedienteForm(forms.ModelForm):
             'expediente_no':        forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 001'}),
             'apellido_paterno':     forms.HiddenInput(),
             'apellido_materno':     forms.HiddenInput(),
+            'edad':                 forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
             'ocupacion':            forms.TextInput(attrs={'class': 'form-control'}),
             'lugar_de_trabajo':     forms.TextInput(attrs={'class': 'form-control'}),
             'cargo':                forms.TextInput(attrs={'class': 'form-control'}),
             'estado_civil':         forms.Select(attrs={'class': 'form-select'}),
+            'sexo':                 forms.RadioSelect(attrs={'class': 'form-check-input'}),
+            'genero':               forms.TextInput(attrs={'class': 'form-control'}),
+            'curp':                 forms.TextInput(attrs={'class': 'form-control'}),
+            'nacimiento':           forms.TextInput(attrs={'class': 'form-control'}),
+            'nacionalidad':         forms.TextInput(attrs={'class': 'form-control'}),
+            'escolaridad':          forms.TextInput(attrs={'class': 'form-control'}),
+            'lateralidad':          forms.RadioSelect(attrs={'class': 'form-check-input'}),
             'calle':                forms.TextInput(attrs={'class': 'form-control'}),
             'num_exterior':         forms.TextInput(attrs={'class': 'form-control'}),
             'colonia':              forms.TextInput(attrs={'class': 'form-control'}),
             'division':             forms.Select(attrs={'class': 'form-select'}),
+            'referido':              forms.TextInput(attrs={'class': 'form-control'}),
+            'correo':                forms.EmailInput(attrs={'class': 'form-control'}),
+            'tipo_sangre':            forms.Select(attrs={'class': 'form-select'}),
             'tiene_hijos':          forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'num_hijos':            forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
             'hijo_1':               forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre y edad'}),
@@ -1055,9 +1071,18 @@ class AperturaExpedienteForm(forms.ModelForm):
             'hijo_4':               forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre y edad'}),
             'religion':             forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional'}),
             'motivo_consulta':      forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'padecimiento_actual':  forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
             'emergencia_contacto':  forms.TextInput(attrs={'class': 'form-control'}),
             'emergencia_telefono':  forms.TextInput(attrs={'class': 'form-control'}),
+            'parentesco_emergencia':forms.TextInput(attrs={'class': 'form-control'}),
             'como_se_entero':       forms.TextInput(attrs={'class': 'form-control'}),
+            #Datos de acompañante
+            'viene_acompanante':    forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'acompanante_nombre':      forms.TextInput(attrs={'class': 'form-control'}),
+            'parentesco_acompanante':  forms.TextInput(attrs={'class': 'form-control'}),
+            'telefono_acompanante':      forms.TextInput(attrs={'class': 'form-control'}),
+            'confiabilidad_acompanante':      forms.TextInput(attrs={'class': 'form-control'}),
+
             # Antecedentes médicos
             'tiene_enfermedad':     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'cual_enfermedad':      forms.TextInput(attrs={'class': 'form-control'}),
@@ -1071,27 +1096,181 @@ class AperturaExpedienteForm(forms.ModelForm):
             'terapia_hace_cuanto':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 1 año'}),
             'terapia_duracion':     forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 3 meses'}),
             'terapia_motivo':       forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            # Sustancias
-            'fuma':                     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'consume_alcohol':          forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'consume_otras_sustancias': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'cuales_sustancias':        forms.TextInput(attrs={'class': 'form-control'}),
-            # Hábitos
-            'comidas_al_dia':       forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
-            'horas_sueno':          forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
-            'actividad_fisica':     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'cual_actividad_fisica': forms.TextInput(attrs={'class': 'form-control'}),
             # Intento suicida
             'intento_suicida':              forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'intento_suicida_hace_cuanto':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 2 años'}),
             'intento_suicida_que_hizo':     forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'intento_suicida_motivo':       forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             # Vida sexual
-            'vida_sexual_activa':   forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'vida_sexual_activa':           forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+
+            #Antecentes heredo-fammiliares
+            'otros_antecedentes':           forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+
+            #antecedentes personales no patoloógicos
+            'alimentacion':                  forms.TextInput(attrs={'class': 'form-control'}),
+            'hig_viv_servicios':             forms.TextInput(attrs={'class': 'form-control'}),
+            'act_fisica_sueño':              forms.TextInput(attrs={'class': 'form-control'}),
+            'inmunizaciones':                forms.TextInput(attrs={'class': 'form-control'}),
+            'det_conusmo':                   forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+
+            #antecedentes personales patológicos
+            'detalle_diagnostico':           forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'diagnostico_previos':           forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'medicacion_actual':             forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+
+            #antecedentes gineco-obstétricos
+            'menarca':                       forms.TextInput(attrs={'class': 'form-control'}),
+            'ritmo':                             forms.TextInput(attrs={'class': 'form-control'}),
+            'gestas':                          forms.TextInput(attrs={'class': 'form-control'}),
+            'met_planificacin':                forms.TextInput(attrs={'class': 'form-control'}),
+            'embararazo_actual':               forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'lactancia_actual':                forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+
+            #antecedentes perinatales
+            'embarazo':                        forms.TextInput(attrs={'class': 'form-control'}),
+            'tipo_parto':                       forms.TextInput(attrs={'class': 'form-control'}),
+            'peso_nacer':                       forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'complicaiones':                    forms.TextInput(attrs={'class': 'form-control'}),
+            'sosten_cefalico':                  forms.TextInput(attrs={'class': 'form-control'}),
+            'primeras_palabras':                forms.TextInput(attrs={'class': 'form-control'}),
+            'control_esfinteres':               forms.TextInput(attrs={'class': 'form-control'}),
+            'socializacion':                    forms.TextInput(attrs={'class': 'form-control'}),
+            'desempeño_escolar':                forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+
+            #apartado medico
+            'peso_kg':                 forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'talla_m':                 forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'imc':                     forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1'}),
+            'perimetro_cefalico':      forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'tension_arterial':        forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 120/80'}),
+            'frecuencia_cardiaca':     forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'frecuencia_respiratoria': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'temperatura':             forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1'}),
+            'saturacion_oxigeno':      forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1'}),
+            'glucosa':                 forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1'}),
+            'dolor':                   forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 10}),
+            'otros_signos_vitales':    forms.TextInput(attrs={'class': 'form-control'}),
+            'sistema_cardiovascular':     forms.Textarea(attrs={'class': 'form-control', 'rows': 1, 'style': 'resize:none;'}),
+            'sistema_respiratorio':       forms.Textarea(attrs={'class': 'form-control', 'rows': 1, 'style': 'resize:none;'}),
+            'sistema_digestivo':          forms.Textarea(attrs={'class': 'form-control', 'rows': 1, 'style': 'resize:none;'}),
+            'sistema_genitourinario':     forms.Textarea(attrs={'class': 'form-control', 'rows': 1, 'style': 'resize:none;'}),
+            'sistema_endocrino':          forms.Textarea(attrs={'class': 'form-control', 'rows': 1, 'style': 'resize:none;'}),
+            'sistema_neurologico':        forms.Textarea(attrs={'class': 'form-control', 'rows': 1, 'style': 'resize:none;'}),
+            'sistema_musculoesqueletico': forms.Textarea(attrs={'class': 'form-control', 'rows': 1, 'style': 'resize:none;'}),
+            'sistema_piel':               forms.Textarea(attrs={'class': 'form-control', 'rows': 1, 'style': 'resize:none;'}),
+            'sistema_sentidos':           forms.Textarea(attrs={'class': 'form-control', 'rows': 1, 'style': 'resize:none;'}),
+            'sistema_hematologico':       forms.Textarea(attrs={'class': 'form-control', 'rows': 1, 'style': 'resize:none;'}),
+            
+            #exploración física
+            'habitus_exterior':            forms.TextInput(attrs={'class': 'form-control'}),
+            'cabeza_cuello':               forms.TextInput(attrs={'class': 'form-control'}),
+            'torax':                       forms.TextInput(attrs={'class': 'form-control'}),
+            'abdomen':                     forms.TextInput(attrs={'class': 'form-control'}),
+            'extremidades':                forms.TextInput(attrs={'class': 'form-control'}),
+            'genitales':                   forms.TextInput(attrs={'class': 'form-control'}),
+            'exploracion_neurologica':     forms.TextInput(attrs={'class': 'form-control'}),
+
+            #apartado psicologico
+            'aspecto_actitud':              forms.TextInput(attrs={'class': 'form-control'}),
+            'conciencia_orientacion':       forms.TextInput(attrs={'class': 'form-control'}),
+            'atencion_concentracion':       forms.TextInput(attrs={'class': 'form-control'}),
+            'lenguaje':                     forms.TextInput(attrs={'class': 'form-control'}),
+            'pensamiento':                  forms.TextInput(attrs={'class': 'form-control'}),
+            'sensopercepcion':              forms.TextInput(attrs={'class': 'form-control'}),
+            'afecto_animo':                 forms.TextInput(attrs={'class': 'form-control'}),
+            'memoria':                      forms.TextInput(attrs={'class': 'form-control'}),
+            'juicio':                       forms.TextInput(attrs={'class': 'form-control'}),
+            'psicomoticidad':               forms.TextInput(attrs={'class': 'form-control'}),
+            'emocional_afectiva':           forms.TextInput(attrs={'class': 'form-control'}),
+            'conductual':                   forms.TextInput(attrs={'class': 'form-control'}),
+            'familiar_pareja':              forms.TextInput(attrs={'class': 'form-control'}),
+            'social_interpersonal':         forms.TextInput(attrs={'class': 'form-control'}),
+            'escolar_laboral':              forms.TextInput(attrs={'class': 'form-control'}),
+            'personalidad':                 forms.TextInput(attrs={'class': 'form-control'}),
+            'ideacion':                     forms.RadioSelect(attrs={'class': 'form-check-input'}),
+            'heteroagresion':               forms.RadioSelect(attrs={'class': 'form-check-input'}),
+            'contencion':                   forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'style': 'resize:none;'}),
+
+            #apartado neuropsicologico
+            'orientacion':                  forms.TextInput(attrs={'class': 'form-control'}),
+            'atencion':                     forms.TextInput(attrs={'class': 'form-control'}),
+            'velocidad':                    forms.TextInput(attrs={'class': 'form-control'}),
+            'memoria_trabajo':              forms.TextInput(attrs={'class': 'form-control'}),
+            'memoria_verbal':               forms.TextInput(attrs={'class': 'form-control'}),
+            'memoria_visual':               forms.TextInput(attrs={'class': 'form-control'}),
+            'lenguaje_neuro':               forms.TextInput(attrs={'class': 'form-control'}),
+            'funciones_ejecutivas':         forms.TextInput(attrs={'class': 'form-control'}),
+            'gnosias':                      forms.TextInput(attrs={'class': 'form-control'}),
+            'praxias':                      forms.TextInput(attrs={'class': 'form-control'}),
+            'habilidades_viso':             forms.TextInput(attrs={'class': 'form-control'}),
+            'cognicion_social':             forms.TextInput(attrs={'class': 'form-control'}),
+            'habilidades_academicas':       forms.TextInput(attrs={'class': 'form-control'}),
+            'analisis_cualitativo':         forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'style': 'resize:none;'}),
+
+            #integracion diagnostica
+            'clinica_integradora':          forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'style': 'resize:none;'}),
+            'factores_contextuales':        forms.TextInput(attrs={'class': 'form-control'}),
+            'nivel_funcionamiento':         forms.TextInput(attrs={'class': 'form-control'}),
+            'diagnostico_diferencial':      forms.TextInput(attrs={'class': 'form-control'}),
+
+            #pronostico
+            'pronostico':                   forms.RadioSelect(attrs={'class': 'form-check-input'}),
+            'factores_pronostico':          forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'style': 'resize:none;'}),
+
+            #plan de manejo e indicaciones terapeuticas
+            'objetivos_terapeuticos':       forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'style': 'resize:none;'}),
+            'proxima_cita_texto':            forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 15/09/2026 10:00'}),
+            'proxima_cita':                 forms.TextInput(attrs={'class': 'form-control'}),
+            'duracion_estimada':            forms.TextInput(attrs={'class': 'form-control'}),
+            'nombre_profesional':           forms.TextInput(attrs={'class': 'form-control'}),
+            'profesion':                    forms.TextInput(attrs={'class': 'form-control'}),
+            'cedula_profesional':           forms.TextInput(attrs={'class': 'form-control'}),
         }
+
+    fam_antecedentes = forms.MultipleChoiceField(
+        choices=[(v, l) for v, l in AperturaExpediente.HEREDOFAMILIARES_CHOICES if v != ''],
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        required=False,
+        label='Familiares con antecedentes',
+    )
+
+    taxicomanias = forms.MultipleChoiceField(
+        choices=[(v, l) for v, l in AperturaExpediente.TAXICOMANIAS_CHOICES if v != ''],
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        required=False,
+        label='Toxicomanías',
+    )
+
+    antecedentes_patologicos = forms.MultipleChoiceField(
+        choices=[(v, l) for v, l in AperturaExpediente.ANTECEDENTES_CHOICES if v != ''],
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        required=False,
+        label='Antecedentes',
+    )
+
+    def clean_fam_antecedentes(self):
+        valores = self.cleaned_data.get('fam_antecedentes') or []
+        return ','.join(valores)
+
+    def clean_taxicomanias(self):
+        valores = self.cleaned_data.get('taxicomanias') or []
+        return ','.join(valores)
+
+    def clean_antecedentes_patologicos(self):
+        valores = self.cleaned_data.get('antecedentes_patologicos') or []
+        return ','.join(valores)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['sexo'].choices = [(v, l) for v, l in self.fields['sexo'].choices if v != '']
+        self.fields['lateralidad'].choices = [(v, l) for v, l in self.fields['lateralidad'].choices if v != '']
+        if self.instance.pk and self.instance.fam_antecedentes:
+            self.fields['fam_antecedentes'].initial = [v.strip() for v in self.instance.fam_antecedentes.split(',') if v.strip()]
+        if self.instance.pk and self.instance.taxicomanias:
+            self.fields['taxicomanias'].initial = [v.strip() for v in self.instance.taxicomanias.split(',') if v.strip()]
+        if self.instance.pk and self.instance.antecedentes_patologicos:
+            self.fields['antecedentes_patologicos'].initial = [v.strip() for v in self.instance.antecedentes_patologicos.split(',') if v.strip()]
         self.fields['nombre'].label = 'Nombre completo'
         self.fields['apellido_paterno'].required = False
         self.fields['apellido_materno'].required = False
@@ -1107,9 +1286,28 @@ class AperturaExpedienteForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.vive_con = ', '.join(self.cleaned_data.get('vive_con_sel', []))
+        fn = self.cleaned_data.get('fecha_nacimiento')
+        if fn:
+            hoy = date.today()
+            instance.edad = hoy.year - fn.year - ((hoy.month, hoy.day) < (fn.month, fn.day))
         if commit:
             instance.save()
         return instance
+
+
+MedicacionFormSet = inlineformset_factory(
+    AperturaExpediente,
+    Medicacion,
+    fields=['nombre', 'dosis', 'frecuencia', 'observaciones'],
+    extra=1,
+    can_delete=True,
+    widgets={
+        'nombre':       forms.TextInput(attrs={'class': 'form-control'}),
+        'dosis':        forms.TextInput(attrs={'class': 'form-control'}),
+        'frecuencia':   forms.TextInput(attrs={'class': 'form-control'}),
+        'observaciones': forms.TextInput(attrs={'class': 'form-control'}),
+    },
+)
 
 
 class AperturaExpedienteGrupalForm(forms.ModelForm):
@@ -1180,6 +1378,33 @@ class PacienteEmpresaForm(forms.ModelForm):
             'sexo': forms.Select(attrs={'class': 'form-select'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'WhatsApp'}),
             'identidad_contacto': forms.Select(attrs={'class': 'form-select'}),
+            'servicio_inicial': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+
+# =============================================================================
+# FORMULARIOS CONSULTORIA
+# =============================================================================
+
+class PacienteConsultoriaForm(forms.ModelForm):
+    """Formulario simplificado para que Consultoria registre nuevos aconsejados."""
+
+    def __init__(self, *args, divisiones=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if divisiones is not None:
+            self.fields['division'].queryset = divisiones.order_by('nombre')
+        self.fields['division'].required = True
+
+    class Meta:
+        model = Paciente
+        fields = ['nombre', 'fecha_nacimiento', 'sexo', 'telefono', 'identidad_contacto', 'division', 'servicio_inicial']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre completo'}),
+            'fecha_nacimiento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'sexo': forms.Select(attrs={'class': 'form-select'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'WhatsApp'}),
+            'identidad_contacto': forms.Select(attrs={'class': 'form-select'}),
+            'division': forms.Select(attrs={'class': 'form-select'}),
             'servicio_inicial': forms.Select(attrs={'class': 'form-select'}),
         }
 

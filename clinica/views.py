@@ -1012,51 +1012,172 @@ def _generar_pdf_apertura(apertura):
     from reportlab.lib import colors
     from reportlab.lib.units import cm
     from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
+        BaseDocTemplate, PageTemplate, Frame,
+        Paragraph, Spacer, Table, TableStyle, HRFlowable,
     )
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
     buffer = BytesIO()
-    doc = SimpleDocTemplate(
+    page_w, page_h = letter
+    margin = 1.8 * cm
+
+    navy   = colors.HexColor('#1b3a5c')
+    navy2  = colors.HexColor('#2c5f8a')
+    gray   = colors.HexColor('#546E7A')
+    lblue  = colors.HexColor('#e8f0f7')
+    border = colors.HexColor('#c7d2db')
+    white  = colors.white
+
+    def _footer(canvas, doc):
+        canvas.saveState()
+        canvas.setFont('Helvetica', 6.5)
+        canvas.setFillColor(gray)
+        canvas.drawString(margin, 1.2 * cm,
+            'Documento confidencial — Datos personales sensibles (LFPDPPP) NOM-004-SSA3-2012')
+        canvas.drawRightString(page_w - margin, 1.2 * cm, f'Página {doc.page}')
+        canvas.setStrokeColor(navy)
+        canvas.setLineWidth(0.4)
+        canvas.line(margin, 1.5 * cm, page_w - margin, 1.5 * cm)
+        canvas.restoreState()
+
+    doc = BaseDocTemplate(
         buffer, pagesize=letter,
-        rightMargin=2 * cm, leftMargin=2 * cm,
-        topMargin=2 * cm, bottomMargin=2 * cm,
+        rightMargin=margin, leftMargin=margin,
+        topMargin=margin, bottomMargin=2.5 * cm,
     )
+    frame = Frame(margin, 2 * cm, page_w - 2 * margin,
+                  page_h - margin - 2 * cm, id='main')
+    doc.addPageTemplates([
+        PageTemplate(id='all', frames=frame, onPage=_footer),
+    ])
 
     styles = getSampleStyleSheet()
-    blue  = colors.HexColor('#003087')
-    gray  = colors.HexColor('#546E7A')
-    lblue = colors.HexColor('#90CAF9')
+    cw = content_width = page_w - 2 * margin
 
-    T_HEADING = ParagraphStyle('heading', parent=styles['Normal'],
-                               fontSize=12, fontName='Helvetica-Bold',
-                               alignment=TA_CENTER, textColor=blue, spaceAfter=3)
-    T_SUB     = ParagraphStyle('sub', parent=styles['Normal'],
-                               fontSize=9, alignment=TA_CENTER, spaceAfter=8)
-    T_SECTION = ParagraphStyle('section', parent=styles['Normal'],
-                               fontSize=8, fontName='Helvetica-Bold',
-                               textColor=blue, spaceBefore=8, spaceAfter=3)
-    T_LABEL   = ParagraphStyle('label', parent=styles['Normal'],
-                               fontSize=7, fontName='Helvetica-Bold', textColor=gray)
-    T_VALUE   = ParagraphStyle('value', parent=styles['Normal'],
-                               fontSize=9, fontName='Helvetica', spaceAfter=3)
-    T_PRIVACY = ParagraphStyle('privacy', parent=styles['Normal'],
-                               fontSize=6.5, textColor=gray, leading=9, spaceBefore=6)
+    T_HDR_LEFT   = ParagraphStyle('hdr_l', parent=styles['Normal'],
+                                  fontSize=7.5, fontName='Helvetica',
+                                  textColor=navy, leading=10)
+    T_HDR_RIGHT  = ParagraphStyle('hdr_r', parent=styles['Normal'],
+                                  fontSize=7.5, fontName='Helvetica',
+                                  textColor=navy, leading=10, alignment=TA_RIGHT)
+    T_META_V     = ParagraphStyle('meta_v', parent=styles['Normal'],
+                                  fontSize=8, textColor=gray)
+    T_TITLE      = ParagraphStyle('title', parent=styles['Normal'],
+                                  fontSize=16, fontName='Helvetica-Bold',
+                                  alignment=TA_CENTER, textColor=navy,
+                                  spaceAfter=2, leading=20)
+    T_SUBTITLE   = ParagraphStyle('sub', parent=styles['Normal'],
+                                  fontSize=9, alignment=TA_CENTER,
+                                  textColor=gray, spaceAfter=2)
+    T_SECTION    = ParagraphStyle('section', parent=styles['Normal'],
+                                  fontSize=9, fontName='Helvetica-Bold',
+                                  textColor=white, leading=14)
+    T_SUBSEC     = ParagraphStyle('subsec', parent=styles['Normal'],
+                                  fontSize=8.5, fontName='Helvetica-Bold',
+                                  textColor=navy, spaceBefore=10, spaceAfter=2,
+                                  leading=13)
+    T_LABEL      = ParagraphStyle('label', parent=styles['Normal'],
+                                  fontSize=7.5, fontName='Helvetica-Bold',
+                                  textColor=navy, leading=10)
+    T_VALUE      = ParagraphStyle('value', parent=styles['Normal'],
+                                  fontSize=8.5, fontName='Helvetica', spaceAfter=2,
+                                  leading=12)
+    T_LISTA_LBL  = ParagraphStyle('lista_lbl', parent=styles['Normal'],
+                                  fontSize=8, fontName='Helvetica-Bold',
+                                  textColor=navy, leading=11)
+    T_PRIVACY    = ParagraphStyle('privacy', parent=styles['Normal'],
+                                  fontSize=6.5, textColor=gray, leading=9,
+                                  spaceBefore=4)
+    T_FOOTNOTE   = ParagraphStyle('fn', parent=styles['Normal'],
+                                  fontSize=7, textColor=gray, leading=9,
+                                  alignment=TA_CENTER, spaceBefore=4)
 
     def lbl(text):
-        return Paragraph(text.upper(), T_LABEL)
+        return Paragraph(text, T_LABEL)
 
     def val(v):
         return Paragraph(str(v) if v else '—', T_VALUE)
 
+    def section_bar(title):
+        t = Paragraph(title.upper(), T_SECTION)
+        tbl = Table([[t]], colWidths=[cw])
+        tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), navy),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('ROUNDEDCORNERS', [4, 4, 4, 4]),
+        ]))
+        return tbl
+
+    def section_spacer():
+        return Spacer(1, 20)
+
+    def subsection(title):
+        t = Paragraph(title, T_SUBSEC)
+        tbl = Table([[t]], colWidths=[cw])
+        tbl.setStyle(TableStyle([
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('LINEBELOW', (0, 0), (-1, -1), 1.2, lblue),
+        ]))
+        return tbl
+
     def grid(rows):
-        """Crea una tabla de 4 columnas label/valor, label/valor."""
         tbl = Table(rows, colWidths=['18%', '32%', '18%', '32%'])
         tbl.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 5),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+            ('GRID', (0, 0), (-1, -1), 0.6, border),
+            ('BACKGROUND', (0, 0), (0, -1), lblue),
+            ('BACKGROUND', (2, 0), (2, -1), lblue),
+        ]))
+        return tbl
+
+    def full_row(label, value):
+        tbl = Table([[lbl(label), val(value)]], colWidths=['24%', '76%'])
+        tbl.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 5),
+            ('GRID', (0, 0), (-1, -1), 0.6, border),
+            ('BACKGROUND', (0, 0), (0, -1), lblue),
+        ]))
+        return tbl
+
+    def tabla_lista(rows):
+        tbl = Table(rows, colWidths=['26%', '74%'])
+        tbl.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+            ('GRID', (0, 0), (-1, -1), 0.5, border),
+            ('BACKGROUND', (0, 0), (0, -1), lblue),
+        ]))
+        return tbl
+
+    def data_table(headers, data_rows):
+        all_rows = [headers] + data_rows
+        n = len(headers)
+        widths = [f'{100.0 / n:.1f}%'] * n
+        tbl = Table(all_rows, colWidths=widths)
+        tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), navy),
+            ('TEXTCOLOR', (0, 0), (-1, 0), white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('GRID', (0, 0), (-1, -1), 0.5, border),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
         ]))
         return tbl
 
@@ -1064,171 +1185,436 @@ def _generar_pdf_apertura(apertura):
     elems = []
 
     # ── Encabezado ──────────────────────────────────────────────────────────
-    elems.append(Paragraph('INSTITUTO DE ATENCIÓN INTEGRAL Y DESARROLLO HUMANO A.C.', T_HEADING))
-    elems.append(Paragraph('Información Personal del Paciente — Apertura de Expediente', T_SUB))
-    elems.append(HRFlowable(width='100%', thickness=1.5, color=blue, spaceAfter=6))
-
-    # Expediente No / fecha
-    elems.append(grid([
-        [lbl('Expediente No.'), val(apertura.expediente_no or '—'),
-         lbl('Fecha de apertura'), val(apertura.creado_en.strftime('%d/%m/%Y'))],
+    hdr = Table([
+        [Paragraph('GRUPO INTRA \u2014 Historia Cl\u00ednica Integral', T_HDR_LEFT),
+         Paragraph(f'Expediente No. {apertura.expediente_no or "\u2014"}', T_HDR_RIGHT)],
+    ], colWidths=['50%', '50%'])
+    hdr.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
     ]))
+    elems.append(hdr)
     elems.append(Spacer(1, 6))
+    elems.append(Paragraph('GRUPO INTRA', T_TITLE))
+    elems.append(Paragraph('Instituto de Atenci\u00f3n Integral y Desarrollo Humano, A.C.', T_SUBTITLE))
+    elems.append(Paragraph('Saltillo, Coahuila, M\u00e9xico', T_SUBTITLE))
+    elems.append(Spacer(1, 4))
+    elems.append(HRFlowable(width='100%', thickness=1.5, color=navy, spaceAfter=4))
+    elems.append(Spacer(1, 4))
+    elems.append(Paragraph(f'<b>Fecha de elaboraci\u00f3n:</b> {apertura.creado_en.strftime("%d/%m/%Y")}', T_META_V))
 
-    # ── Datos Personales ────────────────────────────────────────────────────
-    elems.append(Paragraph('Datos Personales', T_SECTION))
-    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    # ── II. Ficha de Identificación ─────────────────────────────────────────
+    elems.append(section_bar('II. Ficha de Identificación'))
+    elems.append(section_spacer())
+    elems.append(full_row('Nombre completo', p.nombre))
     elems.append(grid([
-        [lbl('Nombre completo'), val(p.nombre),
-         lbl('Fecha de Nacimiento'),
-         val(p.fecha_nacimiento.strftime('%d/%m/%Y') if p.fecha_nacimiento else '—')],
-        [lbl('Ocupación'), val(apertura.ocupacion),
+        [lbl('Fecha de Nacimiento'),
+         val(p.fecha_nacimiento.strftime('%d/%m/%Y') if p.fecha_nacimiento else '—'),
+         lbl('Edad'), val(str(apertura.edad) if apertura.edad else '—')],
+        [lbl('CURP'), val(apertura.curp),
+         lbl('Sexo'), val(p.get_sexo_display() if p.sexo else '—')],
+    ]))
+    elems.append(grid([
+        [lbl('Género'), val(apertura.genero),
+         lbl('Lugar de nacimiento'), val(apertura.nacimiento)],
+        [lbl('Nacionalidad'), val(apertura.nacionalidad),
          lbl('Estado Civil'), val(apertura.get_estado_civil_display() if apertura.estado_civil else '—')],
-        [lbl('Lugar de Trabajo'), val(apertura.lugar_de_trabajo),
-         lbl('Cargo'), val(apertura.cargo)],
+        [lbl('Escolaridad'), val(apertura.escolaridad),
+         lbl('Ocupación'), val(apertura.ocupacion)],
+        [lbl('Religión / Creencias'), val(apertura.religion or 'No especificada'),
+         lbl('Lateralidad'), val(apertura.lateralidad)],
+    ]))
+    elems.append(subsection('Domicilio'))
+    elems.append(grid([
         [lbl('Calle'), val(apertura.calle),
          lbl('Núm.'), val(apertura.num_exterior)],
-        [lbl('Colonia'), val(apertura.colonia),
-         lbl('División'), val(str(apertura.division) if apertura.division else '—')],
+    ]))
+    elems.append(full_row('Colonia', apertura.colonia or '—'))
+    elems.append(grid([
         [lbl('Número de Celular'), val(p.telefono or '—'),
-         lbl('Religión'), val(apertura.religion or 'No especificada')],
+         lbl('Correo electrónico'), val(apertura.correo)],
+        [         lbl('Tipo de sangre'), val((apertura.tipo_sangre or '—').upper()),
+         lbl('Referido por'), val(apertura.referido)],
     ]))
 
-    # ── Convivencia e Hijos ─────────────────────────────────────────────────
-    elems.append(Paragraph('Convivencia', T_SECTION))
-    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    elems.append(subsection('Datos del acompañante / informante / representante (cuando aplique)'))
+    elems.append(full_row('¿Viene acompañado?', 'Sí' if apertura.viene_acompanante else 'No'))
+    if apertura.viene_acompanante:
+        elems.append(grid([
+            [lbl('Nombre del acompañante'), val(apertura.acompanante_nombre),
+             lbl('Parentesco'), val(apertura.parentesco_acompanante)],
+            [lbl('Teléfono'), val(apertura.telefono_acompanante),
+             lbl('Confiabilidad del acompañante'), val(apertura.confiabilidad_acompanante)],
+        ]))
+
+    elems.append(subsection('Datos de contacto de emergencia'))
     elems.append(grid([
-        [lbl('Vive con'), val(apertura.vive_con or '—'),
-         lbl('Tiene hijos'), val('Sí' if apertura.tiene_hijos else 'No')],
-        [lbl('No. de Hijos'), val(str(apertura.num_hijos) if apertura.num_hijos is not None else '—'),
-         lbl(''), val('')],
+        [lbl('Nombre'), val(apertura.emergencia_contacto or '—'),
+         lbl('Parentesco'), val(apertura.parentesco_emergencia or '—')],
     ]))
-    if apertura.tiene_hijos:
-        hijos = [
-            (1, apertura.hijo_1), (2, apertura.hijo_2),
-            (3, apertura.hijo_3), (4, apertura.hijo_4),
-        ]
-        h_rows = [[lbl(f'Hijo {i}'), val(h), lbl(''), val('')]
-                  for i, h in hijos if h]
-        if h_rows:
-            elems.append(grid(h_rows))
+    elems.append(full_row('Teléfono', apertura.emergencia_telefono or '—'))
 
-    # ── Motivo de Consulta ──────────────────────────────────────────────────
-    elems.append(Paragraph('Motivo de Consulta', T_SECTION))
-    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
-    elems.append(Paragraph(apertura.motivo_consulta or '—', T_VALUE))
+    # ── III. Datos Personales ────────────────────────────────────────────────
+    elems.append(Spacer(1, 35))
+    elems.append(section_bar('III. Datos Personales'))
+    elems.append(section_spacer())
+    elems.append(grid([
+        [lbl('Lugar de Trabajo'), val(apertura.lugar_de_trabajo),
+         lbl('Cargo que desempeña'), val(apertura.cargo)],
+    ]))
+    elems.append(full_row('Vive con', apertura.vive_con or '—'))
+    elems.append(full_row('Hijos', 'Sí' if apertura.tiene_hijos else 'No'))
+    if apertura.tiene_hijos and apertura.num_hijos:
+        elems.append(full_row('No. de hijos', str(apertura.num_hijos)))
+        hijos = [h for h in [apertura.hijo_1, apertura.hijo_2, apertura.hijo_3, apertura.hijo_4] if h]
+        if hijos:
+            for h in hijos:
+                elems.append(full_row('Hijo(a)', h))
 
-    # ── Emergencia ──────────────────────────────────────────────────────────
-    elems.append(Paragraph('Contacto de Emergencia', T_SECTION))
-    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
-    emg = Table(
-        [[lbl('En caso de emergencia llamar a'), val(apertura.emergencia_contacto),
-          lbl('Teléfono'), val(apertura.emergencia_telefono)]],
-        colWidths=['22%', '28%', '14%', '36%'],
-    )
-    emg.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP')]))
-    elems.append(emg)
+    # ── IV. Motivo de Consulta ───────────────────────────────────────────────
+    elems.append(Spacer(1, 35))
+    elems.append(section_bar('IV. Motivo de Consulta y Padecimiento Actual'))
+    elems.append(section_spacer())
+    elems.append(full_row('Motivo de consulta (en palabras del paciente / informante)',
+                          apertura.motivo_consulta or '—'))
+    elems.append(full_row('Padecimiento actual (inicio, evolución, factores precipitantes, '
+                          'agravantes y atenuentes, tratamientos previos, repercusión funcional)',
+                          apertura.padecimiento_actual or '—'))
+    elems.append(full_row('¿Cómo se enteró de nosotros?', apertura.como_se_entero or '—'))
 
-    # ── Cómo se enteró ──────────────────────────────────────────────────────
-    elems.append(Spacer(1, 6))
-    elems.append(Table(
-        [[lbl('¿Cómo se enteró de nosotros?'), val(apertura.como_se_entero or '—')]],
-        colWidths=['28%', '72%'],
+    # ── V. Antecedentes Heredofamiliares ───────────────────────────────────
+    elems.append(Spacer(1, 35))
+    elems.append(section_bar('V. Antecedentes Heredofamiliares'))
+    elems.append(section_spacer())
+    elems.append(full_row('Familiares con antecedentes (especifique parentesco)', apertura.fam_antecedentes or '—'))
+    if apertura.otros_antecedentes:
+        elems.append(full_row('Otros antecedentes', apertura.otros_antecedentes))
+
+    # ── VI. Antecedentes Personales No Patológicos ──────────────────────────
+    elems.append(Spacer(1, 35))
+    elems.append(section_bar('VI. Antecedentes Personales No Patológicos'))
+    elems.append(section_spacer())
+    elems.append(full_row('Alimentación', apertura.alimentacion or '—'))
+    elems.append(full_row('Higiene, vivienda y servicios', apertura.hig_viv_servicios or '—'))
+    elems.append(full_row('Actividad física / sueño', apertura.act_fisica_sueño or '—'))
+    elems.append(full_row('Inmunizaciones', apertura.inmunizaciones or '—'))
+    elems.append(full_row('Toxicomanías', apertura.taxicomanias or '—'))
+    elems.append(full_row('Detalle de consumo (sustancias, cantidad, frecuencia, tiempo de evolución, último consumo)',
+                          apertura.det_conusmo or '—'))
+
+    # ── VII. Antecedentes Personales Patológicos ────────────────────────────
+    elems.append(Spacer(1, 35))
+    elems.append(section_bar('VII. Antecedentes Personales Patológicos'))
+    elems.append(section_spacer())
+    ant_pat_labels = dict((v, l) for v, l in AperturaExpediente.ANTECEDENTES_CHOICES if v)
+    if apertura.antecedentes_patologicos:
+        raw = [x.strip() for x in apertura.antecedentes_patologicos.split(',') if x.strip()]
+        display_ant = ', '.join(ant_pat_labels.get(x, x) for x in raw)
+    else:
+        display_ant = '—'
+    elems.append(full_row('Antecedentes (crónicos-degenerativos, quirúrgicos, traumáticos, alérgicos, transfusionales, hospitalizaciones, crisis convulsiva, TCE)', display_ant))
+    if apertura.detalle_diagnostico:
+        elems.append(full_row('Detalle (diagnóstico, fechas, manejo)', apertura.detalle_diagnostico))
+
+    elems.append(subsection('Antecedentes psiquiátricos / psicológicos'))
+    elems.append(full_row('Diagnósticos previos, hospitalizaciones psiquiátricas, intentos suicidas/autolesiones, psicoterapias previas',
+                          apertura.diagnostico_previos or '—'))
+
+    elems.append(subsection('Medicación actual'))
+    if apertura.medicacion_actual:
+        elems.append(Paragraph(apertura.medicacion_actual, T_VALUE))
+    elems.append(Spacer(1, 4))
+    med_data = apertura.medicacion_tabla or [['', '', '', ''] for _ in range(3)]
+    elems.append(data_table(
+        ['Medicamento', 'Dosis / vía', 'Frecuencia', 'Prescrito por'],
+        med_data,
     ))
 
-    # ── Antecedentes Médicos ────────────────────────────────────────────────
-    elems.append(Paragraph('Antecedentes Médicos', T_SECTION))
-    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    # ── VII. Antecedentes Gineco-obstétricos ───────────────────────────────
+    elems.append(Spacer(1, 35))
+    elems.append(section_bar('VIII. Ant. Gineco-obstétricos'))
+    elems.append(section_spacer())
     elems.append(grid([
-        [lbl('¿Tiene alguna enfermedad?'), val('Sí' if apertura.tiene_enfermedad else 'No'),
-         lbl('¿Cuál?'), val(apertura.cual_enfermedad or '—')],
+        [lbl('Menarca'), val(apertura.menarca or '—'),
+         lbl('Ritmo / FUM'), val(apertura.ritmo or '—')],
+        [lbl('Gestas / Partos / Cesáreas / Abortos'), val(apertura.gestas or '—'),
+         lbl('Método de planificación'), val(apertura.met_planificacin or '—')],
+        [lbl('Embarazo actual'), val('Sí' if apertura.embararazo_actual else 'No'),
+         lbl('Lactancia actual'), val('Sí' if apertura.lactancia_actual else 'No')],
     ]))
 
-    # ── Tratamiento Psiquiátrico ────────────────────────────────────────────
-    elems.append(Paragraph('Tratamiento Psiquiátrico', T_SECTION))
-    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
-    elems.append(grid([
-        [lbl('¿Está o ha estado en Tx psiquiátrico?'), val('Sí' if apertura.tx_psiquiatrico else 'No'),
-         lbl('¿Hace cuánto?'), val(apertura.tx_psiquiatrico_hace_cuanto or '—')],
-        [lbl('Medicamento(s)'), val(apertura.tx_psiquiatrico_medicamento or '—'),
-         lbl(''), val('')],
-    ]))
-    if apertura.tx_psiquiatrico and apertura.tx_psiquiatrico_motivo:
-        elems.append(Table(
-            [[lbl('Motivo del tratamiento'), val(apertura.tx_psiquiatrico_motivo)]],
-            colWidths=['22%', '78%'],
-        ))
+    # ── VIII. Antecedentes Perinatales ──────────────────────────────────────
+    elems.append(Spacer(1, 35))
+    elems.append(section_bar('IX. Ant. Perinatales y del Desarrollo neurológico (población infantil / cuando aplique)'))
+    elems.append(section_spacer())
+    elems.append(full_row('Embarazo (planeado, control, complicaciones)', apertura.embarazo or '—'))
+    elems.append(full_row('Tipo de parto / semanas de gestación', apertura.tipo_parto or '—'))
+    elems.append(full_row('Peso y talla al nacer / APGAR', apertura.peso_nacer or '—'))
+    elems.append(full_row('Complicaciones perinatales', apertura.complicaiones or '—'))
 
-    # ── Terapia Previa ──────────────────────────────────────────────────────
-    elems.append(Paragraph('Terapia Previa', T_SECTION))
-    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    elems.append(subsection('Hitos del desarrollo'))
     elems.append(grid([
-        [lbl('¿Ha tomado terapia anteriormente?'), val('Sí' if apertura.ha_tomado_terapia else 'No'),
-         lbl('¿Hace cuánto?'), val(apertura.terapia_hace_cuanto or '—')],
-        [lbl('¿Cuánto duró?'), val(apertura.terapia_duracion or '—'),
-         lbl(''), val('')],
-    ]))
-    if apertura.ha_tomado_terapia and apertura.terapia_motivo:
-        elems.append(Table(
-            [[lbl('Motivo'), val(apertura.terapia_motivo)]],
-            colWidths=['22%', '78%'],
-        ))
-
-    # ── Sustancias ──────────────────────────────────────────────────────────
-    elems.append(Paragraph('Sustancias', T_SECTION))
-    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
-    elems.append(grid([
-        [lbl('Fuma'), val('Sí' if apertura.fuma else 'No'),
-         lbl('Consume alcohol'), val('Sí' if apertura.consume_alcohol else 'No')],
-        [lbl('Otras sustancias'), val('Sí' if apertura.consume_otras_sustancias else 'No'),
-         lbl('¿Cuáles?'), val(apertura.cuales_sustancias or '—')],
+        [lbl('Sostén cefálico / sedestación / marcha'),
+         val(apertura.sosten_cefalico or '—'),
+         lbl('Primeras palabras / lenguaje'), val(apertura.primeras_palabras or '—')],
+        [lbl('Control de esfínteres'), val(apertura.control_esfinteres or '—'),
+         lbl('Socialización'), val(apertura.socializacion or '—')],
     ]))
 
-    # ── Hábitos ─────────────────────────────────────────────────────────────
-    elems.append(Paragraph('Hábitos', T_SECTION))
-    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
+    elems.append(subsection('Historia escolar y dinámica familiar'))
+    elems.append(full_row('Desempeño escolar, conducta, estructura y dinámica familiar, red de apoyo',
+                          apertura.desempeño_escolar or '—'))
+
+    # ── IX. Apartado Médico ────────────────────────────────────────────────
+    elems.append(Spacer(1, 35))
+    elems.append(section_bar('X. Apartado Médico'))
+    elems.append(section_spacer())
+
+    elems.append(subsection('9.1 Somatometría y signos vitales'))
     elems.append(grid([
-        [lbl('Comidas al día'), val(str(apertura.comidas_al_dia) if apertura.comidas_al_dia is not None else '—'),
-         lbl('Horas de sueño al día'), val(str(apertura.horas_sueno) if apertura.horas_sueno is not None else '—')],
-        [lbl('Actividad física'), val('Sí' if apertura.actividad_fisica else 'No'),
-         lbl('¿Cuál?'), val(apertura.cual_actividad_fisica or '—')],
+        [lbl('Peso (kg)'), val(apertura.peso_kg or '—'),
+         lbl('Talla (m)'), val(apertura.talla_m or '—')],
+        [lbl('IMC'), val(apertura.imc or '—'),
+         lbl('Perím. cefálico'), val(apertura.perimetro_cefalico or '—')],
+        [lbl('T/A (mmHg)'), val(apertura.tension_arterial or '—'),
+         lbl('Fc'), val(apertura.frecuencia_cardiaca or '—')],
+        [lbl('Fr'), val(apertura.frecuencia_respiratoria or '—'),
+         lbl('Temp. (°C)'), val(apertura.temperatura or '—')],
+        [lbl('SatO₂ (%)'), val(apertura.saturacion_oxigeno or '—'),
+         lbl('Glucosa'), val(apertura.glucosa or '—')],
+        [lbl('Dolor (0-10)'), val(apertura.dolor or '—'),
+         lbl('Otros'), val(apertura.otros_signos_vitales or '—')],
     ]))
 
-    # ── Riesgo Suicida ──────────────────────────────────────────────────────
-    elems.append(Paragraph('Riesgo Suicida', T_SECTION))
-    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
-    elems.append(grid([
-        [lbl('¿Ha intentado quitarse la vida?'), val('Sí' if apertura.intento_suicida else 'No'),
-         lbl('¿Hace cuánto?'), val(apertura.intento_suicida_hace_cuanto or '—')],
+    elems.append(subsection('9.2 Interrogatorio por aparatos y sistemas'))
+    inter_rows = [
+        [Paragraph('<b>Aparato / Sistema</b>', T_VALUE), Paragraph('<b>Hallazgos / sintomatología</b>', T_VALUE)],
+        [lbl('Cardiovascular'), val(apertura.sistema_cardiovascular)],
+        [lbl('Respiratorio'), val(apertura.sistema_respiratorio)],
+        [lbl('Digestivo'), val(apertura.sistema_digestivo)],
+        [lbl('Genitourinario'), val(apertura.sistema_genitourinario)],
+        [lbl('Endocrino'), val(apertura.sistema_endocrino)],
+        [lbl('Neurológico'), val(apertura.sistema_neurologico)],
+        [lbl('Musculoesquelético'), val(apertura.sistema_musculoesqueletico)],
+        [lbl('Piel y faneras'), val(apertura.sistema_piel)],
+        [lbl('\u00d3rganos de los sentidos'), val(apertura.sistema_sentidos)],
+        [lbl('Hematológico'), val(apertura.sistema_hematologico)],
+    ]
+    inter_tbl = Table(inter_rows, colWidths=['26%', '74%'])
+    inter_tbl.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), navy),
+        ('TEXTCOLOR', (0, 0), (-1, 0), white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('GRID', (0, 0), (-1, -1), 0.5, border),
+        ('BACKGROUND', (0, 1), (0, -1), lblue),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
     ]))
+    elems.append(inter_tbl)
+
+    elems.append(subsection('9.3 Exploración física (habitus exterior por segmentos)'))
+    elems.append(tabla_lista([
+        [lbl('Habitus exterior'), val(apertura.habitus_exterior)],
+        [lbl('Cabeza y cuello'), val(apertura.cabeza_cuello)],
+        [lbl('Tórax (cardiopulmonar)'), val(apertura.torax)],
+        [lbl('Abdomen'), val(apertura.abdomen)],
+        [lbl('Extremidades'), val(apertura.extremidades)],
+        [lbl('Genitales (cuando aplique)'), val(apertura.genitales)],
+        [lbl('Exploración neurológica básica'), val(apertura.exploracion_neurologica)],
+    ]))
+
+    elems.append(subsection('9.4 Antecedentes médicos'))
+    elems.append(full_row('¿Tiene alguna enfermedad?',
+                          'Sí' if apertura.tiene_enfermedad else 'No'))
+    if apertura.tiene_enfermedad and apertura.cual_enfermedad:
+        elems.append(full_row('¿Cuál?', apertura.cual_enfermedad))
+    elems.append(full_row('¿Tiene vida sexual activa?',
+                          'Sí' if apertura.vida_sexual_activa else 'No'))
+
+    elems.append(Spacer(1, 35))
+    # ── X. Apartado Psicológico ────────────────────────────────────────────
+
+    elems.append(section_bar('XI. Apartado Psicológico'))
+    elems.append(section_spacer())
+
+    elems.append(subsection('10.1 Examen mental'))
+    elems.append(tabla_lista([
+        [lbl('Aspecto y actitud'), val(apertura.aspecto_actitud)],
+        [lbl('Conciencia y orientación'), val(apertura.conciencia_orientacion)],
+        [lbl('Atención y concentración'), val(apertura.atencion_concentracion)],
+        [lbl('Lenguaje'), val(apertura.lenguaje)],
+        [lbl('Pensamiento (curso/contenido)'), val(apertura.pensamiento)],
+        [lbl('Sensopercepción'), val(apertura.sensopercepcion)],
+        [lbl('Afecto y estado de ánimo'), val(apertura.afecto_animo)],
+        [lbl('Memoria'), val(apertura.memoria)],
+        [lbl('Juicio e introspección (insight)'), val(apertura.juicio)],
+        [lbl('Psicomotricidad'), val(apertura.psicomoticidad)],
+    ]))
+
+    elems.append(subsection('10.2 Esferas de evaluación'))
+    elems.append(tabla_lista([
+        [lbl('Emocional / afectiva'), val(apertura.emocional_afectiva)],
+        [lbl('Conductual'), val(apertura.conductual)],
+        [lbl('Familiar y de pareja'), val(apertura.familiar_pareja)],
+        [lbl('Social / interpersonal'), val(apertura.social_interpersonal)],
+        [lbl('Escolar / laboral'), val(apertura.escolar_laboral)],
+        [lbl('Personalidad / afrontamiento'), val(apertura.personalidad)],
+    ]))
+    elems.append(subsection('10.3 Evaluación de riesgo'))
+    elems.append(full_row('Ideación / Conducta suicida',
+                          apertura.get_ideacion_display() or '—'))
+    elems.append(full_row('Riesgo de auto / heteroagresión',
+                          apertura.get_heteroagresion_display() or '—'))
+
+    elems.append(full_row('Plan de seguridad / Contención (cuando aplique):', apertura.contencion or '—'))
+
+    elems.append(subsection('Riesgo suicida'))
+    elems.append(full_row('\u00bfHa intentado quitarse la vida?',
+                          'Sí' if apertura.intento_suicida else 'No'))
     if apertura.intento_suicida:
-        rows_suicida = []
+        if apertura.intento_suicida_hace_cuanto:
+            elems.append(full_row('\u00bfHace cuánto?', apertura.intento_suicida_hace_cuanto))
         if apertura.intento_suicida_que_hizo:
-            rows_suicida.append([lbl('¿Qué hizo?'), val(apertura.intento_suicida_que_hizo)])
+            elems.append(full_row('\u00bfQué hizo?', apertura.intento_suicida_que_hizo))
         if apertura.intento_suicida_motivo:
-            rows_suicida.append([lbl('¿Por qué?'), val(apertura.intento_suicida_motivo)])
-        for r in rows_suicida:
-            elems.append(Table([r], colWidths=['22%', '78%']))
+            elems.append(full_row('\u00bfPor qué?', apertura.intento_suicida_motivo))
 
-    # ── Vida Sexual ─────────────────────────────────────────────────────────
-    elems.append(Paragraph('Vida Sexual', T_SECTION))
-    elems.append(HRFlowable(width='100%', thickness=0.5, color=lblue, spaceAfter=3))
-    elems.append(Table(
-        [[lbl('¿Tiene vida sexual activa?'), val('Sí' if apertura.vida_sexual_activa else 'No'), lbl(''), val('')]],
-        colWidths=['28%', '22%', '18%', '32%'],
+    elems.append(subsection('Tratamiento psiquiátrico / Terapia previa'))
+    elems.append(full_row('\u00bfEstá o ha estado en tratamiento psiquiátrico?',
+                          'Sí' if apertura.tx_psiquiatrico else 'No'))
+    if apertura.tx_psiquiatrico:
+        if apertura.tx_psiquiatrico_hace_cuanto:
+            elems.append(full_row('\u00bfHace cuánto?', apertura.tx_psiquiatrico_hace_cuanto))
+        if apertura.tx_psiquiatrico_medicamento:
+            elems.append(full_row('Medicamento(s)', apertura.tx_psiquiatrico_medicamento))
+        if apertura.tx_psiquiatrico_motivo:
+            elems.append(full_row('Motivo del tratamiento', apertura.tx_psiquiatrico_motivo))
+    elems.append(full_row('\u00bfHa tomado terapia anteriormente?',
+                          'Sí' if apertura.ha_tomado_terapia else 'No'))
+    if apertura.ha_tomado_terapia:
+        if apertura.terapia_hace_cuanto:
+            elems.append(full_row('\u00bfHace cuánto?', apertura.terapia_hace_cuanto))
+        if apertura.terapia_duracion:
+            elems.append(full_row('\u00bfCuánto duró?', apertura.terapia_duracion))
+        if apertura.terapia_motivo:
+            elems.append(full_row('Motivo', apertura.terapia_motivo))
+
+    elems.append(subsection('10.4 Instrumentos psicométricos aplicados'))
+    psi_data = apertura.instrumentos_psi or [['', '', ''] for _ in range(3)]
+    elems.append(Spacer(1, 6))
+    elems.append(data_table(
+        ['Instrumento / prueba', 'Resultado / puntuación', 'Interpretación'],
+        psi_data,
     ))
 
-    # ── Aviso de Privacidad ─────────────────────────────────────────────────
-    elems.append(Spacer(1, 10))
-    elems.append(HRFlowable(width='100%', thickness=0.5, color=gray))
+    # ── XII. Apartado Neuropsicológico ───────────────────────────────────────
+    elems.append(Spacer(1, 35))
+    elems.append(section_bar('XII. Apartado Neuropsicológico'))
+    elems.append(section_spacer())
+
+    elems.append(subsection('11.1 Dominios cognitivos evaluados'))
+    elems.append(tabla_lista([
+        [lbl('Orientación'), val(apertura.orientacion)],
+        [lbl('Atención (sostenida, selectiva, alternante)'), val(apertura.atencion)],
+        [lbl('Velocidad de procesamiento'), val(apertura.velocidad)],
+        [lbl('Memoria de trabajo'), val(apertura.memoria_trabajo)],
+        [lbl('Memoria verbal'), val(apertura.memoria_verbal)],
+        [lbl('Memoria visual'), val(apertura.memoria_visual)],
+        [lbl('Lenguaje (expresivo/comprensivo)'), val(apertura.lenguaje_neuro)],
+        [lbl('Funciones ejecutivas (planeación, inhibición, flexibilidad)'), val(apertura.funciones_ejecutivas)],
+        [lbl('Gnosias (visuales, táctiles, auditivas)'), val(apertura.gnosias)],
+        [lbl('Praxias (ideomotora, construccional)'), val(apertura.praxias)],
+        [lbl('Habilidades visoespaciales'), val(apertura.habilidades_viso)],
+        [lbl('Cognición social'), val(apertura.cognicion_social)],
+        [lbl('Cálculo y habilidades académicas'), val(apertura.habilidades_academicas)],
+    ]))
+
+    elems.append(subsection('11.2 Instrumentos neuropsicológicos aplicados'))
+    neuro_data = apertura.instrumentos_neuro or [['', '', ''] for _ in range(3)]
+    elems.append(Spacer(1, 6))
+    elems.append(data_table(
+        ['Instrumento / batería', 'Puntuación (bruta/escalar/percentil)', 'Clasificación'],
+        neuro_data,
+    ))
+    elems.append(full_row('Análisis cualitativo e integración del perfil neuropsicológico',
+                          apertura.analisis_cualitativo or '—'))
+
+    # ── XIII. Estudios de laboratorio y gabinete ────────────────────────────
+    elems.append(Spacer(1, 35))
+    elems.append(section_bar('XIII. Estudios de laboratorio y gabinete'))
+    elems.append(section_spacer())
+    lab_data = apertura.estudios_lab or [['', '', ''] for _ in range(3)]
+    elems.append(Spacer(1, 6))
+    elems.append(data_table(
+        ['Fecha', 'Estudio', 'Resultado relevante'],
+        lab_data,
+    ))
+
+    # ── XIV. Integración Diagnóstica ────────────────────────────────────────
+    elems.append(Spacer(1, 35))
+    elems.append(section_bar('XIV. Integración Diagnóstica (CIE-11 / DSM-5-TR)'))
+    elems.append(section_spacer())
+    elems.append(full_row('Resumen e impresión clínica integradora',
+                          apertura.clinica_integradora or '—'))
+    diag_data = apertura.diagnosticos_tabla or [['', '', ''] for _ in range(3)]
+    elems.append(Spacer(1, 6))
+    elems.append(data_table(
+        ['Diagnóstico', 'Código CIE-11', 'Código DSM-5-TR'],
+        diag_data,
+    ))
+    elems.append(grid([
+        [lbl('Factores contextuales / psicosociales'),
+         val(apertura.factores_contextuales or '—'),
+         lbl('Nivel de funcionamiento (WHODAS / GAF)'),
+         val(apertura.nivel_funcionamiento or '—')],
+    ]))
+    elems.append(full_row('Diagnóstico diferencial', apertura.diagnostico_diferencial or '—'))
+
+    # ── XV. Pronóstico ─────────────────────────────────────────────────────
+    elems.append(Spacer(1, 35))
+    elems.append(section_bar('XV. Pronóstico'))
+    elems.append(section_spacer())
+    elems.append(full_row('Pronóstico',
+                          apertura.get_pronostico_display() or '—'))
+    elems.append(full_row('Justificación de factores que modifican el pronóstico',
+                          apertura.factores_pronostico or '—'))
+
+    # ── XVI. Plan de Manejo ────────────────────────────────────────────────
+    elems.append(Spacer(1, 35))
+    elems.append(section_bar('XVI. Plan de Manejo e Indicaciones Terapéuticas'))
+    elems.append(section_spacer())
+    elems.append(full_row('Objetivos terapéuticos, intervenciones, enfoque, frecuencia, interconsultas y referencias',
+                          apertura.objetivos_terapeuticos or '—'))
+    elems.append(full_row('Próxima cita', apertura.proxima_cita_texto or '—'))
+    elems.append(grid([
+        [lbl('Frecuencia de sesiones'), val(apertura.proxima_cita or '—'),
+         lbl('Duración estimada del tratamiento'), val(apertura.duracion_estimada or '—')],
+    ]))
+    elems.append(full_row('Nombre del profesional responsable', apertura.nombre_profesional or '—'))
+    elems.append(grid([
+        [lbl('Profesión / cargo'), val(apertura.profesion or '—'),
+         lbl('Cédula profesional'), val(apertura.cedula_profesional or '—')],
+    ]))
+
+    # ── Firma ──────────────────────────────────────────────────────────────
+    elems.append(Spacer(1, 30))
+    elems.append(HRFlowable(width='55%', thickness=0.6, color=gray, spaceAfter=4))
     elems.append(Paragraph(
-        '<b>Aviso de Privacidad</b> — De acuerdo con lo establecido en la Constitución Política de los '
-        'Estados Unidos Mexicanos, la Ley Federal De Protección de Datos Personales y en el Código Ético '
-        'del Psicólogo, la totalidad de la información como de los registros e historias clínicas, están '
-        'cubiertas por el secreto profesional del Instituto de Atención Integral y Desarrollo Humano A.C. '
-        'y sus colaboradores. WhatsApp: 844 443 99 87 | ANA CECILIA TREVIÑO No. 158 COL. IGNACIO ZARAGOZA',
+        'Firma autógrafa del profesional responsable', T_FOOTNOTE))
+    elems.append(Spacer(1, 16))
+
+    elems.append(Paragraph(
+        'De conformidad con la NOM-004-SSA3-2012, todo documento del expediente debe contener '
+        'nombre completo, cargo, n\u00famero de cédula profesional y firma autógrafa del '
+        'profesional que lo elabora, así como fecha y hora.',
         T_PRIVACY,
     ))
+   
 
     doc.build(elems)
     return buffer.getvalue()
@@ -1505,6 +1891,24 @@ def expediente_terapeuta_detalle(request, paciente_id):
             if form_apertura.is_valid():
                 ap = form_apertura.save(commit=False)
                 ap.paciente = paciente
+
+                # Recopilar datos de tablas desde POST
+                def _collect_table(prefix, rows, cols):
+                    data = []
+                    for r in range(rows):
+                        row = []
+                        for c in range(cols):
+                            row.append(request.POST.get(f'{prefix}_{r}_{c}', '').strip())
+                        data.append(row)
+                    # Quitar filas completamente vacías
+                    return [row for row in data if any(cell for cell in row)]
+
+                ap.medicacion_tabla = _collect_table('med', 4, 4)
+                ap.instrumentos_psi = _collect_table('psi', 3, 3)
+                ap.instrumentos_neuro = _collect_table('neuro', 3, 3)
+                ap.estudios_lab = _collect_table('lab', 3, 3)
+                ap.diagnosticos_tabla = _collect_table('diag', 3, 3)
+
                 ap.save()
 
                 nombre_completo = (form_apertura.cleaned_data.get('nombre') or '').strip()

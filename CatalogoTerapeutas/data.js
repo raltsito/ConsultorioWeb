@@ -28,6 +28,7 @@ window.AREAS = {
   violencia:    { label: "Violencia",         iconKey: "shield",   color: "#B45309", soft: "#FEF1D6", terms: ["Violencia"] },
   familia:      { label: "Familia & Parejas", iconKey: "users",    color: "#7C3AED", soft: "#EFE6FE", terms: ["Familiar","Parejas","Grupal","Crianza"] },
   infantil:     { label: "Infantil",          iconKey: "child",    color: "#0D9488", soft: "#D6F3EF", terms: ["Infantil","Neurodesarrollo"] },
+  adolescencia: { label: "Adolescencia",      iconKey: "youth",    color: "#0891B2", soft: "#CFFAFE", terms: ["Adolescencia","Adolescente","Adolescentes","Puberto"] },
   sexual:       { label: "Salud Sexual",      iconKey: "heart",    color: "#DB2777", soft: "#FCE2EF", terms: ["Salud sexual"] },
   tanatologia:  { label: "Tanatología",       iconKey: "leaf",     color: "#4338CA", soft: "#E2E1FB", terms: ["Tanatología"] },
   especializado:{ label: "Especializado",     iconKey: "sparkles", color: "#475569", soft: "#E5E9EF", terms: ["Hipnosis clínica","Psiquiatría","Consejería"] },
@@ -147,10 +148,14 @@ window.SYNONYMS = {
   "menor":            "Infantil",
   "pediatrico":       "Infantil",
   "pediátrico":       "Infantil",
-  "adolescente":      "Infantil",
   "tdah":             "Neurodesarrollo",
   "autismo":          "Neurodesarrollo",
   "tea":              "Neurodesarrollo",
+
+  // ── Adolescencia ──
+"adolescente":  "Adolescencia",
+"adolescentes": "Adolescencia",
+"puberto":      "Adolescencia",
 
   // ── TLP ──
   "trastorno límite": "TLP",
