@@ -1,0 +1,18 @@
+<tr data-proposal-row>
+    {% for hidden in detalle_form.hidden_fields %}{{ hidden }}{% endfor %}
+    <td class="ps-4" style="min-width: 240px;">
+        {{ detalle_form.servicio }}
+        {% for error in detalle_form.servicio.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        {% for error in detalle_form.non_field_errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+    </td>
+    <td><span class="proposal-current" data-current-rate>{% if detalle_form.tarifa_actual_visual %}${{ detalle_form.tarifa_actual_visual }}{% else %}Tarifa pendiente{% endif %}</span></td>
+    <td style="min-width: 150px;">
+        <div class="input-group input-group-sm"><span class="input-group-text">$</span>{{ detalle_form.precio_propuesto }}</div>
+        {% for error in detalle_form.precio_propuesto.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+    </td>
+    <td style="min-width: 140px;">
+        {{ detalle_form.gratuita_propuesta }}
+        {% for error in detalle_form.gratuita_propuesta.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+    </td>
+    <td class="pe-4 text-end"><button class="proposal-remove" type="button" data-remove-row title="Quitar servicio" aria-label="Quitar servicio">×</button></td>
+</tr>

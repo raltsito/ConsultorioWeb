@@ -63,8 +63,109 @@ urlpatterns = [
     path('api/penalizacion-paciente/', clinica_views.api_penalizacion_paciente, name='api_penalizacion_paciente'),
     path('api/sin-reagendar/', clinica_views.api_sin_reagendar, name='api_sin_reagendar'),
     path('precios-servicios/', clinica_views.precios_servicios, name='precios_servicios'),
+    path(
+        'precios-servicios/beneficios-referidos/',
+        clinica_views.beneficios_referidos,
+        name='beneficios_referidos',
+    ),
+
+    # ============================================================================
+    # ===== INICIO RECUPERACIÓN PRECIOS: rutas ==================================
+    # ============================================================================
+    path(
+        'precios-servicios/<int:servicio_id>/',
+        clinica_views.servicio_catalogo_detalle,
+        name='servicio_catalogo_detalle',
+    ),
+
+    path(
+        'catalogo-servicios/',
+        clinica_views.catalogo_servicios_tarifas,
+        name='catalogo_servicios_tarifas',
+    ),
+    path(
+        'catalogo-servicios/propuestas/',
+        clinica_views.propuestas_tarifas_lista,
+        name='propuestas_tarifas_lista',
+    ),
+    path(
+        'catalogo-servicios/propuestas/nueva/',
+        clinica_views.propuesta_tarifas_nueva,
+        name='propuesta_tarifas_nueva',
+    ),
+    path(
+        'catalogo-servicios/propuestas/pendientes/',
+        clinica_views.propuestas_tarifas_pendientes,
+        name='propuestas_tarifas_pendientes',
+    ),
+    path(
+        'catalogo-servicios/propuestas/<int:propuesta_id>/',
+        clinica_views.propuesta_tarifas_detalle,
+        name='propuesta_tarifas_detalle',
+    ),
+    path(
+        'catalogo-servicios/propuestas/<int:propuesta_id>/agregar/',
+        clinica_views.propuesta_tarifa_agregar_detalle,
+        name='propuesta_tarifa_agregar_detalle',
+    ),
+    path(
+        'catalogo-servicios/propuestas/detalle/<int:detalle_id>/eliminar/',
+        clinica_views.propuesta_tarifa_eliminar_detalle,
+        name='propuesta_tarifa_eliminar_detalle',
+    ),
+    path(
+        'catalogo-servicios/propuestas/detalle/<int:detalle_id>/editar/',
+        clinica_views.propuesta_tarifa_editar_detalle,
+        name='propuesta_tarifa_editar_detalle',
+    ),
+    path(
+        'catalogo-servicios/propuestas/<int:propuesta_id>/enviar/',
+        clinica_views.propuesta_tarifas_enviar,
+        name='propuesta_tarifas_enviar',
+    ),
+    path(
+        'catalogo-servicios/propuestas/<int:propuesta_id>/duplicar/',
+        clinica_views.propuesta_tarifas_duplicar,
+        name='propuesta_tarifas_duplicar',
+    ),
+    path(
+        'catalogo-servicios/propuestas/<int:propuesta_id>/aprobar/',
+        clinica_views.propuesta_tarifas_aprobar,
+        name='propuesta_tarifas_aprobar',
+    ),
+    path(
+        'catalogo-servicios/propuestas/<int:propuesta_id>/rechazar/',
+        clinica_views.propuesta_tarifas_rechazar,
+        name='propuesta_tarifas_rechazar',
+    ),
+    path(
+        'catalogo-servicios/tarifa/directa/',
+        clinica_views.tarifa_servicio_directa,
+        name='tarifa_servicio_directa',
+    ),
+    path(
+        'catalogo-servicios/tarifa/<int:tarifa_id>/cancelar/',
+        clinica_views.tarifa_servicio_cancelar_futura,
+        name='tarifa_servicio_cancelar_futura',
+    ),
+    path(
+        'catalogo-servicios/notificaciones/',
+        clinica_views.notificaciones_tarifas_lista,
+        name='notificaciones_tarifas_lista',
+    ),
+    path(
+        'catalogo-servicios/notificaciones/<int:notificacion_id>/leer/',
+        clinica_views.notificacion_tarifa_marcar_leida,
+        name='notificacion_tarifa_marcar_leida',
+    ),
+    # ============================================================================
+    # ===== FIN RECUPERACIÓN PRECIOS: rutas =====================================
+    # ============================================================================
+
     path('citas/<int:cita_id>/checkout/', clinica_views.checkout_cita, name='checkout_cita'),
     path('bitacora/', clinica_views.bitacora_diaria, name='bitacora_diaria'),
+    path('bitacora/citas/<int:cita_id>/registrar-pago/',clinica_views.registrar_pago_recepcion,name='registrar_pago_recepcion'),
+    path('bitacora/pagos/<int:pago_id>/confirmar/',clinica_views.confirmar_pago_recepcion,name='confirmar_pago_recepcion'),
     path('reporte-general/', clinica_views.reporte_general, name='reporte_general'),
     path('ausentismo/', clinica_views.estadisticas_ausentismo, name='estadisticas_ausentismo'),
     path('nomina/', clinica_views.nomina_lista, name='nomina_lista'),

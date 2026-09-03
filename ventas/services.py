@@ -1,12 +1,14 @@
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
+from urllib.parse import unquote, urlparse
 
 from django.db import IntegrityError, transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
 
-from clinica.models import Cita
+from clinica.models import Cita, CobroCita
 from clinica.services import cita_tiene_movimiento_confirmado
 
 from .classification import captador_es_elegible_para_liquidacion
@@ -146,20 +148,57 @@ def evaluar_elegibilidad_captacion(paciente):
     return ElegibilidadCaptacion(True, "elegible", "Paciente nuevo elegible.")
 
 
+# ============================================================================
+# ===== INICIO RECUPERACIÓN CAPTACIÓN / QR: normalización ====================
+# ============================================================================
+
+
+def normalizar_token_captacion(valor):
+    """Extrae el token de una lectura directa o de la URL del QR oficial."""
+    valor = (valor or "").strip()
+    if not valor:
+        return ""
+
+    parsed = urlparse(valor)
+    if parsed.scheme or parsed.netloc:
+        segmentos = [segmento for segmento in parsed.path.split("/") if segmento]
+        return unquote(segmentos[-1]).strip() if segmentos else ""
+
+    return unquote(parsed.path).strip().strip("/")
+
+
+# ============================================================================
+# ===== FIN RECUPERACIÓN CAPTACIÓN / QR: normalización =======================
+# ============================================================================
+
+
 def buscar_codigo_captacion(token):
     """Devuelve código y estado estable para la web y futuras interfaces."""
-    codigo = (
-        CodigoCaptacion.objects.select_related(
-            "captador__usuario",
-            "captador__empresa",
-        )
-        .filter(token=(token or "").strip())
-        .first()
+    token = normalizar_token_captacion(token)
+    codigos = CodigoCaptacion.objects.select_related(
+        "captador__usuario",
+        "captador__empresa",
     )
-    if not codigo or not codigo.activo:
+    coincidencia_publica = re.fullmatch(r"INTRA([0-9]{4,})", token, re.IGNORECASE)
+    if coincidencia_publica:
+        codigo_id = int(coincidencia_publica.group(1))
+        if codigo_id > 0 and token.upper() == f"INTRA{codigo_id:04d}":
+            codigo = codigos.filter(pk=codigo_id).first()
+        else:
+            codigo = None
+    else:
+        codigo = codigos.filter(token=token).first()
+    if not codigo:
         return None, "inexistente"
+    if not codigo.activo:
+        return codigo, "codigo_inactivo"
     if not codigo.captador.activo:
         return codigo, "inactivo"
+    if (
+        codigo.porcentaje_comision is None
+        or not 0 <= codigo.porcentaje_comision <= 10
+    ):
+        return codigo, "sin_configurar"
     return codigo, "valido"
 
 
@@ -183,19 +222,41 @@ def registrar_captacion(*, paciente, codigo, usuario, canal=""):
         raise ValueError(
             "Este captador está inactivo y no puede generar nuevas captaciones."
         )
+    if (
+        codigo.porcentaje_comision is None
+        or not 0 <= codigo.porcentaje_comision <= 10
+    ):
+        raise ValueError(
+            "Este código de captación aún no tiene una comisión configurada."
+        )
 
     try:
-        return Captacion.objects.create(
+        captacion = Captacion.objects.create(
             paciente=paciente,
             captador=codigo.captador,
             codigo=codigo,
             registrado_por=usuario,
+            estado=Captacion.ESTADO_APROBADA,
             canal=canal.strip(),
             captador_nombre_snapshot=codigo.captador.nombre_display,
             captador_tipo_snapshot=codigo.captador.clasificacion_display,
+            porcentaje_comision=codigo.porcentaje_comision,
+            decidido_por=codigo.porcentaje_configurado_por,
+            decidido_en=codigo.porcentaje_configurado_en,
         )
     except IntegrityError as exc:
         raise ValueError("Este paciente ya cuenta con una captación registrada.") from exc
+
+    EventoCaptacion.objects.create(
+        captacion=captacion,
+        accion=EventoCaptacion.ACCION_APROBADA,
+        usuario=codigo.porcentaje_configurado_por,
+        estado_anterior=Captacion.ESTADO_PENDIENTE,
+        estado_nuevo=Captacion.ESTADO_APROBADA,
+        porcentaje_comision=captacion.porcentaje_comision,
+        motivo="Aprobación automática por configuración previa del QR.",
+    )
+    return captacion
 
 
 def _obtener_captacion_pendiente(captacion):
@@ -211,11 +272,11 @@ def _obtener_captacion_pendiente(captacion):
 def aprobar_captacion(*, captacion, porcentaje, usuario):
     if isinstance(porcentaje, bool) or not isinstance(porcentaje, int):
         raise PorcentajeComisionInvalidoError(
-            "El porcentaje debe ser un número entero entre 1 y 10."
+            "El porcentaje debe ser un número entero entre 0 y 10."
         )
-    if porcentaje < 1 or porcentaje > 10:
+    if porcentaje < 0 or porcentaje > 10:
         raise PorcentajeComisionInvalidoError(
-            "El porcentaje debe estar entre 1 y 10."
+            "El porcentaje debe estar entre 0 y 10."
         )
 
     captacion = _obtener_captacion_pendiente(captacion)
@@ -330,13 +391,11 @@ def _primera_cita_asistida(paciente):
 
 
 def _cita_es_anterior_a_captacion(cita, captacion):
-    fecha_hora = datetime.combine(cita.fecha, cita.hora)
-    if timezone.is_aware(captacion.fecha_captacion):
-        fecha_hora = timezone.make_aware(
-            fecha_hora,
-            timezone.get_current_timezone(),
-        )
-    return fecha_hora < captacion.fecha_captacion
+    fecha_captacion = timezone.localtime(
+        captacion.fecha_captacion
+    ).date()
+
+    return cita.fecha < fecha_captacion
 
 
 def _resultado(captacion, estado, *, cita=None, detalle="", comision=None):
@@ -372,6 +431,12 @@ def evaluar_y_generar_comision(captacion, *, usuario=None):
             "datos_inconsistentes",
             detalle="Captación aprobada sin porcentaje autorizado.",
         )
+    if captacion.porcentaje_comision == 0:
+        return _resultado(
+            captacion,
+            "sin_comision",
+            detalle="Captación configurada sin comisión.",
+        )
 
     cita = _primera_cita_asistida(captacion.paciente)
     if cita is None:
@@ -383,11 +448,14 @@ def evaluar_y_generar_comision(captacion, *, usuario=None):
             cita=cita,
             detalle="Existe una asistencia anterior a la captación.",
         )
-    if not cita_tiene_movimiento_confirmado(cita):
+    cobro = (
+        CobroCita.objects.select_for_update()
+        .filter(cita=cita)
+        .first()
+    )
+    if cobro is None or cobro.total_confirmado < cobro.importe_esperado:
         return _resultado(captacion, "cita_sin_pago", cita=cita)
-    base = cita.importe_servicio_snapshot
-    if base is None:
-        return _resultado(captacion, "sin_importe_servicio", cita=cita)
+    base = cobro.importe_esperado
     if base <= Decimal("0.00"):
         return _resultado(captacion, "importe_servicio_invalido", cita=cita)
 
@@ -423,6 +491,24 @@ def evaluar_y_generar_comision(captacion, *, usuario=None):
         "generada",
         cita=cita,
         comision=comision,
+    )
+
+
+def generar_comision_captacion_si_corresponde(*, cita, usuario=None):
+    """Evalúa la captación del paciente principal tras confirmar un pago."""
+    if cita is None or cita.paciente_id is None:
+        return None
+
+    captacion = (
+        Captacion.objects.filter(paciente_id=cita.paciente_id)
+        .first()
+    )
+    if captacion is None:
+        return None
+
+    return evaluar_y_generar_comision(
+        captacion,
+        usuario=usuario,
     )
 
 

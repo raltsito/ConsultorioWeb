@@ -6,6 +6,7 @@ from django.urls import reverse
 from clinica.models import Cita
 from clinica.tests_helpers import ClinicaTestDataMixin
 
+from ventas.forms import CaptacionForm
 from ventas.models import Captacion, Captador, IntentoCaptacionRechazado
 from ventas.services import evaluar_elegibilidad_captacion, registrar_captacion
 
@@ -136,6 +137,23 @@ class CaptacionViewTests(ClinicaTestDataMixin, TestCase):
         self.assertEqual(captacion.captador_nombre_snapshot, "Colegio ABC")
         self.assertEqual(captacion.captador_tipo_snapshot, "Escuela")
 
+    def test_codigo_publico_y_token_validan_el_mismo_codigo(self):
+        self.client.force_login(self.recepcion)
+        for entrada in (
+            self.captador.codigo_activo.codigo_publico,
+            self.captador.codigo_activo.token,
+        ):
+            with self.subTest(entrada=entrada):
+                formulario = CaptacionForm({
+                    "paciente": self.paciente.pk,
+                    "codigo": entrada,
+                })
+                self.assertTrue(formulario.is_valid(), formulario.errors)
+                self.assertEqual(
+                    formulario.codigo_validado,
+                    self.captador.codigo_activo,
+                )
+
     def test_captador_inactivo_no_permite_captacion(self):
         self.captador.activo = False
         self.captador.save(update_fields=["activo"])
@@ -184,7 +202,8 @@ class CaptacionViewTests(ClinicaTestDataMixin, TestCase):
             reverse("ventas:elegibilidad_paciente", args=[self.otro_paciente.pk])
         )
         self.assertContains(lista, "Colegio ABC")
-        self.assertContains(detalle, self.captador.codigo_activo.token)
+        self.assertContains(detalle, self.captador.codigo_activo.codigo_publico)
+        self.assertNotContains(detalle, self.captador.codigo_activo.token)
         self.assertTrue(elegibilidad.json()["elegible"])
 
     def test_inicio_sustituye_validar_qr_por_captaciones(self):

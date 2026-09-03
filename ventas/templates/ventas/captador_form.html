@@ -25,7 +25,12 @@
 
       <div class="row g-3">
         {% for field in form %}
-          <div class="col-md-6">
+          <div
+            class="col-md-6"
+            {% if field.name == 'usuario' or field.name == 'empresa' or field.name == 'empresa_nueva_nombre' or field.name == 'nombre_externo' or field.name == 'tipo_organizacion' %}
+              data-captador-campo="{{ field.name }}"
+            {% endif %}
+          >
             <label
               class="form-label fw-semibold"
               for="{{ field.id_for_label }}"
@@ -33,6 +38,14 @@
               {{ field.label }}
             </label>
             {{ field }}
+
+            {% if field.name == 'porcentaje_comision' %}
+              <span class="input-group-text d-inline-flex mt-2">%</span>
+            {% endif %}
+
+            {% if field.help_text %}
+              <div class="form-text">{{ field.help_text }}</div>
+            {% endif %}
 
             {% for error in field.errors %}
               <div class="text-danger small">{{ error }}</div>
@@ -49,4 +62,33 @@
     </div>
   </form>
 </div>
+
+<script>
+  (() => {
+    const tipo = document.querySelector('[data-captador-tipo]');
+    if (!tipo) return;
+
+    const camposPorTipo = {
+      interno: ['usuario'],
+      empresa: ['empresa'],
+      empresa_nueva: ['empresa_nueva_nombre'],
+      externo: ['nombre_externo', 'tipo_organizacion'],
+    };
+    const contenedores = document.querySelectorAll('[data-captador-campo]');
+
+    const actualizarCampos = () => {
+      const visibles = camposPorTipo[tipo.value] || [];
+      contenedores.forEach((contenedor) => {
+        const visible = visibles.includes(contenedor.dataset.captadorCampo);
+        contenedor.hidden = !visible;
+        contenedor.querySelectorAll('input, select, textarea').forEach((control) => {
+          control.disabled = !visible;
+        });
+      });
+    };
+
+    tipo.addEventListener('change', actualizarCampos);
+    actualizarCampos();
+  })();
+</script>
 {% endblock %}

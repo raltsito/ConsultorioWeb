@@ -117,7 +117,7 @@
             <dt class="col-sm-7">Pago confirmado vigente</dt>
             <dd class="col-sm-5">{% if detalle.tiene_pago_vigente %}Sí{% else %}No{% endif %}</dd>
             <dt class="col-sm-7">Importe histórico del servicio</dt>
-            <dd class="col-sm-5">${{ comision.cita_generadora.importe_servicio_snapshot|floatformat:'2u' }}</dd>
+            <dd class="col-sm-5">${{ comision.base_calculo|floatformat:'2u' }}</dd>
             <dt class="col-sm-7">Total registrado</dt>
             <dd class="col-sm-5">${{ detalle.total_recibido|floatformat:'2u' }}</dd>
           </dl>

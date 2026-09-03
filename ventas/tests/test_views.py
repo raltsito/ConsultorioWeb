@@ -110,8 +110,11 @@ class AdministracionCaptadoresTests(VentasViewMixin, TestCase):
         detalle = self.client.get(reverse("ventas:captador_detalle", args=[captador.id]))
         self.assertEqual(lista.status_code, 200)
         self.assertContains(lista, captador.nombre_display)
+        self.assertContains(lista, captador.codigo_activo.codigo_publico)
+        self.assertNotContains(lista, captador.codigo_activo.token)
         self.assertEqual(detalle.status_code, 200)
-        self.assertContains(detalle, captador.codigo_activo.token)
+        self.assertContains(detalle, captador.codigo_activo.codigo_publico)
+        self.assertNotContains(detalle, captador.codigo_activo.token)
 
 
 class ValidacionYQRTests(VentasViewMixin, TestCase):
@@ -155,6 +158,7 @@ class ValidacionYQRTests(VentasViewMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         contenido = qr_mock.return_value.add_data.call_args.args[0]
         self.assertIn(self.captador.codigo_activo.token, contenido)
+        self.assertNotIn(self.captador.codigo_activo.codigo_publico, contenido)
         self.assertNotIn("comision", contenido.lower())
         self.assertNotIn("descuento", contenido.lower())
         self.assertNotIn("porcentaje", contenido.lower())

@@ -1,9 +1,9 @@
 import unicodedata
 import uuid
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -429,16 +429,823 @@ class Division(models.Model):
     def __str__(self):
         return self.nombre
 
+
+class CategoriaServicio(models.Model):
+    codigo = models.CharField(max_length=30, unique=True)
+    nombre = models.CharField(max_length=100, unique=True)
+    activo = models.BooleanField(default=True)
+    orden = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Categoría de servicio'
+        verbose_name_plural = 'Categorías de servicio'
+        ordering = ('orden', 'nombre')
+
+    def __str__(self):
+        return self.nombre
+
+
 class Servicio(models.Model):
+    MODALIDAD_INDIVIDUAL = 'individual'
+    MODALIDAD_PAREJA = 'pareja'
+    MODALIDAD_FAMILIAR = 'familiar'
+    MODALIDAD_GRUPAL = 'grupal'
+    MODALIDAD_CHOICES = (
+        (MODALIDAD_INDIVIDUAL, 'Individual'),
+        (MODALIDAD_PAREJA, 'Pareja'),
+        (MODALIDAD_FAMILIAR, 'Familiar'),
+        (MODALIDAD_GRUPAL, 'Grupal'),
+    )
+
+    IVA_INCLUIDO_16 = 'iva_incluido_16'
+    IVA_EXENTO = 'exento'
+    TRATAMIENTO_IVA_CHOICES = (
+        (IVA_INCLUIDO_16, 'IVA incluido 16%'),
+        (IVA_EXENTO, 'Exento'),
+    )
+
     nombre = models.CharField(max_length=100)
     precio = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True,
         verbose_name="Precio estándar",
         help_text="Precio público del servicio. Se usa para calcular penalizaciones por inasistencia."
     )
+    activo = models.BooleanField(default=True)
+    categoria = models.ForeignKey(
+        CategoriaServicio,
+        on_delete=models.PROTECT,
+        related_name='servicios',
+        null=True,
+        blank=True,
+    )
+    codigo = models.CharField(max_length=30, unique=True, null=True, blank=True)
+    duracion_minutos = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+    )
+    modalidad = models.CharField(
+        max_length=20,
+        choices=MODALIDAD_CHOICES,
+        null=True,
+        blank=True,
+    )
+    orden = models.PositiveIntegerField(default=0)
+    reemplazado_por = models.ForeignKey(
+        'self',
+        on_delete=models.PROTECT,
+        related_name='variantes_historicas',
+        null=True,
+        blank=True,
+    )
+    tratamiento_iva = models.CharField(
+        max_length=20,
+        choices=TRATAMIENTO_IVA_CHOICES,
+        null=True,
+        blank=True,
+    )
+
+    def clean(self):
+        super().clean()
+        errores = {}
+        reemplazo = self.reemplazado_por
+        if reemplazo is not None:
+            if reemplazo is self or (self.pk and reemplazo.pk == self.pk):
+                errores['reemplazado_por'] = (
+                    'Un servicio no puede reemplazarse por sí mismo.'
+                )
+            elif reemplazo.reemplazado_por_id is not None:
+                errores['reemplazado_por'] = (
+                    'El reemplazo debe apuntar directamente al servicio canónico.'
+                )
+            if self.activo:
+                errores['activo'] = (
+                    'Un servicio reemplazado debe permanecer inactivo.'
+                )
+        if errores:
+            raise ValidationError(errores)
 
     def __str__(self):
         return self.nombre
+
+
+class TarifaServicio(models.Model):
+    ESTADO_PUBLICADA = 'publicada'
+    ESTADO_CANCELADA = 'cancelada'
+    ESTADO_CHOICES = (
+        (ESTADO_PUBLICADA, 'Publicada'),
+        (ESTADO_CANCELADA, 'Cancelada'),
+    )
+
+    ORIGEN_MIGRACION = 'migracion'
+    ORIGEN_DIRECCION = 'direccion'
+    ORIGEN_PROPUESTA = 'propuesta'
+    ORIGEN_CHOICES = (
+        (ORIGEN_MIGRACION, 'Migración'),
+        (ORIGEN_DIRECCION, 'Dirección'),
+        (ORIGEN_PROPUESTA, 'Propuesta'),
+    )
+
+    servicio = models.ForeignKey(
+        Servicio,
+        on_delete=models.PROTECT,
+        related_name='tarifas',
+    )
+    precio_final = models.DecimalField(max_digits=12, decimal_places=2)
+    gratuita = models.BooleanField(default=False)
+    vigente_desde = models.DateField()
+    vigente_hasta = models.DateField(null=True, blank=True)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES)
+    origen = models.CharField(max_length=20, choices=ORIGEN_CHOICES)
+    motivo_publicacion = models.TextField(blank=True)
+    tratamiento_iva_snapshot = models.CharField(
+        max_length=20,
+        choices=Servicio.TRATAMIENTO_IVA_CHOICES,
+    )
+    tasa_iva_snapshot = models.DecimalField(max_digits=5, decimal_places=2)
+    creada_en = models.DateTimeField(auto_now_add=True)
+    publicada_en = models.DateTimeField()
+    cancelada_en = models.DateTimeField(null=True, blank=True)
+    motivo_cancelacion = models.TextField(blank=True)
+    creada_por = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='tarifas_servicio_creadas',
+    )
+    publicada_por = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='tarifas_servicio_publicadas',
+    )
+    cancelada_por = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='tarifas_servicio_canceladas',
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        verbose_name = 'Tarifa de servicio'
+        verbose_name_plural = 'Tarifas de servicio'
+        ordering = ('servicio_id', 'vigente_desde', 'id')
+        indexes = [
+            models.Index(
+                fields=['servicio', 'estado', 'vigente_desde'],
+                name='tarifa_serv_est_inicio_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(gratuita=True, precio_final=Decimal('0.00'))
+                    | models.Q(gratuita=False, precio_final__gt=Decimal('0.00'))
+                ),
+                name='tarifa_gratuidad_precio_consistente',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(vigente_hasta__isnull=True)
+                    | models.Q(vigente_hasta__gte=models.F('vigente_desde'))
+                ),
+                name='tarifa_rango_vigencia_valido',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        estado='publicada',
+                        cancelada_en__isnull=True,
+                        cancelada_por__isnull=True,
+                        motivo_cancelacion='',
+                    )
+                    | models.Q(
+                        estado='cancelada',
+                        cancelada_en__isnull=False,
+                        cancelada_por__isnull=False,
+                    )
+                ),
+                name='tarifa_cancelacion_consistente',
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        errores = {}
+        if self.gratuita and self.precio_final != Decimal('0.00'):
+            errores['precio_final'] = (
+                'Una tarifa gratuita debe tener precio final cero.'
+            )
+        if not self.gratuita and self.precio_final <= Decimal('0.00'):
+            errores['precio_final'] = (
+                'Una tarifa no gratuita debe tener precio final mayor que cero.'
+            )
+        if self.vigente_hasta and self.vigente_hasta < self.vigente_desde:
+            errores['vigente_hasta'] = (
+                'La vigencia final no puede ser anterior a la inicial.'
+            )
+        if self.servicio_id and self.estado == self.ESTADO_PUBLICADA:
+            solapadas = TarifaServicio.objects.filter(
+                servicio_id=self.servicio_id,
+                estado=self.ESTADO_PUBLICADA,
+            ).exclude(pk=self.pk)
+            solapadas = solapadas.filter(
+                models.Q(vigente_hasta__isnull=True)
+                | models.Q(vigente_hasta__gte=self.vigente_desde)
+            )
+            if self.vigente_hasta is not None:
+                solapadas = solapadas.filter(
+                    vigente_desde__lte=self.vigente_hasta
+                )
+            if solapadas.exists():
+                errores['vigente_desde'] = (
+                    'La tarifa se superpone con otra tarifa publicada.'
+                )
+        if errores:
+            raise ValidationError(errores)
+
+    @property
+    def total(self):
+        return Decimal(self.precio_final).quantize(
+            Decimal('0.01'),
+            rounding=ROUND_HALF_UP,
+        )
+
+    @property
+    def subtotal(self):
+        if self.tratamiento_iva_snapshot == Servicio.IVA_EXENTO:
+            return self.total
+        factor = Decimal('1.00') + (
+            Decimal(self.tasa_iva_snapshot) / Decimal('100.00')
+        )
+        return (self.total / factor).quantize(
+            Decimal('0.01'),
+            rounding=ROUND_HALF_UP,
+        )
+
+    @property
+    def importe_iva(self):
+        return self.total - self.subtotal
+
+    def __str__(self):
+        return f'{self.servicio} — {self.total} desde {self.vigente_desde}'
+
+
+# RECUPERACIÓN BENEFICIOS: modelo sincronizado con 0107
+class ReglaBeneficioReferido(models.Model):
+    categoria_servicio = models.ForeignKey(
+        CategoriaServicio,
+        on_delete=models.PROTECT,
+        related_name='reglas_beneficio_referido',
+        verbose_name='Categoría',
+    )
+    porcentaje_descuento = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal('0.00')),
+            MaxValueValidator(Decimal('100.00')),
+        ],
+        verbose_name='Descuento',
+    )
+    activo = models.BooleanField(default=True, verbose_name='Estado')
+    vigente_desde = models.DateField(verbose_name='Vigente desde')
+    vigente_hasta = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='Vigente hasta',
+    )
+    creado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='reglas_beneficio_referido_creadas',
+        null=True,
+        blank=True,
+    )
+    aprobado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='reglas_beneficio_referido_aprobadas',
+        null=True,
+        blank=True,
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+    aprobado_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Regla de beneficio por referido'
+        verbose_name_plural = 'Reglas de beneficio por referido'
+        ordering = ('categoria_servicio__orden', '-vigente_desde', '-pk')
+        permissions = [
+            (
+                'view_referral_benefit_rule',
+                'Puede consultar reglas de beneficio por referido',
+            ),
+            (
+                'manage_referral_benefit_rule',
+                'Puede administrar reglas de beneficio por referido',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    porcentaje_descuento__gte=Decimal('0.00'),
+                    porcentaje_descuento__lte=Decimal('100.00'),
+                ),
+                name='regla_beneficio_porcentaje_entre_0_100',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(vigente_hasta__isnull=True)
+                    | models.Q(vigente_hasta__gte=models.F('vigente_desde'))
+                ),
+                name='regla_beneficio_fin_no_anterior_inicio',
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        errores = {}
+        if self.vigente_hasta and self.vigente_hasta < self.vigente_desde:
+            errores['vigente_hasta'] = (
+                'La vigencia final no puede ser anterior a la inicial.'
+            )
+        if self.categoria_servicio_id and self.activo:
+            superpuestas = ReglaBeneficioReferido.objects.filter(
+                categoria_servicio_id=self.categoria_servicio_id,
+                activo=True,
+            ).exclude(pk=self.pk)
+            superpuestas = superpuestas.filter(
+                models.Q(vigente_hasta__isnull=True)
+                | models.Q(vigente_hasta__gte=self.vigente_desde)
+            )
+            if self.vigente_hasta is not None:
+                superpuestas = superpuestas.filter(
+                    vigente_desde__lte=self.vigente_hasta
+                )
+            if superpuestas.exists():
+                errores['vigente_desde'] = (
+                    'La regla se superpone con otra regla activa.'
+                )
+        if errores:
+            raise ValidationError(errores)
+
+    def __str__(self):
+        return (
+            f'{self.categoria_servicio} — '
+            f'{self.porcentaje_descuento}% desde {self.vigente_desde}'
+        )
+# ============================================================================
+# ===== INICIO RECUPERACIÓN PAGO FORMAL: CobroCita + Pago ====================
+# ============================================================================
+
+
+class CobroCita(models.Model):
+    SITUACION_PENDIENTE = 'pendiente'
+    SITUACION_SALDADO = 'saldado'
+    SITUACION_A_FAVOR = 'a_favor'
+
+    cita = models.OneToOneField(
+        'Cita',
+        on_delete=models.PROTECT,
+        related_name='cobro',
+    )
+    importe_esperado = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.00'))],
+    )
+    creado_en = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Cobro de cita'
+        verbose_name_plural = 'Cobros de citas'
+        ordering = ('-creado_en', '-id')
+        permissions = [
+            (
+                'view_reception_ledger',
+                'Puede consultar la Bitácora de Recepción',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    importe_esperado__gte=Decimal('0.00')
+                ),
+                name='cobro_cita_importe_esperado_no_negativo',
+            ),
+        ]
+
+    @property
+    def total_confirmado(self):
+        total = self.pagos.filter(
+            estado__in=(
+                Pago.ESTADO_CONFIRMADO,
+                Pago.ESTADO_CON_DIFERENCIA,
+            )
+        ).aggregate(
+            total=models.Sum('importe_verificado')
+        )['total']
+
+        return total or Decimal('0.00')
+
+    @property
+    def saldo(self):
+        return self.importe_esperado - self.total_confirmado
+
+    @property
+    def situacion_saldo(self):
+        saldo = self.saldo
+
+        if saldo > Decimal('0.00'):
+            return self.SITUACION_PENDIENTE
+
+        if saldo < Decimal('0.00'):
+            return self.SITUACION_A_FAVOR
+
+        return self.SITUACION_SALDADO
+
+    def __str__(self):
+        return f'Cobro cita #{self.cita_id} — ${self.importe_esperado}'
+
+
+class Pago(models.Model):
+    ORIGEN_TERAPEUTA = 'terapeuta'
+    ORIGEN_RECEPCION = 'recepcion'
+
+    ORIGEN_CHOICES = (
+        (ORIGEN_TERAPEUTA, 'Terapeuta'),
+        (ORIGEN_RECEPCION, 'Recepción'),
+    )
+
+    ESTADO_PENDIENTE_VERIFICACION = 'pendiente_verificacion'
+    ESTADO_CONFIRMADO = 'confirmado'
+    ESTADO_CON_DIFERENCIA = 'con_diferencia'
+    ESTADO_ANULADO = 'anulado'
+
+    ESTADO_CHOICES = (
+        (
+            ESTADO_PENDIENTE_VERIFICACION,
+            'Pendiente de verificación',
+        ),
+        (ESTADO_CONFIRMADO, 'Confirmado'),
+        (ESTADO_CON_DIFERENCIA, 'Con diferencia'),
+        (ESTADO_ANULADO, 'Anulado'),
+    )
+
+    METODO_DEBITO = 'Debito'
+    METODO_CREDITO = 'Credito'
+    METODO_TRANSFERENCIA = 'Transferencia'
+    METODO_EFECTIVO = 'Efectivo'
+    METODO_PASE = 'Pase'
+
+    METODO_CHOICES = (
+        (METODO_DEBITO, 'Débito'),
+        (METODO_CREDITO, 'Crédito'),
+        (METODO_TRANSFERENCIA, 'Transferencia'),
+        (METODO_EFECTIVO, 'Efectivo'),
+        (METODO_PASE, 'Pase'),
+    )
+
+    cobro = models.ForeignKey(
+        CobroCita,
+        on_delete=models.PROTECT,
+        related_name='pagos',
+    )
+    importe_reportado = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.00'))],
+    )
+    metodo_pago = models.CharField(
+        max_length=50,
+        choices=METODO_CHOICES,
+    )
+    origen_registro = models.CharField(
+        max_length=20,
+        choices=ORIGEN_CHOICES,
+    )
+    estado = models.CharField(
+        max_length=30,
+        choices=ESTADO_CHOICES,
+        default=ESTADO_PENDIENTE_VERIFICACION,
+    )
+    registrado_en = models.DateTimeField(default=timezone.now)
+    registrado_por = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='pagos_registrados',
+    )
+
+    importe_verificado = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+    )
+    verificado_por = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='pagos_verificados',
+        null=True,
+        blank=True,
+    )
+    verificado_en = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    observacion_diferencia = models.TextField(blank=True)
+
+    anulado_por = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='pagos_anulados',
+        null=True,
+        blank=True,
+    )
+    anulado_en = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    motivo_anulacion = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = 'Pago'
+        verbose_name_plural = 'Pagos'
+        ordering = ('-registrado_en', '-id')
+        permissions = [
+            (
+                'register_reception_payment',
+                'Puede registrar pagos desde Recepción',
+            ),
+            (
+                'confirm_reception_payment',
+                'Puede confirmar pagos desde Recepción',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['estado', 'registrado_en'],
+                name='pago_estado_fecha_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    importe_reportado__gte=Decimal('0.00')
+                ),
+                name='pago_importe_reportado_no_negativo',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(importe_verificado__isnull=True)
+                    | models.Q(
+                        importe_verificado__gte=Decimal('0.00')
+                    )
+                ),
+                name='pago_importe_verificado_no_negativo',
+            ),
+            models.UniqueConstraint(
+             fields=('cobro',),
+             condition=(
+                 models.Q(origen_registro='terapeuta')
+                    & ~models.Q(estado='anulado')
+                 ),
+                 name='pago_checkout_terapeuta_activo_unico',
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        errores = {}
+
+        if self.estado in (
+            self.ESTADO_CONFIRMADO,
+            self.ESTADO_CON_DIFERENCIA,
+        ):
+            if self.importe_verificado is None:
+                errores['importe_verificado'] = (
+                    'El importe verificado es obligatorio '
+                    'para un pago verificado.'
+                )
+
+            if self.verificado_por_id is None:
+                errores['verificado_por'] = (
+                    'El usuario que verificó el pago es obligatorio.'
+                )
+
+            if self.verificado_en is None:
+                errores['verificado_en'] = (
+                    'La fecha de verificación es obligatoria.'
+                )
+
+        if self.estado == self.ESTADO_CON_DIFERENCIA:
+            if not (self.observacion_diferencia or '').strip():
+                errores['observacion_diferencia'] = (
+                    'Describe la diferencia encontrada.'
+                )
+
+            if (
+                self.importe_verificado is not None
+                and self.importe_verificado == self.importe_reportado
+            ):
+                errores['importe_verificado'] = (
+                    'Un pago con diferencia debe tener un importe '
+                    'verificado distinto al reportado.'
+                )
+
+        if self.estado == self.ESTADO_ANULADO:
+            if self.anulado_por_id is None:
+                errores['anulado_por'] = (
+                    'El usuario que anuló el pago es obligatorio.'
+                )
+
+            if self.anulado_en is None:
+                errores['anulado_en'] = (
+                    'La fecha de anulación es obligatoria.'
+                )
+
+            if not (self.motivo_anulacion or '').strip():
+                errores['motivo_anulacion'] = (
+                    'El motivo de anulación es obligatorio.'
+                )
+
+        if errores:
+            raise ValidationError(errores)
+
+    def __str__(self):
+        return (
+            f'Pago #{self.pk or "nuevo"} — '
+            f'${self.importe_reportado} — {self.get_estado_display()}'
+        )
+
+
+# ============================================================================
+# ===== FIN RECUPERACIÓN PAGO FORMAL: CobroCita + Pago =======================
+# ============================================================================
+
+class PropuestaTarifas(models.Model):
+    ESTADO_BORRADOR = 'borrador'
+    ESTADO_PENDIENTE = 'pendiente'
+    ESTADO_APROBADA = 'aprobada'
+    ESTADO_RECHAZADA = 'rechazada'
+    ESTADO_CHOICES = (
+        (ESTADO_BORRADOR, 'Borrador'),
+        (ESTADO_PENDIENTE, 'Pendiente'),
+        (ESTADO_APROBADA, 'Aprobada'),
+        (ESTADO_RECHAZADA, 'Rechazada'),
+    )
+
+    vigencia_propuesta = models.DateField()
+    observaciones = models.TextField(blank=True)
+    estado = models.CharField(
+        max_length=20,
+        choices=ESTADO_CHOICES,
+        default=ESTADO_BORRADOR,
+    )
+    creada_en = models.DateTimeField(auto_now_add=True)
+    actualizada_en = models.DateTimeField(auto_now=True)
+    enviada_en = models.DateTimeField(null=True, blank=True)
+    aprobada_en = models.DateTimeField(null=True, blank=True)
+    rechazada_en = models.DateTimeField(null=True, blank=True)
+    motivo_rechazo = models.TextField(blank=True)
+    creada_por = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='propuestas_tarifas_creadas',
+    )
+    enviada_por = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='propuestas_tarifas_enviadas',
+        null=True,
+        blank=True,
+    )
+    aprobada_por = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='propuestas_tarifas_aprobadas',
+        null=True,
+        blank=True,
+    )
+    rechazada_por = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='propuestas_tarifas_rechazadas',
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        verbose_name = 'Propuesta de tarifas'
+        verbose_name_plural = 'Propuestas de tarifas'
+        ordering = ('-creada_en', '-id')
+        permissions = [
+            ('view_service_catalog', 'Puede consultar el catálogo de servicios'),
+            ('propose_service_tariff', 'Puede crear propuestas de tarifas'),
+            ('submit_service_tariff_proposal', 'Puede enviar propuestas de tarifas'),
+            ('review_service_tariff_proposal', 'Puede revisar propuestas de tarifas'),
+            ('publish_service_tariff', 'Puede publicar tarifas de servicios'),
+            ('cancel_future_service_tariff', 'Puede cancelar tarifas futuras'),
+        ]
+
+    def __str__(self):
+        return f'Propuesta #{self.pk} — {self.get_estado_display()}'
+
+
+class PropuestaTarifaDetalle(models.Model):
+    propuesta = models.ForeignKey(
+        PropuestaTarifas,
+        on_delete=models.CASCADE,
+        related_name='detalles',
+    )
+    servicio = models.ForeignKey(
+        Servicio,
+        on_delete=models.PROTECT,
+        related_name='propuestas_tarifa',
+    )
+    tarifa_actual = models.ForeignKey(
+        TarifaServicio,
+        on_delete=models.SET_NULL,
+        related_name='detalles_snapshot',
+        null=True,
+        blank=True,
+    )
+    precio_actual_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    gratuita_actual_snapshot = models.BooleanField(null=True, blank=True)
+    precio_propuesto = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    gratuita_propuesta = models.BooleanField(default=False)
+    tarifa_publicada = models.ForeignKey(
+        TarifaServicio,
+        on_delete=models.SET_NULL,
+        related_name='detalles_origen',
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        verbose_name = 'Detalle de propuesta de tarifas'
+        verbose_name_plural = 'Detalles de propuesta de tarifas'
+        ordering = ('servicio__nombre', 'id')
+        constraints = [
+            models.UniqueConstraint(
+                fields=('propuesta', 'servicio'),
+                name='propuesta_tarifa_servicio_unico',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Propuesta #{self.propuesta_id} — {self.servicio}'
+
+
+class NotificacionTarifa(models.Model):
+    TIPO_PROPUESTA_ENVIADA = 'propuesta_enviada'
+    TIPO_PROPUESTA_APROBADA = 'propuesta_aprobada'
+    TIPO_PROPUESTA_RECHAZADA = 'propuesta_rechazada'
+    TIPO_CHOICES = (
+        (TIPO_PROPUESTA_ENVIADA, 'Propuesta enviada'),
+        (TIPO_PROPUESTA_APROBADA, 'Propuesta aprobada'),
+        (TIPO_PROPUESTA_RECHAZADA, 'Propuesta rechazada'),
+    )
+
+    destinatario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='notificaciones_tarifas',
+    )
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    propuesta = models.ForeignKey(
+        PropuestaTarifas,
+        on_delete=models.CASCADE,
+        related_name='notificaciones',
+    )
+    creada_en = models.DateTimeField(auto_now_add=True)
+    leida_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Notificación de tarifas'
+        verbose_name_plural = 'Notificaciones de tarifas'
+        ordering = ('-creada_en', '-id')
+        constraints = [
+            models.UniqueConstraint(
+                fields=('destinatario', 'tipo', 'propuesta'),
+                name='notificacion_tarifa_unica',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.get_tipo_display()} — propuesta #{self.propuesta_id}'
 
 
 

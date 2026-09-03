@@ -31,7 +31,7 @@
         <dd class="col-sm-8 py-2">{{ captacion.captador_tipo_snapshot }}</dd>
 
         <dt class="col-sm-4 py-2">Código utilizado</dt>
-        <dd class="col-sm-8 py-2"><code>{{ captacion.codigo.token }}</code></dd>
+        <dd class="col-sm-8 py-2"><code>{{ captacion.codigo.codigo_publico }}</code></dd>
 
         <dt class="col-sm-4 py-2">Fecha de registro</dt>
         <dd class="col-sm-8 py-2">
@@ -54,7 +54,7 @@
         <span class="badge text-bg-success fs-6 mb-4">Aprobada</span>
         <dl class="row mb-0">
           <dt class="col-sm-4 py-2">Comisión autorizada</dt>
-          <dd class="col-sm-8 py-2">{{ captacion.porcentaje_comision }}%</dd>
+          <dd class="col-sm-8 py-2">{{ captacion.porcentaje_comision }} %</dd>
           <dt class="col-sm-4 py-2">Aprobada por</dt>
           <dd class="col-sm-8 py-2">{{ captacion.decidido_por|default:'—' }}</dd>
           <dt class="col-sm-4 py-2">Fecha</dt>

@@ -8,7 +8,7 @@
       <h2>Registrar pago</h2>
       <p class="text-muted mb-0">{{ liquidacion.beneficiario_nombre_snapshot }}</p>
     </div>
-    <a href="{% url 'ventas:liquidacion_detalle' liquidacion.pk %}" class="btn btn-outline-secondary align-self-start">Volver</a>
+    <a href="{% if origen_finanzas %}{% url 'ventas:liquidaciones_panel' %}{% else %}{% url 'ventas:liquidacion_detalle' liquidacion.pk %}{% endif %}" class="btn btn-outline-secondary align-self-start">Volver</a>
   </div>
 
   <div class="alert alert-warning">
@@ -39,6 +39,7 @@
           <h4>Confirmación administrativa</h4>
           <form method="post">
             {% csrf_token %}
+            {% if origen_finanzas %}<input type="hidden" name="origen" value="finanzas">{% endif %}
             <div class="mb-3">{{ form.metodo_pago.label_tag }}{{ form.metodo_pago }}{{ form.metodo_pago.errors }}</div>
             <div class="mb-3">{{ form.referencia.label_tag }}{{ form.referencia }}{{ form.referencia.errors }}</div>
             <button class="btn btn-primary w-100">Registrar pago completo</button>

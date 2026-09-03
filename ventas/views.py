@@ -6,14 +6,15 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from clinica.models import Paciente, Servicio
+from clinica.models import Empresa, Paciente, Servicio
 
 from .classification import clasificacion_captador_liquidacion
 from .forms import (
@@ -21,6 +22,8 @@ from .forms import (
     CaptacionForm,
     CaptadorEditarForm,
     CaptadorForm,
+    ConvenioEmpresaForm,
+    ConfigurarComisionCaptadorForm,
     DesactivarCaptadorForm,
     CancelarBorradorLiquidacionForm,
     MotivoRetiroComisionForm,
@@ -34,6 +37,7 @@ from .models import (
     Captador,
     CodigoCaptacion,
     ComisionCaptacion,
+    ConvenioEmpresa,
     EventoCaptador,
     IntentoCaptacionRechazado,
     LiquidacionComisiones,
@@ -61,6 +65,8 @@ from .services import (
     crear_borrador_liquidacion,
     borrador_tiene_comisiones_no_elegibles,
     evaluar_elegibilidad_captacion,
+    buscar_codigo_captacion,
+    normalizar_token_captacion,
     rechazar_captacion,
     registrar_captacion,
     retirar_comision_borrador,
@@ -129,18 +135,58 @@ def captador_nuevo(request):
     if request.method == "POST":
         form = CaptadorForm(request.POST)
         if form.is_valid():
-            with transaction.atomic():
-                captador = form.save(commit=False)
-                captador.creado_por = request.user
-                captador.save()
-                EventoCaptador.objects.create(
-                    captador=captador,
-                    accion=EventoCaptador.ACCION_CREADO,
-                    usuario=request.user,
-                    detalle="Alta de captador.",
+            try:
+                with transaction.atomic():
+                    captador = form.save(commit=False)
+                    if form.empresa_nueva_solicitada:
+                        nombre_empresa = form.cleaned_data[
+                            "empresa_nueva_nombre"
+                        ]
+                        if Empresa.objects.filter(
+                            nombre__iexact=nombre_empresa
+                        ).exists():
+                            raise ValueError(
+                                "Ya existe una empresa con este nombre. "
+                                "Selecciona Empresa existente."
+                            )
+                        captador.tipo = Captador.TIPO_EMPRESA
+                        captador.empresa = Empresa.objects.create(
+                            nombre=nombre_empresa,
+                            activo=True,
+                        )
+                    captador.creado_por = request.user
+                    captador.save()
+                    codigo = captador.codigo_activo
+                    if codigo is None:
+                        raise ValueError(
+                            "No fue posible obtener el código activo del captador."
+                        )
+
+                    # RECUPERACIÓN CAPTACIÓN / QR: configuración de comisión
+                    codigo.porcentaje_comision = form.cleaned_data[
+                        "porcentaje_comision"
+                    ]
+                    codigo.porcentaje_configurado_por = request.user
+                    codigo.porcentaje_configurado_en = timezone.now()
+                    codigo.save(update_fields=[
+                        "porcentaje_comision",
+                        "porcentaje_configurado_por",
+                        "porcentaje_configurado_en",
+                    ])
+                    EventoCaptador.objects.create(
+                        captador=captador,
+                        accion=EventoCaptador.ACCION_CREADO,
+                        usuario=request.user,
+                        detalle="Alta de captador.",
+                    )
+            except ValueError as error:
+                form.add_error(None, str(error))
+            else:
+                messages.success(
+                    request,
+                    "Captador creado y código generado correctamente.",
                 )
-            messages.success(request, "Captador creado y código generado correctamente.")
-            return redirect("ventas:captador_detalle", pk=captador.pk)
+                return redirect("ventas:captador_detalle", pk=captador.pk)
     else:
         form = CaptadorForm()
     return render(request, "ventas/captador_form.html", {"form": form, "titulo": "Nuevo captador"})
@@ -153,9 +199,16 @@ def captador_detalle(request, pk):
         Captador.objects.select_related("usuario", "empresa", "creado_por", "desactivado_por"),
         pk=pk,
     )
+    convenio_activo = None
+    if captador.tipo == Captador.TIPO_EMPRESA and captador.empresa_id:
+        convenio_activo = ConvenioEmpresa.objects.filter(
+            empresa_id=captador.empresa_id,
+            activo=True,
+        ).first()
     return render(request, "ventas/captador_detalle.html", {
         "captador": captador,
         "codigo": captador.codigo_activo,
+        "convenio_activo": convenio_activo,
         "desactivar_form": DesactivarCaptadorForm(),
     })
 
@@ -185,6 +238,90 @@ def captador_editar(request, pk):
 
 @login_required
 @permission_required("ventas.manage_captadores", raise_exception=True)
+def captador_convenio(request, pk):
+    captador = get_object_or_404(
+        Captador.objects.select_related("empresa"),
+        pk=pk,
+    )
+    if captador.tipo != Captador.TIPO_EMPRESA or not captador.empresa_id:
+        raise Http404("El captador no corresponde a una empresa.")
+
+    convenio = ConvenioEmpresa.objects.filter(
+        empresa_id=captador.empresa_id,
+        activo=True,
+    ).first()
+
+    if request.method == "POST":
+        form = ConvenioEmpresaForm(request.POST, instance=convenio)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    convenio_guardado = form.save(commit=False)
+                    if convenio is None:
+                        convenio_guardado.empresa = captador.empresa
+                        convenio_guardado.creado_por = request.user
+                    convenio_guardado.actualizado_por = request.user
+                    convenio_guardado.full_clean()
+                    convenio_guardado.save()
+            except IntegrityError:
+                form.add_error(
+                    None,
+                    "La empresa ya tiene un convenio activo.",
+                )
+            else:
+                messages.success(request, "Convenio empresarial guardado.")
+                return redirect("ventas:captador_detalle", pk=captador.pk)
+    else:
+        form = ConvenioEmpresaForm(instance=convenio)
+
+    return render(
+        request,
+        "ventas/captador_convenio_form.html",
+        {
+            "captador": captador,
+            "empresa": captador.empresa,
+            "convenio": convenio,
+            "form": form,
+        },
+    )
+
+
+@login_required
+@permission_required("ventas.manage_captadores", raise_exception=True)
+def captador_configurar_comision(request, pk):
+    captador = get_object_or_404(Captador, pk=pk)
+    codigo = get_object_or_404(
+        CodigoCaptacion,
+        captador=captador,
+        activo=True,
+    )
+    if request.method == "POST":
+        form = ConfigurarComisionCaptadorForm(request.POST)
+        if form.is_valid():
+            # RECUPERACIÓN CAPTACIÓN / QR: configuración de comisión
+            codigo.porcentaje_comision = form.cleaned_data["porcentaje_comision"]
+            codigo.porcentaje_configurado_por = request.user
+            codigo.porcentaje_configurado_en = timezone.now()
+            codigo.save(update_fields=[
+                "porcentaje_comision",
+                "porcentaje_configurado_por",
+                "porcentaje_configurado_en",
+            ])
+            messages.success(request, "Comisión vigente actualizada correctamente.")
+            return redirect("ventas:captador_detalle", pk=captador.pk)
+    else:
+        form = ConfigurarComisionCaptadorForm(initial={
+            "porcentaje_comision": codigo.porcentaje_comision,
+        })
+    return render(request, "ventas/captador_form.html", {
+        "form": form,
+        "titulo": "Configurar comisión",
+        "captador": captador,
+    })
+
+
+@login_required
+@permission_required("ventas.manage_captadores", raise_exception=True)
 @require_POST
 def captador_desactivar(request, pk):
     captador = get_object_or_404(Captador, pk=pk)
@@ -199,6 +336,37 @@ def captador_desactivar(request, pk):
         messages.success(request, "Captador desactivado; su código e histórico se conservaron.")
     return redirect("ventas:captador_detalle", pk=pk)
 
+@login_required
+@permission_required("ventas.manage_captadores", raise_exception=True)
+@require_POST
+def captador_eliminar(request, pk):
+    captador = get_object_or_404(Captador, pk=pk)
+
+    tiene_historial_operativo = (
+        captador.captaciones.exists()
+        or captador.liquidaciones_comisiones.exists()
+    )
+
+    if tiene_historial_operativo:
+        messages.error(
+            request,
+            (
+                "Este captador ya tiene historial y no puede eliminarse. "
+                "Desactívalo para conservar la trazabilidad."
+            ),
+        )
+        return redirect("ventas:captador_detalle", pk=pk)
+
+    with transaction.atomic():
+        captador.codigos.all().delete()
+        captador.eventos.all().delete()
+        captador.delete()
+
+    messages.success(
+        request,
+        "Captador eliminado correctamente.",
+    )
+    return redirect("ventas:captadores_lista")
 
 @login_required
 @permission_required("ventas.manage_captadores", raise_exception=True)
@@ -257,17 +425,43 @@ def mi_qr(request):
 
 @login_required
 def validar_codigo(request):
+    solicita_json = request.GET.get("formato") == "json"
     if not (
         request.user.has_perm("ventas.validate_codigo")
         or request.user.has_perm("ventas.manage_captadores")
+        or (
+            solicita_json
+            and request.user.has_perm("ventas.register_captacion")
+        )
     ):
         raise PermissionDenied
+
+    if solicita_json:
+        token = normalizar_token_captacion(request.GET.get("codigo", ""))
+        codigo, estado = buscar_codigo_captacion(token)
+        mensajes = {
+            "valido": "Captación identificada",
+            "inexistente": "No se encontró un código de captación válido.",
+            "codigo_inactivo": "Este código de captación ya no está activo.",
+            "inactivo": "El captador asociado a este código no está activo.",
+            "sin_configurar": (
+                "Este código de captación aún no tiene una comisión "
+                "configurada."
+            ),
+        }
+        return JsonResponse({
+            "valido": estado == "valido" and codigo is not None,
+            "mensaje": mensajes.get(
+                estado,
+                "No fue posible validar el código de captación.",
+            ),
+        })
+
     resultado = None
     form = ValidarCodigoForm(request.GET or None)
     if form.is_valid():
-        resultado = CodigoCaptacion.objects.select_related(
-            "captador__usuario", "captador__empresa"
-        ).filter(token=form.cleaned_data["codigo"], activo=True).first()
+        codigo, estado = buscar_codigo_captacion(form.cleaned_data["codigo"])
+        resultado = codigo if estado == "valido" else None
     return render(request, "ventas/validar_codigo.html", {"form": form, "resultado": resultado})
 
 
@@ -457,7 +651,7 @@ def captacion_aprobar(request, pk):
     if not form.is_valid():
         messages.error(
             request,
-            "Indica un porcentaje entero entre 1 y 10.",
+            "Indica un porcentaje entero entre 0 y 10.",
         )
         return redirect("ventas:captacion_detalle", pk=pk)
 
@@ -552,6 +746,9 @@ def comisiones_panel(request):
             "tipos_captador": Captador.TIPO_CHOICES,
             "filtros": request.GET,
             "parametros_paginacion": parametros_paginacion.urlencode(),
+            "puede_pagar_liquidacion": request.user.has_perm(
+                "ventas.pay_liquidacion"
+            ),
             "puede_crear_liquidacion": request.user.has_perm(
                 "ventas.create_liquidacion"
             ),
@@ -582,12 +779,38 @@ def comision_detalle(request, pk):
 @permission_required("ventas.create_liquidacion", raise_exception=True)
 @require_POST
 def liquidacion_crear(request):
-    form = SeleccionComisionesLiquidacionForm(request.POST)
+    origen_nomina = request.POST.get("origen") == "nomina"
+    ids_comisiones = request.POST.getlist("comisiones")
+
+    try:
+        captadores_ids = list(
+            ComisionCaptacion.objects.filter(pk__in=ids_comisiones)
+            .values_list("captacion__captador_id", flat=True)
+            .distinct()
+        )
+    except (TypeError, ValueError):
+        captadores_ids = []
+
+    if len(captadores_ids) != 1:
+        messages.error(request, "Selecciona comisiones disponibles.")
+        if origen_nomina:
+            return redirect("ventas:liquidaciones_panel")
+        return redirect("ventas:comisiones_panel")
+
+    captador = Captador.objects.get(pk=captadores_ids[0])
+    form = SeleccionComisionesLiquidacionForm(
+        request.POST,
+        captador=captador,
+    )
+
     if not form.is_valid():
         messages.error(request, "Selecciona comisiones disponibles.")
+        if origen_nomina:
+            return redirect("ventas:liquidaciones_panel")
         return redirect("ventas:comisiones_panel")
+
     comisiones = list(form.cleaned_data["comisiones"])
-    captador = comisiones[0].captacion.captador
+
     try:
         liquidacion = crear_borrador_liquidacion(
             captador=captador,
@@ -596,8 +819,15 @@ def liquidacion_crear(request):
         )
     except OperacionLiquidacionError as error:
         messages.error(request, str(error))
+        if origen_nomina:
+            return redirect("ventas:liquidaciones_panel")
         return redirect("ventas:comisiones_panel")
+
     messages.success(request, "El borrador de liquidación fue creado.")
+
+    if origen_nomina:
+        return redirect("ventas:liquidaciones_panel")
+
     return redirect("ventas:liquidacion_detalle", pk=liquidacion.pk)
 
 
@@ -656,24 +886,64 @@ def liquidaciones_panel(request):
         "incidencia": request.GET.get("incidencia", "").strip(),
         "busqueda": request.GET.get("q", "").strip(),
     }
+
     liquidaciones = listar_liquidaciones(**filtros)
     pagina = Paginator(liquidaciones, 25).get_page(request.GET.get("page"))
+
+    puede_crear_liquidacion = request.user.has_perm(
+        "ventas.create_liquidacion"
+    )
+    puede_pagar_liquidacion = request.user.has_perm(
+        "ventas.pay_liquidacion"
+    )
+
+    captadores = Captador.objects.select_related(
+        "usuario",
+        "empresa",
+    ).order_by("tipo", "id")
+
+    grupos_comisiones_disponibles = []
+
+    if puede_crear_liquidacion:
+        for captador in captadores:
+            comisiones_disponibles = list(
+                comisiones_disponibles_para_liquidacion(
+                    captador=captador
+                )
+            )
+
+            if not comisiones_disponibles:
+                continue
+
+            grupos_comisiones_disponibles.append(
+                {
+                    "captador": captador,
+                    "comisiones": comisiones_disponibles,
+                    "total": sum(
+                        comision.monto_calculado
+                        for comision in comisiones_disponibles
+                    ),
+                }
+            )
+
     for liquidacion in pagina.object_list:
         liquidacion.clasificacion_panel = clasificacion_captador_liquidacion(
             liquidacion.captador
         )
+
     parametros_paginacion = request.GET.copy()
     parametros_paginacion.pop("page", None)
+
     return render(
         request,
         "ventas/liquidaciones_panel.html",
         {
             "pagina": pagina,
             "resumen": obtener_resumen_liquidaciones(),
-            "captadores": Captador.objects.select_related(
-                "usuario",
-                "empresa",
-            ).order_by("tipo", "id"),
+            "captadores": captadores,
+            "grupos_comisiones_disponibles": grupos_comisiones_disponibles,
+            "puede_crear_liquidacion": puede_crear_liquidacion,
+            "puede_pagar_liquidacion": puede_pagar_liquidacion,
             "estados": LiquidacionComisiones.ESTADO_CHOICES,
             "tipos_captador": Captador.TIPO_CHOICES,
             "metodos_pago": LiquidacionComisiones.METODO_PAGO_CHOICES,
@@ -712,6 +982,9 @@ def liquidacion_agregar(request, pk):
 @permission_required("ventas.pay_liquidacion", raise_exception=True)
 def liquidacion_registrar_pago(request, pk):
     liquidacion = get_object_or_404(LiquidacionComisiones, pk=pk)
+    origen_finanzas = (
+        request.POST.get("origen") or request.GET.get("origen")
+    ) == "finanzas"
     if liquidacion.estado != LiquidacionComisiones.ESTADO_BORRADOR:
         messages.error(request, "La liquidación ya no puede pagarse.")
         return redirect("ventas:liquidacion_detalle", pk=pk)
@@ -735,6 +1008,8 @@ def liquidacion_registrar_pago(request, pk):
             messages.error(request, str(error))
         else:
             messages.success(request, "El pago de la liquidación fue registrado.")
+            if origen_finanzas:
+                return redirect("ventas:liquidaciones_panel")
             return redirect("ventas:liquidacion_detalle", pk=pk)
     return render(
         request,
@@ -746,6 +1021,7 @@ def liquidacion_registrar_pago(request, pk):
             "lineas": liquidacion.lineas.filter(activa=True).select_related(
                 "comision"
             ),
+            "origen_finanzas": origen_finanzas,
         },
     )
 

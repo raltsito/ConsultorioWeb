@@ -256,6 +256,32 @@ class PagoLiquidacionesTests(LiquidacionesOperativasMixin, TestCase):
 
 
 class PagoLiquidacionesInterfazTests(LiquidacionesOperativasMixin, TestCase):
+    def test_pago_iniciado_desde_finanzas_regresa_al_panel(self):
+        liquidacion = self.crear_borrador([self.crear_comision(1)])
+        self.client.force_login(self.staff)
+
+        respuesta = self.client.post(
+            reverse(
+                "ventas:liquidacion_registrar_pago",
+                args=[liquidacion.pk],
+            ),
+            {
+                "metodo_pago": "transferencia",
+                "referencia": "TRX-FINANZAS",
+                "origen": "finanzas",
+            },
+        )
+
+        self.assertRedirects(
+            respuesta,
+            reverse("ventas:liquidaciones_panel"),
+        )
+        liquidacion.refresh_from_db()
+        self.assertEqual(
+            liquidacion.estado,
+            LiquidacionComisiones.ESTADO_PAGADA,
+        )
+
     def test_permiso_pay_es_independiente(self):
         liquidacion = self.crear_borrador([self.crear_comision(1)])
         usuario = User.objects.create_user("finanzas_sin_permiso")

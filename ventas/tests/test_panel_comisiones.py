@@ -41,13 +41,6 @@ class PanelComisionesTests(GeneracionComisionMixin, TestCase):
         importe_pago="100.00",
     ):
         paciente = paciente or self.paciente
-        # El importe solicitado representa ya el precio final con captaciÃ³n.
-        # Ajustamos el precio pÃºblico vigente para que el servicio conserve
-        # esos escenarios histÃ³ricos del panel bajo la regla permanente 25%.
-        self.servicio.precio = (
-            Decimal(importe_servicio) / Decimal("0.75")
-        ).quantize(Decimal("0.01"))
-        self.servicio.save(update_fields=["precio"])
         captacion = self.crear_captacion(
             paciente=paciente,
             porcentaje=porcentaje,

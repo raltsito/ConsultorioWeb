@@ -180,6 +180,50 @@
 
             {{ form.pacientes_relacionados }}
           </div>
+                    <!-- ============================================================= -->
+          <!-- ===== INICIO RECUPERACIÓN CAPTACIÓN / QR ===================== -->
+          <!-- ============================================================= -->
+
+          {% if form.codigo_captacion %}
+          <div class="border rounded-3 p-3 mb-3">
+            <label
+              for="{{ form.codigo_captacion.id_for_label }}"
+              class="d-flex align-items-center gap-2"
+            >
+              <i class="bi bi-qr-code-scan"></i>
+              Código / QR de captación
+            </label>
+
+            {{ form.codigo_captacion }}
+
+            <div class="form-text">
+              Escanea el QR del captador o ingresa el código manualmente.
+            </div>
+
+            <div
+              id="resultado-codigo-captacion"
+              class="small mt-2"
+              data-validar-captacion="{% url 'ventas:validar_codigo' %}"
+              aria-live="polite"
+            ></div>
+
+            {% if form.codigo_captacion.errors %}
+              <div class="text-danger small mt-2">
+                {% for error in form.codigo_captacion.errors %}
+                  <div>
+                    <i class="bi bi-exclamation-circle me-1"></i>
+                    {{ error }}
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <!-- ============================================================= -->
+          <!-- ===== FIN RECUPERACIÓN CAPTACIÓN / QR ======================== -->
+          <!-- ============================================================= -->
+
           {% if form.codigo_institucional %}
           <div class="border rounded-3 p-3 mb-3">
             <label for="{{ form.codigo_institucional.id_for_label }}">
@@ -221,6 +265,52 @@
           },
         });
       });
+    </script>
+
+    <script>
+      (function () {
+        const campo = document.getElementById("id_codigo_captacion");
+        const resultado = document.getElementById("resultado-codigo-captacion");
+
+        if (!campo || !resultado) {
+          return;
+        }
+
+        campo.addEventListener("keydown", async function (event) {
+          if (event.key === "Enter") {
+            event.preventDefault();
+
+            const codigo = campo.value.trim();
+            if (!codigo) {
+              resultado.className = "small mt-2 text-danger";
+              resultado.textContent = "Ingresa o escanea un código de captación.";
+              return;
+            }
+
+            const parametros = new URLSearchParams({
+              formato: "json",
+              codigo: codigo,
+            });
+            resultado.className = "small mt-2 text-muted";
+            resultado.textContent = "Validando código…";
+
+            try {
+              const respuesta = await fetch(
+                resultado.dataset.validarCaptacion + "?" + parametros.toString(),
+                { headers: { "X-Requested-With": "XMLHttpRequest" } }
+              );
+              const datos = await respuesta.json();
+              resultado.className = datos.valido
+                ? "small mt-2 text-success"
+                : "small mt-2 text-danger";
+              resultado.textContent = datos.mensaje;
+            } catch (error) {
+              resultado.className = "small mt-2 text-danger";
+              resultado.textContent = "No fue posible validar el código en este momento.";
+            }
+          }
+        });
+      })();
     </script>
   </body>
 </html>

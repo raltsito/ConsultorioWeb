@@ -15,6 +15,17 @@
       >
         Editar contacto
       </a>
+      <form
+      method="post"
+       action="{% url 'ventas:captador_eliminar' captador.pk %}"
+      class="d-inline"
+      onsubmit="return confirm('¿Eliminar este captador? Esta acción sólo se permitirá si no tiene historial operativo.');"
+      >
+      {% csrf_token %}
+       <button type="submit" class="btn btn-outline-danger">
+        Eliminar captador
+       </button>
+</form>
       <a
         class="btn btn-outline-secondary"
         href="{% url 'ventas:captadores_lista' %}"
@@ -53,7 +64,7 @@
             <dd class="col-sm-8">{{ captador.creado_por|default:'—' }}</dd>
 
             <dt class="col-sm-4">Código</dt>
-            <dd class="col-sm-8"><code>{{ codigo.token }}</code></dd>
+            <dd class="col-sm-8"><code>{{ codigo.codigo_publico }}</code></dd>
           </dl>
         </div>
       </div>
@@ -72,6 +83,115 @@
             El QR no contiene datos financieros.
           </p>
         </div>
+      </div>
+    </div>
+  </div>
+
+  {% if captador.tipo == 'empresa' and captador.empresa_id %}
+    <div class="card shadow-sm border-0 mt-4">
+      <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+          <div>
+            <p class="text-uppercase text-primary fw-bold small mb-1">
+              Convenio empresarial
+            </p>
+            {% if convenio_activo %}
+              <dl class="row mb-0 mt-3">
+                <dt class="col-sm-5">Empresa</dt>
+                <dd class="col-sm-7">{{ convenio_activo.empresa }}</dd>
+
+                <dt class="col-sm-5">Modalidad</dt>
+                <dd class="col-sm-7">{{ convenio_activo.get_modalidad_display }}</dd>
+
+                <dt class="col-sm-5">Quién paga</dt>
+                <dd class="col-sm-7">{{ convenio_activo.get_quien_paga_display }}</dd>
+
+                <dt class="col-sm-5">Vigencia</dt>
+                <dd class="col-sm-7">
+                  {{ convenio_activo.vigencia_desde|date:'d/m/Y'|default:'Sin definir' }}
+                  –
+                  {{ convenio_activo.vigencia_hasta|date:'d/m/Y'|default:'Sin definir' }}
+                </dd>
+
+                {% if convenio_activo.modalidad == 'PAQUETE_MENSUAL' %}
+                  <dt class="col-sm-5">Consultas incluidas por mes</dt>
+                  <dd class="col-sm-7">
+                    {{ convenio_activo.limite_consultas_mensual|default:'No definido' }}
+                  </dd>
+                  <dt class="col-sm-5">Monto mensual acordado</dt>
+                  <dd class="col-sm-7">
+                    {% if convenio_activo.monto_mensual is not None %}
+                      ${{ convenio_activo.monto_mensual|floatformat:2 }}
+                    {% else %}
+                      No definido
+                    {% endif %}
+                  </dd>
+                {% elif convenio_activo.modalidad == 'PASE' %}
+                  <dt class="col-sm-5">Usa folio o identificador</dt>
+                  <dd class="col-sm-7">
+                    {{ convenio_activo.pase_requiere_identificador|yesno:'Sí,No' }}
+                  </dd>
+                  <dt class="col-sm-5">Consultas autorizadas por pase</dt>
+                  <dd class="col-sm-7">
+                    {{ convenio_activo.consultas_por_pase|default:'No definido' }}
+                  </dd>
+                {% endif %}
+              </dl>
+            {% else %}
+              <p class="mb-0 mt-2">
+                Estado: <span class="text-muted">Sin configurar</span>
+              </p>
+            {% endif %}
+          </div>
+          <a
+            class="btn btn-outline-primary"
+            href="{% url 'ventas:captador_convenio' captador.id %}"
+          >
+            {% if convenio_activo %}Editar convenio{% else %}Configurar convenio{% endif %}
+          </a>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- RECUPERACIÓN CAPTACIÓN / QR: configuración de comisión -->
+  <div class="card shadow-sm border-0 mt-4">
+    <div class="card-body p-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+          <h5 class="mb-3">Configuración de comisión</h5>
+          <dl class="row mb-0">
+            <dt class="col-sm-5">Comisión vigente</dt>
+            <dd class="col-sm-7">
+              {% if codigo.porcentaje_comision is not None %}
+                {{ codigo.porcentaje_comision }} %
+              {% else %}
+                <span class="text-muted">Sin configurar</span>
+              {% endif %}
+            </dd>
+
+            {% if codigo.porcentaje_comision is not None %}
+              <dt class="col-sm-5">Configurada por</dt>
+              <dd class="col-sm-7">
+                {{ codigo.porcentaje_configurado_por|default:'—' }}
+              </dd>
+              <dt class="col-sm-5">Configurada el</dt>
+              <dd class="col-sm-7">
+                {{ codigo.porcentaje_configurado_en|date:'d/m/Y H:i'|default:'—' }}
+              </dd>
+            {% endif %}
+          </dl>
+        </div>
+        <a
+          class="btn btn-outline-primary"
+          href="{% url 'ventas:captador_configurar_comision' captador.id %}"
+        >
+          {% if codigo.porcentaje_comision is not None %}
+            Editar comisión
+          {% else %}
+            Configurar comisión
+          {% endif %}
+        </a>
       </div>
     </div>
   </div>

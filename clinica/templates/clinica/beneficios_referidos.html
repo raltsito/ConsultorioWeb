@@ -1,0 +1,291 @@
+{% extends 'clinica/base.html' %}
+{% load l10n %}
+
+{% block content %}
+<style>
+    .benefit-hero {
+        background: linear-gradient(135deg, #102b3b 0%, #174e5d 100%);
+        border-radius: 1.5rem;
+        color: #fff;
+        padding: 2rem;
+    }
+
+    .benefit-panel {
+        border: 0;
+        border-radius: 1.25rem;
+        box-shadow: 0 12px 32px rgba(15, 42, 57, .08);
+    }
+
+    .benefit-kicker {
+        color: #19c8d8;
+        font-size: .78rem;
+        font-weight: 800;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+
+    .benefit-table th {
+        color: #526475;
+        font-size: .72rem;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+</style>
+
+<section class="benefit-hero mb-4">
+    <div class="d-flex flex-column flex-lg-row align-items-lg-start justify-content-between gap-4">
+        <div>
+            <div class="benefit-kicker mb-2">
+                Precios de Servicios
+            </div>
+
+            <h1 class="fw-bold mb-2">
+                Beneficios de referidos
+            </h1>
+
+            <p class="mb-0 text-white-50">
+                Reglas institucionales por categoría y periodo de vigencia.
+            </p>
+        </div>
+
+        <a
+            class="btn btn-outline-light rounded-pill px-4"
+            href="{% url 'precios_servicios' %}"
+        >
+            <i class="bi bi-arrow-left me-2"></i>
+            Volver a Precios
+        </a>
+    </div>
+</section>
+
+{% if puede_gestionar %}
+<section class="card benefit-panel p-4 mb-4">
+    <h2 class="h5 fw-bold mb-3">
+        Registrar o programar una regla
+    </h2>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <label class="form-label" for="{{ form.categoria_servicio.id_for_label }}">
+                    {{ form.categoria_servicio.label }}
+                </label>
+                {{ form.categoria_servicio }}
+                {{ form.categoria_servicio.errors }}
+            </div>
+
+            <div class="col-sm-6 col-lg-2">
+                <label class="form-label" for="{{ form.porcentaje_descuento.id_for_label }}">
+                    {{ form.porcentaje_descuento.label }} (%)
+                </label>
+                {{ form.porcentaje_descuento }}
+                {{ form.porcentaje_descuento.errors }}
+            </div>
+
+            <div class="col-sm-6 col-lg-2">
+                <label class="form-label" for="{{ form.vigente_desde.id_for_label }}">
+                    {{ form.vigente_desde.label }}
+                </label>
+                {{ form.vigente_desde }}
+                {{ form.vigente_desde.errors }}
+            </div>
+
+            <div class="col-sm-6 col-lg-2">
+                <label class="form-label" for="{{ form.vigente_hasta.id_for_label }}">
+                    {{ form.vigente_hasta.label }}
+                </label>
+                {{ form.vigente_hasta }}
+                {{ form.vigente_hasta.errors }}
+            </div>
+
+            <div class="col-sm-6 col-lg-2 d-flex align-items-end">
+                <div class="form-check mb-2">
+                    {{ form.activo }}
+                    <label class="form-check-label" for="{{ form.activo.id_for_label }}">
+                        {{ form.activo.label }}
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-4">
+            <button
+                class="btn btn-primary rounded-pill px-4"
+                type="submit"
+                name="accion"
+                value="registrar"
+            >
+                Registrar regla
+            </button>
+
+            <button
+                class="btn btn-outline-primary rounded-pill px-4"
+                type="submit"
+                name="accion"
+                value="programar"
+            >
+                Programar cambio futuro
+            </button>
+        </div>
+    </form>
+</section>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-xl-6">
+        <section class="card benefit-panel h-100 p-4">
+            <h2 class="h5 fw-bold mb-3">
+                Reglas actuales
+            </h2>
+
+            <div class="table-responsive">
+                <table class="table benefit-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Categoría</th>
+                            <th>Descuento</th>
+                            <th>Vigente desde</th>
+                            <th>Vigente hasta</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for regla in reglas_actuales %}
+                        <tr>
+                            <td>{{ regla.categoria_servicio.nombre }}</td>
+                            <td>{{ regla.porcentaje_descuento|floatformat:2 }}%</td>
+                            <td>{{ regla.vigente_desde|date:'d/m/Y' }}</td>
+                            <td>
+                                {% if regla.vigente_hasta %}
+                                    {{ regla.vigente_hasta|date:'d/m/Y' }}
+                                {% else %}
+                                    Sin fecha final
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge text-bg-success">Activa</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td class="text-muted text-center py-4" colspan="5">
+                                No hay reglas vigentes para hoy.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="col-xl-6">
+        <section class="card benefit-panel h-100 p-4">
+            <h2 class="h5 fw-bold mb-3">
+                Próximas reglas
+            </h2>
+
+            <div class="table-responsive">
+                <table class="table benefit-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Categoría</th>
+                            <th>Descuento</th>
+                            <th>Vigente desde</th>
+                            <th>Vigente hasta</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for regla in reglas_proximas %}
+                        <tr>
+                            <td>{{ regla.categoria_servicio.nombre }}</td>
+                            <td>{{ regla.porcentaje_descuento|floatformat:2 }}%</td>
+                            <td>{{ regla.vigente_desde|date:'d/m/Y' }}</td>
+                            <td>
+                                {% if regla.vigente_hasta %}
+                                    {{ regla.vigente_hasta|date:'d/m/Y' }}
+                                {% else %}
+                                    Sin fecha final
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge text-bg-info">Programada</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td class="text-muted text-center py-4" colspan="5">
+                                No hay cambios futuros programados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+<details class="card benefit-panel p-4 mt-4">
+    <summary class="fw-bold">
+        Ver histórico
+    </summary>
+
+    <div class="table-responsive mt-3">
+        <table class="table benefit-table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Categoría</th>
+                    <th>Descuento</th>
+                    <th>Vigente desde</th>
+                    <th>Vigente hasta</th>
+                    <th>Registrado por</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for regla in reglas_historicas %}
+                <tr>
+                    <td>{{ regla.categoria_servicio.nombre }}</td>
+                    <td>{{ regla.porcentaje_descuento|floatformat:2 }}%</td>
+                    <td>{{ regla.vigente_desde|date:'d/m/Y' }}</td>
+                    <td>
+                        {% if regla.vigente_hasta %}
+                            {{ regla.vigente_hasta|date:'d/m/Y' }}
+                        {% else %}
+                            Sin fecha final
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if regla.creado_por %}
+                            {{ regla.creado_por.username }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge text-bg-secondary">Histórica</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td class="text-muted text-center py-4" colspan="6">
+                        No hay reglas históricas.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
+{% endblock %}

@@ -1,4 +1,5 @@
 import secrets
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -177,6 +178,109 @@ class Captador(models.Model):
         return self.nombre_display
 
 
+class ConvenioEmpresa(models.Model):
+    MODALIDAD_TARIFA_ESPECIAL = "TARIFA_ESPECIAL"
+    MODALIDAD_DESCUENTO_PORCENTAJE = "DESCUENTO_PORCENTAJE"
+    MODALIDAD_PAQUETE_MENSUAL = "PAQUETE_MENSUAL"
+    MODALIDAD_PASE = "PASE"
+    MODALIDAD_CHOICES = [
+        (MODALIDAD_TARIFA_ESPECIAL, "Tarifa especial"),
+        (MODALIDAD_DESCUENTO_PORCENTAJE, "Descuento porcentual"),
+        (MODALIDAD_PAQUETE_MENSUAL, "Paquete mensual"),
+        (MODALIDAD_PASE, "Pase / autorización"),
+    ]
+
+    PAGA_PACIENTE = "PACIENTE"
+    PAGA_EMPRESA = "EMPRESA"
+    PAGA_ASOCIACION = "ASOCIACION"
+    PAGA_COMPARTIDO = "COMPARTIDO"
+    QUIEN_PAGA_CHOICES = [
+        (PAGA_PACIENTE, "Paciente"),
+        (PAGA_EMPRESA, "Empresa"),
+        (PAGA_ASOCIACION, "Asociación"),
+        (PAGA_COMPARTIDO, "Compartido"),
+    ]
+
+    empresa = models.ForeignKey(
+        "clinica.Empresa",
+        on_delete=models.PROTECT,
+        related_name="convenios_ventas",
+    )
+    activo = models.BooleanField(default=True)
+    vigencia_desde = models.DateField(null=True, blank=True)
+    vigencia_hasta = models.DateField(null=True, blank=True)
+    modalidad = models.CharField(max_length=30, choices=MODALIDAD_CHOICES)
+    quien_paga = models.CharField(max_length=20, choices=QUIEN_PAGA_CHOICES)
+    limite_consultas_mensual = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+    )
+    monto_mensual = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+    pase_requiere_identificador = models.BooleanField(
+        default=False,
+        verbose_name="¿Los pases utilizan folio o identificador?",
+    )
+    consultas_por_pase = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+    )
+    observaciones = models.TextField(blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="convenios_empresa_creados",
+    )
+    actualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="convenios_empresa_actualizados",
+    )
+
+    class Meta:
+        ordering = ["-activo", "-vigencia_desde", "-id"]
+        verbose_name = "Convenio empresarial"
+        verbose_name_plural = "Convenios empresariales"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["empresa"],
+                condition=Q(activo=True),
+                name="ventas_un_convenio_activo_por_empresa",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if (
+            self.vigencia_desde
+            and self.vigencia_hasta
+            and self.vigencia_hasta < self.vigencia_desde
+        ):
+            raise ValidationError(
+                {
+                    "vigencia_hasta": (
+                        "La vigencia final no puede ser anterior a la inicial."
+                    )
+                }
+            )
+
+    def __str__(self):
+        return f"{self.empresa} — {self.get_modalidad_display()}"
+
+
 class CodigoCaptacion(models.Model):
     captador = models.ForeignKey(
         Captador, on_delete=models.PROTECT, related_name="codigos"
@@ -192,19 +296,54 @@ class CodigoCaptacion(models.Model):
     creado_en = models.DateTimeField(auto_now_add=True)
     revocado_en = models.DateTimeField(null=True, blank=True)
     motivo_revocacion = models.TextField(blank=True)
+    porcentaje_comision = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(10)],
+    )
+    porcentaje_configurado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="codigos_captacion_porcentaje_configurados",
+    )
+    porcentaje_configurado_en = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-activo", "-creado_en"]
+        permissions = [
+            (
+                "authorize_captacion_commission",
+                "Puede autorizar o modificar la comisión de captación",
+            ),
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=["captador"],
                 condition=Q(activo=True),
                 name="ventas_un_codigo_activo_por_captador",
-            )
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(porcentaje_comision__isnull=True)
+                    | Q(
+                        porcentaje_comision__gte=0,
+                        porcentaje_comision__lte=10,
+                    )
+                ),
+                name="ventas_codigo_captacion_porcentaje_0_10",
+            ),
         ]
 
     def __str__(self):
         return f"Código de {self.captador}"
+
+    @property
+    def codigo_publico(self):
+        if self.pk is None:
+            return ""
+        return f"INTRA{self.pk:04d}"
 
 
 class EventoCaptador(models.Model):
@@ -272,7 +411,7 @@ class Captacion(models.Model):
     porcentaje_comision = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
-        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        validators=[MinValueValidator(0), MaxValueValidator(10)],
     )
     decidido_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -297,9 +436,9 @@ class Captacion(models.Model):
             models.CheckConstraint(
                 condition=(
                     Q(porcentaje_comision__isnull=True)
-                    | Q(porcentaje_comision__gte=1, porcentaje_comision__lte=10)
+                    | Q(porcentaje_comision__gte=0, porcentaje_comision__lte=10)
                 ),
-                name="ventas_captacion_porcentaje_1_10",
+                name="ventas_captacion_porcentaje_0_10",
             ),
         ]
 
@@ -388,9 +527,11 @@ class EventoCaptacion(models.Model):
 class ComisionCaptacion(models.Model):
     ESTADO_PENDIENTE_PAGO = "pendiente_pago"
     ESTADO_SUSPENDIDA = "suspendida"
+    ESTADO_PAGADA = "pagada"
     ESTADO_CHOICES = [
         (ESTADO_PENDIENTE_PAGO, "Pendiente de pago"),
         (ESTADO_SUSPENDIDA, "Suspendida"),
+        (ESTADO_PAGADA, "Pagada"),
     ]
 
     captacion = models.OneToOneField(
@@ -448,6 +589,42 @@ class ComisionCaptacion(models.Model):
 
     def __str__(self):
         return f"Comisión de captación {self.captacion_id}"
+
+
+class PagoComision(models.Model):
+    METODO_EFECTIVO = "efectivo"
+    METODO_TRANSFERENCIA = "transferencia"
+    METODO_PAGO_CHOICES = [
+        (METODO_EFECTIVO, "Efectivo"),
+        (METODO_TRANSFERENCIA, "Transferencia"),
+    ]
+
+    comision = models.OneToOneField(
+        ComisionCaptacion,
+        on_delete=models.PROTECT,
+        related_name="pago",
+    )
+    importe_pagado = models.DecimalField(max_digits=12, decimal_places=2)
+    metodo_pago = models.CharField(max_length=20, choices=METODO_PAGO_CHOICES)
+    referencia = models.CharField(max_length=200, blank=True)
+    pagado_en = models.DateTimeField(auto_now_add=True)
+    pagado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="pagos_comisiones_registrados",
+    )
+
+    class Meta:
+        ordering = ["-pagado_en", "-id"]
+        verbose_name = "Pago de comisión"
+        verbose_name_plural = "Pagos de comisiones"
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(importe_pagado__gte=0),
+                name="ventas_pago_comision_importe_no_negativo",
+            ),
+        ]
 
 
 class LiquidacionComisiones(models.Model):

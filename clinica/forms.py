@@ -1,6 +1,8 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.forms import BaseInlineFormSet, inlineformset_factory
+from django.utils import timezone
 
 from .models import (
     AperturaExpediente,
@@ -12,13 +14,17 @@ from .models import (
     Horario,
     NotaTerapeutaPaciente,
     Paciente,
+    PropuestaTarifaDetalle,
+    PropuestaTarifas,
+    ReglaBeneficioReferido,
     ReglaTerapeuta,
     ReporteSesion,
     TabuladorGeneral,
+    TarifaServicio,
     obtener_bloqueo_terapeuta_en_fecha,
 )
 from .models import Terapeuta, Consultorio, Division, Servicio
-from .pricing import calcular_importe_servicio_con_captacion
+from .services_tarifas import obtener_tarifa_vigente
 
 
 CODIGOS_INSTITUCIONALES_CHOICES = [
@@ -93,6 +99,271 @@ def verificar_empalme_paciente(paciente, fecha, hora, excluir_cita_id=None):
     if excluir_cita_id:
         qs = qs.exclude(pk=excluir_cita_id)
     return qs.first()
+
+
+def _servicios_publicables():
+    return Servicio.objects.filter(
+        activo=True,
+        reemplazado_por__isnull=True,
+    ).order_by('orden', 'nombre', 'id')
+
+
+class PropuestaTarifasForm(forms.ModelForm):
+    class Meta:
+        model = PropuestaTarifas
+        fields = ('vigencia_propuesta', 'observaciones')
+        widgets = {
+            'vigencia_propuesta': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+            }),
+            'observaciones': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+            }),
+        }
+        labels = {
+            'vigencia_propuesta': 'Vigente desde',
+            'observaciones': 'Observaciones',
+        }
+
+    def clean_vigencia_propuesta(self):
+        vigencia = self.cleaned_data['vigencia_propuesta']
+        if vigencia < timezone.localdate():
+            raise ValidationError(
+                'La vigencia propuesta no puede estar en el pasado.'
+            )
+        return vigencia
+
+
+class PropuestaTarifaDetalleForm(forms.ModelForm):
+    gratuita_propuesta = forms.TypedChoiceField(
+        choices=((False, 'Con cobro'), (True, 'Gratuito')),
+        coerce=lambda valor: valor in (True, 'True', '1', 1),
+        empty_value=False,
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm'}),
+        label='Tipo',
+    )
+
+    class Meta:
+        model = PropuestaTarifaDetalle
+        fields = ('servicio', 'precio_propuesto', 'gratuita_propuesta')
+        widgets = {
+            'servicio': forms.Select(attrs={
+                'class': 'form-select form-select-sm',
+            }),
+            'precio_propuesto': forms.NumberInput(attrs={
+                'class': 'form-control form-control-sm',
+                'step': '0.01',
+                'min': '0',
+            }),
+        }
+        labels = {
+            'servicio': 'Servicio',
+            'precio_propuesto': 'Nueva tarifa',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['servicio'].queryset = _servicios_publicables()
+        self.tarifa_actual_visual = None
+
+        servicio = None
+        if self.is_bound:
+            servicio_id = self.data.get(self.add_prefix('servicio'))
+            if servicio_id:
+                servicio = Servicio.objects.filter(pk=servicio_id).first()
+        elif self.instance and self.instance.servicio_id:
+            servicio = self.instance.servicio
+        else:
+            servicio_inicial = self.initial.get('servicio')
+            if isinstance(servicio_inicial, Servicio):
+                servicio = servicio_inicial
+            elif servicio_inicial:
+                servicio = Servicio.objects.filter(pk=servicio_inicial).first()
+
+        if servicio is not None:
+            tarifa = obtener_tarifa_vigente(servicio, timezone.localdate())
+            if tarifa is not None:
+                self.tarifa_actual_visual = f'{tarifa.precio_final:.2f}'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        servicio = cleaned_data.get('servicio')
+        precio = cleaned_data.get('precio_propuesto')
+        gratuita = cleaned_data.get('gratuita_propuesta', False)
+
+        if servicio is not None and servicio.tratamiento_iva is None:
+            self.add_error(
+                'servicio',
+                f'{servicio}: tratamiento fiscal pendiente.',
+            )
+        if precio is not None:
+            if gratuita and precio != 0:
+                self.add_error(
+                    'precio_propuesto',
+                    'Un servicio gratuito debe tener precio igual a cero.',
+                )
+            elif not gratuita and precio <= 0:
+                self.add_error(
+                    'precio_propuesto',
+                    'Una tarifa con cobro debe ser mayor que cero.',
+                )
+        return cleaned_data
+
+
+class BasePropuestaTarifaDetalleFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+
+        servicios = set()
+        for form in self.forms:
+            if not hasattr(form, 'cleaned_data'):
+                continue
+            if form.cleaned_data.get('DELETE'):
+                continue
+            servicio = form.cleaned_data.get('servicio')
+            if servicio is None:
+                continue
+            if servicio.pk in servicios:
+                raise ValidationError(
+                    'Cada servicio puede aparecer una sola vez en la propuesta.'
+                )
+            servicios.add(servicio.pk)
+
+
+PropuestaTarifaDetalleFormSet = inlineformset_factory(
+    PropuestaTarifas,
+    PropuestaTarifaDetalle,
+    form=PropuestaTarifaDetalleForm,
+    formset=BasePropuestaTarifaDetalleFormSet,
+    fields=('servicio', 'precio_propuesto', 'gratuita_propuesta'),
+    extra=0,
+    can_delete=True,
+)
+
+
+class TarifaDirectaForm(forms.Form):
+    servicio = forms.ModelChoiceField(
+        queryset=Servicio.objects.none(),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    precio_final = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=0,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'min': '0',
+        }),
+        label='Precio final',
+    )
+    gratuita = forms.BooleanField(required=False, label='Servicio gratuito')
+    vigente_desde = forms.DateField(
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date',
+        }),
+        label='Vigente desde',
+    )
+    motivo = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+        }),
+        label='Motivo',
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['servicio'].queryset = _servicios_publicables()
+
+    def clean_vigente_desde(self):
+        vigencia = self.cleaned_data['vigente_desde']
+        if vigencia < timezone.localdate():
+            raise ValidationError(
+                'La vigencia inicial no puede estar en el pasado.'
+            )
+        return vigencia
+
+    def clean(self):
+        cleaned_data = super().clean()
+        servicio = cleaned_data.get('servicio')
+        precio = cleaned_data.get('precio_final')
+        gratuita = cleaned_data.get('gratuita', False)
+
+        if servicio is not None and servicio.tratamiento_iva is None:
+            self.add_error(
+                'servicio',
+                'El servicio no tiene tratamiento fiscal definido.',
+            )
+        if precio is not None:
+            if gratuita and precio != 0:
+                self.add_error(
+                    'precio_final',
+                    'Una tarifa gratuita debe tener precio final cero.',
+                )
+            elif not gratuita and precio <= 0:
+                self.add_error(
+                    'precio_final',
+                    'Una tarifa no gratuita debe tener precio final mayor que cero.',
+                )
+        return cleaned_data
+
+
+class MotivoTarifaForm(forms.Form):
+    motivo = forms.CharField(
+        required=True,
+        strip=True,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+        }),
+        label='Motivo',
+    )
+
+
+class ReglaBeneficioReferidoForm(forms.ModelForm):
+    class Meta:
+        model = ReglaBeneficioReferido
+        fields = (
+            'categoria_servicio',
+            'porcentaje_descuento',
+            'vigente_desde',
+            'vigente_hasta',
+            'activo',
+        )
+        widgets = {
+            'categoria_servicio': forms.Select(attrs={'class': 'form-select'}),
+            'porcentaje_descuento': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'max': '100',
+                'step': '0.01',
+            }),
+            'vigente_desde': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+            }),
+            'vigente_hasta': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+            }),
+            'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['categoria_servicio'].queryset = (
+            self.fields['categoria_servicio'].queryset.order_by(
+                'orden',
+                'nombre',
+            )
+        )
 
 
 class CheckoutCitaForm(forms.Form):
@@ -176,13 +447,98 @@ class ManualPortalForm(forms.Form):
 class PacienteForm(CamposCodigosInstitucionalesMixin, forms.ModelForm):
     fecha_nacimiento = forms.DateField(
         input_formats=['%Y-%m-%d'],
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+        widget=forms.DateInput(
+            attrs={'class': 'form-control', 'type': 'date'},
+            format='%Y-%m-%d',
+        ),
     )
 
-    def __init__(self, *args, incluir_codigos=False, **kwargs):
+    # ========================================================================
+    # ===== INICIO RECUPERACIÓN CAPTACIÓN / QR: campo y validación ===========
+    # ========================================================================
+
+    codigo_captacion = forms.CharField(
+        required=False,
+        label='Captación',
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Escanea o ingresa el código',
+                'autocomplete': 'off',
+            }
+        ),
+    )
+
+    def __init__(
+        self,
+        *args,
+        incluir_codigos=False,
+        incluir_captacion=False,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
+
+        # Aquí guardaremos el objeto CodigoCaptacion ya validado.
+        # No se guarda directamente en Paciente.
+        self.codigo_captacion_validado = None
+
         if not incluir_codigos:
             self.fields.pop('codigo_institucional', None)
+
+        if not incluir_captacion:
+            self.fields.pop('codigo_captacion', None)
+
+    def clean_codigo_captacion(self):
+        valor = self.cleaned_data.get('codigo_captacion') or ''
+
+        self.codigo_captacion_validado = None
+
+        # Captación es opcional.
+        if not valor.strip():
+            return ''
+
+        # Import local para evitar acoplar forms.py a ventas al cargar el módulo.
+        from ventas.services import (
+            buscar_codigo_captacion,
+            normalizar_token_captacion,
+        )
+
+        token = normalizar_token_captacion(valor)
+
+        codigo, estado = buscar_codigo_captacion(token)
+
+        if estado == 'inexistente':
+            raise ValidationError(
+                'No se encontró un código de captación válido.'
+            )
+
+        if estado == 'codigo_inactivo':
+            raise ValidationError(
+                'Este código de captación ya no está activo.'
+            )
+
+        if estado == 'inactivo':
+            raise ValidationError(
+                'El captador asociado a este código no está activo.'
+            )
+
+        if estado == 'sin_configurar':
+            raise ValidationError(
+                'Este código de captación aún no tiene una comisión configurada.'
+            )
+
+        if estado != 'valido' or codigo is None:
+            raise ValidationError(
+                'No fue posible validar el código de captación.'
+            )
+
+        self.codigo_captacion_validado = codigo
+        return token
+
+    # ========================================================================
+    # ===== FIN RECUPERACIÓN CAPTACIÓN / QR: campo y validación ==============
+    # ========================================================================
+
 
     class Meta:
         model = Paciente
@@ -415,23 +771,6 @@ class CitaForm(forms.ModelForm):
                         f"No se puede empalmar."
                     )
                     self.add_error('pacientes_extra', msg)
-
-        servicio = cleaned_data.get('servicio')
-        estatus = cleaned_data.get('estatus')
-        tiene_descuento_legacy = cleaned_data.get('tiene_descuento')
-        if (
-            paciente
-            and servicio
-            and estatus != Cita.ESTATUS_NO_ASISTIO
-            and not tiene_descuento_legacy
-            and self.instance.importe_servicio_snapshot is None
-        ):
-            calculo = calcular_importe_servicio_con_captacion(
-                paciente=paciente,
-                servicio=servicio,
-            )
-            if calculo.aplica_descuento and calculo.importe_final is not None:
-                cleaned_data['costo'] = calculo.importe_final
 
         return cleaned_data
 

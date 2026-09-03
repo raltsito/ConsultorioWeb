@@ -15,10 +15,21 @@ from urllib.parse import urlencode
 
 #Herramientas base de Django
 from django.conf import settings
-from django.core.exceptions import ValidationError
+# ===== INICIO RECUPERACIÓN PRECIOS: imports Django =====
+from django.core.exceptions import PermissionDenied, ValidationError
+# ===== FIN RECUPERACIÓN PRECIOS: imports Django =====
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
-from django.db import transaction
+# ===== INICIO RECUPERACIÓN PRECIOS: transacciones =====
+from django.db import IntegrityError, transaction
+# ===== FIN RECUPERACIÓN PRECIOS: transacciones =====
+# ============================================================================
+# ===== INICIO RECUPERACIÓN CAPTACIÓN / QR: servicio =========================
+# ============================================================================
+from ventas.services import registrar_captacion
+# ============================================================================
+# ===== FIN RECUPERACIÓN CAPTACIÓN / QR: servicio ============================
+# ============================================================================
 from django.db.models import (
     Case,
     Count,
@@ -30,11 +41,15 @@ from django.db.models import (
     Sum,
     When,
 )
-from django.contrib.auth.decorators import login_required
+# ===== INICIO RECUPERACIÓN PRECIOS: permisos =====
+from django.contrib.auth.decorators import login_required, permission_required
+# ===== FIN RECUPERACIÓN PRECIOS: permisos =====
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, Http404
 from django.utils.encoding import escape_uri_path
-from django.views.decorators.http import require_POST
+# ===== INICIO RECUPERACIÓN PRECIOS: métodos HTTP =====
+from django.views.decorators.http import require_GET, require_POST
+# ===== FIN RECUPERACIÓN PRECIOS: métodos HTTP =====
 from django.views.decorators.csrf import csrf_exempt
 
 from clinica.utils import sincronizar_google_sheet
@@ -76,6 +91,8 @@ from .models import (
     ReporteSesion,
     Terapeuta,
     Cita,
+    CobroCita,
+    Pago,
     ConfiguracionWhatsApp,
     MensajeWhatsApp,
     MensajeWhatsAppEntrante,
@@ -89,6 +106,14 @@ from .models import (
     SolicitudCita,
     SolicitudReagendo,
     Servicio,
+    # ===== INICIO RECUPERACIÓN PRECIOS: modelos =====
+    CategoriaServicio,
+    TarifaServicio,
+    NotificacionTarifa,
+    PropuestaTarifaDetalle,
+    PropuestaTarifas,
+    ReglaBeneficioReferido,
+    # ===== FIN RECUPERACIÓN PRECIOS: modelos =====
     NotificacionTerapeuta,
     obtener_bloqueo_terapeuta_en_fecha,
     ReporteIncidente,
@@ -113,7 +138,36 @@ from .forms import (
     NotaTerapeutaPacienteForm,
     CheckoutCitaForm,
     ReporteSesionForm,
+    # ===== INICIO RECUPERACIÓN PRECIOS: formularios =====
+    MotivoTarifaForm,
+    PropuestaTarifaDetalleForm,
+    PropuestaTarifaDetalleFormSet,
+    PropuestaTarifasForm,
+    ReglaBeneficioReferidoForm,
+    TarifaDirectaForm,
+    # ===== FIN RECUPERACIÓN PRECIOS: formularios =====
 )
+# ===== INICIO RECUPERACIÓN PRECIOS: servicios de dominio =====
+from .services_propuestas_tarifas import (
+    aprobar_propuesta_tarifas,
+    duplicar_propuesta_rechazada,
+    enviar_propuesta_tarifas,
+    rechazar_propuesta_tarifas,
+)
+from .services_penalizaciones import calcular_monto_penalizacion
+from .services_tarifas import (
+    cancelar_tarifa_futura,
+    obtener_proxima_tarifa,
+    obtener_tarifa_vigente,
+    publicar_tarifa_servicio,
+)
+from .services_beneficios import (
+    crear_regla_beneficio,
+    programar_regla_beneficio,
+    resolver_beneficio_referido,
+)
+# ===== FIN RECUPERACIÓN PRECIOS: servicios de dominio =====
+
 from .services_codigos import actualizar_codigos_institucionales
 from .services import (
     actualizar_totales_corte,
@@ -126,10 +180,7 @@ from .services_instrumentos import (calcular_resultado_instrumento, calcular_rav
                                      _RAVEN_SERIES, _RAVEN_ESPERADOS,
                                      _SCL90_REF, _SCL90_REF_SUMMARY)
 from . import services_whatsapp as wa
-from .pricing import (
-    aplicar_costo_captacion_a_cita,
-    calcular_importe_servicio_con_captacion,
-)
+from .services_pagos import confirmar_pago, registrar_pago
 #from .utils import sincronizar_google_sheet
 
 def _registrar_actividad(request, accion, categoria, descripcion, terapeuta=None, paciente=None):
@@ -876,39 +927,80 @@ def asignar_division_paciente(request, paciente_id):
         paciente.save()
         messages.success(request, 'División actualizada correctamente.')
     return redirect('detalle_paciente', paciente_id=paciente.id)
+
 @login_required
 def registrar_paciente(request):
+    # =========================================================================
+    # ===== INICIO RECUPERACIÓN CAPTACIÓN / QR: nuevo expediente ==============
+    # =========================================================================
+
+    puede_registrar_captacion = (
+        request.user.has_perm('ventas.register_captacion')
+        or request.user.has_perm('ventas.manage_captadores')
+    )
+
     if request.method == 'POST':
         form = PacienteForm(
             request.POST,
             request.FILES,
             incluir_codigos=True,
+            incluir_captacion=puede_registrar_captacion,
         )
+
         if form.is_valid():
-            with transaction.atomic():
-                paciente = form.save()
-                actualizar_codigos_institucionales(
+            try:
+                with transaction.atomic():
+                    paciente = form.save()
+
+                    actualizar_codigos_institucionales(
+                        paciente=paciente,
+                        codigos=form.codigos_seleccionados(),
+                        usuario=request.user,
+                    )
+
+                    if form.codigo_captacion_validado is not None:
+                        registrar_captacion(
+                            paciente=paciente,
+                            codigo=form.codigo_captacion_validado,
+                            usuario=request.user,
+                            canal='Nuevo expediente',
+                        )
+
+            except ValueError as error:
+                form.add_error('codigo_captacion', str(error))
+
+            else:
+                _registrar_actividad(
+                    request,
+                    'paciente_registrado',
+                    'paciente',
+                    f'Expediente de {paciente.nombre} registrado en el sistema.',
                     paciente=paciente,
-                    codigos=form.codigos_seleccionados(),
-                    usuario=request.user,
                 )
-            _registrar_actividad(
-                request,
-                'paciente_registrado',
-                'paciente',
-                f'Expediente de {paciente.nombre} registrado en el sistema.',
-                paciente=paciente,
-            )
-            return redirect('lista_pacientes')
+                return redirect('lista_pacientes')
+
     else:
-        form = PacienteForm(incluir_codigos=True)
+        form = PacienteForm(
+            initial={
+                'codigo_captacion': request.GET.get('codigo_captacion', ''),
+            },
+            incluir_codigos=True,
+            incluir_captacion=puede_registrar_captacion,
+        )
+
+    # =========================================================================
+    # ===== FIN RECUPERACIÓN CAPTACIÓN / QR: nuevo expediente =================
+    # =========================================================================
+
     return render(request, 'clinica/registro_paciente.html', {
         'form': form,
         'cancel_url': reverse('lista_pacientes'),
         'navbar_url': reverse('home'),
         'titulo_form': 'Nuevo Expediente',
         'subtitulo_form': 'Ingresa los datos del paciente',
+        'puede_registrar_captacion': puede_registrar_captacion,
     })
+
 # En clinica/views.py
 
 # En clinica/views.py (dentro de detalle_paciente)
@@ -1196,6 +1288,73 @@ def detalle_paciente(request, paciente_id):
 
     apertura = getattr(paciente, 'apertura_expediente_obj', None)
 
+    puede_consultar_beneficio_referido = request.user.has_perm(
+        'ventas.view_captaciones'
+    )
+    resultado_beneficio_referido = None
+    servicio_beneficio_referido = None
+    fecha_beneficio_referido = timezone.localdate()
+    mensaje_beneficio_referido = ''
+    servicios_beneficio_referido = Servicio.objects.none()
+
+    if puede_consultar_beneficio_referido:
+        servicios_beneficio_referido = Servicio.objects.filter(
+            activo=True,
+            reemplazado_por__isnull=True,
+        ).order_by('orden', 'nombre', 'id')
+
+        servicio_id = request.GET.get('beneficio_servicio', '').strip()
+        fecha_consulta = request.GET.get('beneficio_fecha', '').strip()
+        if fecha_consulta:
+            try:
+                fecha_beneficio_referido = date.fromisoformat(fecha_consulta)
+            except ValueError:
+                mensaje_beneficio_referido = 'Indica una fecha válida.'
+
+        if servicio_id:
+            servicio_beneficio_referido = servicios_beneficio_referido.filter(
+                pk=servicio_id
+            ).first()
+            if servicio_beneficio_referido is None:
+                mensaje_beneficio_referido = (
+                    'Selecciona un servicio activo del catálogo.'
+                )
+        elif paciente.servicio_inicial_id:
+            servicio_beneficio_referido = servicios_beneficio_referido.filter(
+                pk=paciente.servicio_inicial_id
+            ).first()
+        if servicio_beneficio_referido is None and not servicio_id:
+            servicio_beneficio_referido = servicios_beneficio_referido.first()
+
+        if servicio_beneficio_referido is not None and not mensaje_beneficio_referido:
+            resultado_beneficio_referido = resolver_beneficio_referido(
+                paciente=paciente,
+                servicio=servicio_beneficio_referido,
+                fecha=fecha_beneficio_referido,
+            )
+            mensajes_beneficio = {
+                'paciente_no_referido': (
+                    'Este paciente no tiene una captación registrada.'
+                ),
+                'categoria_no_determinada': (
+                    'El servicio aún no tiene una categoría definida.'
+                ),
+                'tarifa_oficial_no_disponible': (
+                    'No existe una tarifa oficial vigente para este servicio.'
+                ),
+                'regla_no_disponible': (
+                    'No hay un beneficio por captación vigente para esta categoría.'
+                ),
+            }
+            mensaje_beneficio_referido = mensajes_beneficio.get(
+                resultado_beneficio_referido.motivo,
+                '',
+            )
+        elif not servicios_beneficio_referido.exists():
+            mensaje_beneficio_referido = (
+                'No hay servicios activos disponibles para consultar.'
+            )
+
     context = {
         'paciente': paciente,
         'historial': historial,
@@ -1207,6 +1366,12 @@ def detalle_paciente(request, paciente_id):
         'form_documento': form_documento,
         'can_subir_documentos': can_subir_documentos,
         'divisiones': Division.objects.all().order_by('nombre'),
+        'puede_consultar_beneficio_referido': puede_consultar_beneficio_referido,
+        'resultado_beneficio_referido': resultado_beneficio_referido,
+        'servicios_beneficio_referido': servicios_beneficio_referido,
+        'servicio_beneficio_referido': servicio_beneficio_referido,
+        'fecha_beneficio_referido': fecha_beneficio_referido,
+        'mensaje_beneficio_referido': mensaje_beneficio_referido,
     }
     return render(request, 'clinica/detalle_paciente.html', context)
 
@@ -1828,13 +1993,12 @@ def descargar_documento(request, doc_id):
 @login_required
 def agendar_cita(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)
-    
+
     if request.method == 'POST':
         form = CitaForm(request.POST)
         if form.is_valid():
             cita = form.save(commit=False)
             cita.paciente = paciente  # Aquí vinculamos la cita al paciente automáticamente
-            aplicar_costo_captacion_a_cita(cita)
             cita.save()
             if es_servicio_grupal(cita.servicio):
                 pacientes_extra = form.cleaned_data.get('pacientes_extra')
@@ -1847,12 +2011,12 @@ def agendar_cita(request, paciente_id):
     else:
         # Pre-llenamos el terapeuta por defecto si quieres, o lo dejamos vacío
         form = CitaForm(initial={'costo': 500})
-    
+
     return render(request, 'clinica/agendar_cita.html', {'form': form, 'paciente': paciente})
 @login_required
 def editar_paciente(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)
-    
+
     if request.method == 'POST':
         # FILES es necesario para recibir archivos (PDFs, fotos)
         form = PacienteForm(request.POST, request.FILES, instance=paciente)
@@ -1864,7 +2028,7 @@ def editar_paciente(request, paciente_id):
             return redirect('detalle_paciente', paciente_id=paciente.id)
     else:
         form = PacienteForm(instance=paciente)
-    
+
     return render(request, 'clinica/editar_paciente.html', {'form': form, 'paciente': paciente})
 @login_required
 def agendar_cita(request, paciente_id):
@@ -1897,7 +2061,6 @@ def agendar_cita(request, paciente_id):
             else:
                 cita = form.save(commit=False)
                 cita.paciente = paciente
-                aplicar_costo_captacion_a_cita(cita)
 
                 if penalizacion_pendiente:
                     costo_actual = cita.costo or 0
@@ -1951,19 +2114,19 @@ def calendario_citas(request):
     """API que devuelve las citas en formato JSON para FullCalendar"""
     from django.http import JsonResponse
     from datetime import datetime
-    
+
     # Obtenemos todas las citas activas
     citas = Cita.objects.filter(estatus__in=Cita.ESTATUS_ACTIVOS)
-    
+
     eventos = []
     for cita in citas:
         # FullCalendar necesita fecha y hora combinadas
         start = datetime.combine(cita.fecha, cita.hora)
-        
+
         # Si no tienes hora_fin, calculamos 1 hora por defecto
         # (Si ya tienes hora_fin en tu modelo, úsalo: cita.hora_fin)
         from datetime import timedelta
-        end = start + timedelta(hours=1) 
+        end = start + timedelta(hours=1)
 
         # Colores según estatus
         color = '#3788d8' # Azul default
@@ -2088,19 +2251,19 @@ def crear_cita(request):
                 return redirect('home')
         else:
             # Tu logica de rastreo de errores intacta
-            print("ERRORES DETECTADOS:", form.errors) 
+            print("ERRORES DETECTADOS:", form.errors)
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{error}")
-            
-            # ATENCION: Aqui NO hacemos redirect. Dejamos que el flujo continue 
-            # hacia abajo para que vuelva a mostrar el formulario, pero ahora 
+
+            # ATENCION: Aqui NO hacemos redirect. Dejamos que el flujo continue
+            # hacia abajo para que vuelva a mostrar el formulario, pero ahora
             # marcado con los errores y conservando lo que el usuario escribio.
-            
+
     else:
         # Peticion GET: El usuario apenas va a abrir la pagina
         datos_iniciales = {}
-        
+
         if 'fecha' in request.GET:
             datos_iniciales['fecha'] = request.GET.get('fecha')
         if 'hora' in request.GET:
@@ -2113,24 +2276,24 @@ def crear_cita(request):
                 paciente_match = resolver_paciente_por_nombre(paciente_param)
                 if paciente_match:
                     datos_iniciales['paciente'] = paciente_match.id
-            
+
         # TRUCO: Lo convertimos a entero para que el campo Choice de Django lo acepte sin quejarse
         if 'terapeuta' in request.GET:
             try:
                 datos_iniciales['terapeuta'] = int(request.GET.get('terapeuta'))
             except ValueError:
                 pass
-            
+
         solicitud_id = request.GET.get('solicitud')
         if solicitud_id:
             try:
                 solicitud = SolicitudCita.objects.get(id=solicitud_id)
                 # Llenamos el formulario con lo que pidió el paciente
                 datos_iniciales['fecha'] = solicitud.fecha_deseada
-                
+
                 if solicitud.hora_deseada:
                     datos_iniciales['hora'] = solicitud.hora_deseada
-                    
+
                 if solicitud.terapeuta:
                     datos_iniciales['terapeuta'] = solicitud.terapeuta.id
 
@@ -2304,7 +2467,7 @@ def verificar_disponibilidad(request):
     except ValueError as e:
         print(f"Error de formato en verificar_disponibilidad: {e}")
         return JsonResponse({'available': True, 'msg': 'Disponible'})
-    
+
 # En clinica/views.py
 
 @login_required
@@ -2435,7 +2598,7 @@ def editar_cita(request, cita_id):
                 )
 
             messages.success(request, '¡Cita actualizada correctamente! ')
-            
+
             origen = request.GET.get('next', 'home')
             if origen == 'paciente':
                 return redirect('detalle_paciente', paciente_id=cita.paciente.id)
@@ -2470,7 +2633,7 @@ def editar_cita(request, cita_id):
         form = CitaForm(instance=cita, initial=datos_iniciales)
 
     return render(request, 'clinica/editar_cita.html', {
-        'form': form, 
+        'form': form,
         'cita': cita
     }
     )
@@ -2538,7 +2701,7 @@ def api_citas_calendario(request):
             pass
 
     eventos = []
-    
+
     for cita in citas:
         # FullCalendar necesita fecha y hora juntas en formato ISO
         start_datetime = datetime.combine(cita.fecha, cita.hora)
@@ -2580,7 +2743,7 @@ def api_citas_calendario(request):
                 'editar_url': f"/citas/{cita.id}/editar/?next=calendario",
             },
         })
-        
+
     return JsonResponse(eventos, safe=False)
 
 @api_key_required
@@ -2588,31 +2751,31 @@ def api_terapeutas_paciente(request):
     paciente_id = request.GET.get('paciente_id')
     if not paciente_id:
         return JsonResponse({'terapeutas': []})
-    
+
     # Buscamos todas las citas del paciente y sacamos los terapeutas
     citas = Cita.objects.filter(
         Q(paciente_id=paciente_id) | Q(pacientes_adicionales__id=paciente_id)
     ).select_related('terapeuta').distinct()
-    
+
     terapeutas_unicos = set()
     for cita in citas:
         if cita.terapeuta:
             terapeutas_unicos.add(str(cita.terapeuta))
-            
+
     return JsonResponse({'terapeutas': list(terapeutas_unicos)})
 
 @login_required
 def portal_terapeuta(request):
     if not hasattr(request.user, 'perfil_terapeuta'):
-        return redirect('home') 
-    
+        return redirect('home')
+
     mi_perfil = request.user.perfil_terapeuta
     hoy = date.today()
-    
+
     # --- TRUCO PARA LA FECHA PERFECTA EN ESPAÑOL ---
     meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
     fecha_bonita = f"{hoy.day} de {meses[hoy.month - 1]} del {hoy.year}"
-    
+
     citas_hoy = Cita.objects.filter(
         terapeuta=mi_perfil,
         fecha=hoy,
@@ -2621,7 +2784,7 @@ def portal_terapeuta(request):
     citas_proximas = Cita.objects.filter(
         terapeuta=mi_perfil,
         fecha__gt=hoy,
-    ).order_by('fecha', 'hora')[:10] 
+    ).order_by('fecha', 'hora')[:10]
 
     try:
         semana_offset = int(request.GET.get('semana_offset', 0))
@@ -2656,7 +2819,7 @@ def portal_terapeuta(request):
             'es_hoy': fecha_item == hoy,
             'citas': citas_por_fecha.get(fecha_item, []),
         })
-    
+
     mis_solicitudes = SolicitudCita.objects.filter(
         terapeuta=mi_perfil
     ).order_by('-fecha_creacion')[:5]
@@ -2709,7 +2872,7 @@ def portal_terapeuta(request):
         'manual_portal': manual_portal,
         'corte_pendiente_confirmacion': corte_pendiente_confirmacion,
     }
-    
+
     return render(request, 'clinica/portal_terapeuta.html', context)
 
 
@@ -4372,34 +4535,34 @@ def portal_paciente(request):
     # 1. Verificamos si el usuario actual tiene un perfil de paciente
     if not hasattr(request.user, 'perfil_paciente'):
         return redirect('home')
-    
+
     # 2. Identificamos al paciente exacto
     mi_perfil = request.user.perfil_paciente
     hoy = date.today()
-    
+
     # 3. Filtramos sus citas futuras y pasadas
     citas_proximas = Cita.objects.filter(
         Q(paciente=mi_perfil) | Q(pacientes_adicionales=mi_perfil),
         fecha__gte=hoy
     ).distinct().order_by('fecha', 'hora')
-    
+
     historial = Cita.objects.filter(
         Q(paciente=mi_perfil) | Q(pacientes_adicionales=mi_perfil),
         fecha__lt=hoy
     ).distinct().order_by('-fecha', '-hora')
-    
-  
+
+
     mis_solicitudes = SolicitudCita.objects.filter(
         paciente_nombre=mi_perfil.nombre
-    ).order_by('-fecha_creacion')[:5] 
-    
+    ).order_by('-fecha_creacion')[:5]
+
     context = {
         'paciente': mi_perfil,
         'citas_proximas': citas_proximas,
         'historial': historial,
         'mis_solicitudes': mis_solicitudes, # <--- Lo agregamos al paquete
     }
-    
+
     return render(request, 'clinica/portal_paciente.html', context)
 
 @login_required
@@ -4407,16 +4570,16 @@ def solicitar_cita_paciente(request):
     # Verificamos que sea un paciente
     if not hasattr(request.user, 'perfil_paciente'):
         return redirect('home')
-        
+
     mi_perfil = request.user.perfil_paciente
-    
+
     if request.method == 'POST':
         # Atrapamos lo que el paciente lleno en el formulario HTML
         fecha = request.POST.get('fecha_deseada')
         hora = request.POST.get('hora_deseada')
         terapeuta_id = request.POST.get('terapeuta')
         notas = request.POST.get('notas_paciente')
-        
+
         consultorio_id = request.POST.get('consultorio')
 
         # Creamos el ticket en nuestra "Sala de Espera" (SolicitudCita)
@@ -4430,11 +4593,11 @@ def solicitar_cita_paciente(request):
             notas_paciente=notas,
             estado='pendiente'
         )
-        
+
         # Le avisamos que todo salio bien y lo regresamos a su portal
         messages.success(request, '¡Tu solicitud ha sido enviada! Recepción la revisará y te confirmará pronto.')
         return redirect('portal_paciente')
-        
+
     # Si apenas va a abrir la pagina (GET), le mandamos la lista de terapeutas y consultorios
     terapeutas = Terapeuta.objects.filter(activo=True, horario__isnull=False).distinct().order_by('nombre')
     from .models import Consultorio
@@ -4447,10 +4610,10 @@ def rechazar_solicitud(request, solicitud_id):
         try:
             from .models import SolicitudCita # Aseguramos que este import global funcione
             solicitud = SolicitudCita.objects.get(id=solicitud_id)
-            
+
             # Atrapamos lo que escribio la recepcionista
             motivo = request.POST.get('motivo_rechazo', '')
-            
+
             solicitud.estado = 'rechazada'
             solicitud.motivo_rechazo = motivo
             solicitud.save()
@@ -4468,19 +4631,19 @@ def rechazar_solicitud(request, solicitud_id):
             messages.warning(request, f'La solicitud de {solicitud.paciente_nombre} fue rechazada correctamente.')
         except SolicitudCita.DoesNotExist:
             pass
-            
+
     return redirect('home')
 
 @login_required
 def solicitar_cita_terapeuta(request):
     if not hasattr(request.user, 'perfil_terapeuta'):
         return redirect('home')
-        
+
     mi_perfil = request.user.perfil_terapeuta
-    
+
     # Importamos los modelos necesarios
     from .models import SolicitudCita, Paciente
-    
+
     if request.method == 'POST':
         # Ahora este dato vendra del menu desplegable (exactamente como esta escrito en la BD)
         paciente = request.POST.get('paciente_nombre')
@@ -4502,10 +4665,10 @@ def solicitar_cita_terapeuta(request):
             notas_paciente=f"SOLICITADO POR TERAPEUTA: {notas}",
             estado='pendiente'
         )
-        
+
         messages.success(request, 'Solicitud enviada a Recepción. Espera su confirmación.')
         return redirect('portal_terapeuta')
-        
+
     # --- NUEVO: Traemos la lista de pacientes ordenados alfabeticamente ---
     pacientes = Paciente.objects.all().order_by('nombre')
     from .models import Consultorio, Servicio
@@ -4530,7 +4693,7 @@ def api_disponibilidad_terapeuta(request):
     try:
         from datetime import datetime, timedelta
         from .models import Horario, Cita
-        
+
         fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
         dia_semana = fecha_obj.weekday()
         bloqueos = list(
@@ -4558,7 +4721,7 @@ def api_disponibilidad_terapeuta(request):
 
         # 1. Buscar si el terapeuta trabaja ese dia
         horarios_laborales = Horario.objects.filter(
-            terapeuta_id=terapeuta_id, 
+            terapeuta_id=terapeuta_id,
             dia=dia_semana
         )
 
@@ -4649,7 +4812,6 @@ def checkout_cita(request, cita_id):
             cita.metodo_pago = metodo
         if costo is not None:
             cita.costo = costo
-        aplicar_costo_captacion_a_cita(cita)
         cita.save()
         estatus_display = dict(Cita.ESTATUS_CHOICES).get(cita.estatus, cita.estatus)
         _registrar_actividad(request, 'cita_checkout', 'cita',
@@ -4710,15 +4872,39 @@ def bitacora_diaria(request):
                 default=Decimal('0.00'),
             ),
         )
-        .select_related(
+                .select_related(
             'paciente',
             'paciente__captacion_ventas',
             'terapeuta',
             'servicio',
             'consultorio',
             'division',
+            'cobro',
         )
-        .prefetch_related('pacientes_adicionales')
+        .prefetch_related(
+            'pacientes_adicionales',
+            Prefetch(
+                'cobro__pagos',
+                queryset=(
+                    Pago.objects
+                    .exclude(estado=Pago.ESTADO_ANULADO)
+                    .select_related('registrado_por', 'verificado_por')
+                    .order_by(
+                        Case(
+                            When(
+                                estado=Pago.ESTADO_PENDIENTE_VERIFICACION,
+                                then=0,
+                            ),
+                            default=1,
+                            output_field=IntegerField(),
+                        ),
+                        '-registrado_en',
+                        '-id',
+                    )
+                ),
+                to_attr='pagos_bitacora',
+            ),
+        )
         .order_by('hora', 'terapeuta__nombre')
     )
 
@@ -4734,27 +4920,20 @@ def bitacora_diaria(request):
     for cita in citas:
         key = (cita.terapeuta_id, cita.paciente.nombre if cita.paciente else '')
         cita.solicito_seguimiento = key in sol_set
-        cita.calculo_precio_captacion = (
-            calcular_importe_servicio_con_captacion(
-                paciente=cita.paciente,
-                servicio=cita.servicio,
-            )
-        )
-        if cita.importe_servicio_snapshot is not None:
-            cita.importe_servicio_mostrado = cita.importe_servicio_snapshot
-            cita.precio_base_mostrado = cita.precio_servicio_base_snapshot
-            cita.descuento_captacion_mostrado = (
-                cita.descuento_captacion_porcentaje_snapshot
-            )
-        else:
-            cita.importe_servicio_mostrado = (
-                cita.calculo_precio_captacion.importe_final
-            )
-            cita.precio_base_mostrado = (
-                cita.calculo_precio_captacion.precio_general
-            )
-            cita.descuento_captacion_mostrado = (
-                cita.calculo_precio_captacion.porcentaje_descuento
+        # Pago Formal para Bitácora
+        try:
+            pagos_bitacora = cita.cobro.pagos_bitacora
+        except CobroCita.DoesNotExist:
+            pagos_bitacora = []
+
+        cita.pago_bitacora = pagos_bitacora[0] if pagos_bitacora else None
+        cita.importe_pago_bitacora = None
+
+        if cita.pago_bitacora is not None:
+            cita.importe_pago_bitacora = (
+                cita.pago_bitacora.importe_verificado
+                if cita.pago_bitacora.importe_verificado is not None
+                else cita.pago_bitacora.importe_reportado
             )
 
     # Stats del día
@@ -4814,8 +4993,108 @@ def bitacora_diaria(request):
         'por_cerrar':                   por_cerrar,
         'monto_dia':                    monto_dia,
         'solicitudes_pendientes_count': solicitudes_pendientes_count,
+        'metodos_pago_recepcion': [
+            (valor, etiqueta)
+            for valor, etiqueta in Cita.PAGO_CHOICES
+            if valor != 'Pase'
+        ],
     })
+def _redirigir_a_bitacora_cita(cita):
+    return redirect(
+        f"{reverse('bitacora_diaria')}?fecha={cita.fecha.isoformat()}"
+    )
 
+
+@login_required
+@require_POST
+def registrar_pago_recepcion(request, cita_id):
+    """Registra y confirma un pago formal desde la Bitácora de Recepción."""
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    cita = get_object_or_404(Cita, pk=cita_id)
+
+    if cita.estatus != Cita.ESTATUS_SI_ASISTIO:
+        messages.error(
+            request,
+            'Sólo se puede registrar el pago de una cita atendida.'
+        )
+        return _redirigir_a_bitacora_cita(cita)
+
+    metodo_pago = (request.POST.get('metodo_pago') or '').strip()
+    importe_recibido = (request.POST.get('importe_recibido') or '').strip()
+
+    try:
+        with transaction.atomic():
+            cita_bloqueada = Cita.objects.select_for_update().get(pk=cita.pk)
+
+            pago_activo = (
+                Pago.objects
+                .filter(cobro__cita=cita_bloqueada)
+                .exclude(estado=Pago.ESTADO_ANULADO)
+                .exists()
+            )
+
+            if pago_activo:
+                raise ValidationError({
+                    'cita': 'La cita ya tiene un pago formal registrado.'
+                })
+
+            registrar_pago(
+                cita=cita_bloqueada,
+                importe_esperado=cita_bloqueada.costo,
+                importe_reportado=importe_recibido,
+                metodo_pago=metodo_pago,
+                origen_registro=Pago.ORIGEN_RECEPCION,
+                registrado_por=request.user,
+            )
+
+    except ValidationError as error:
+        messages.error(request, '; '.join(error.messages))
+    else:
+        messages.success(
+            request,
+            'El pago fue registrado y confirmado correctamente.'
+        )
+
+    return _redirigir_a_bitacora_cita(cita)
+
+@login_required
+@require_POST
+def confirmar_pago_recepcion(request, pago_id):
+    """Confirma un pago histórico pendiente registrado por el terapeuta."""
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    pago = get_object_or_404(
+        Pago.objects.select_related('cobro__cita'),
+        pk=pago_id,
+    )
+
+    cita = pago.cobro.cita
+
+    if cita.estatus != Cita.ESTATUS_SI_ASISTIO:
+        messages.error(
+            request,
+            'Sólo se puede confirmar el pago de una cita atendida.'
+        )
+        return _redirigir_a_bitacora_cita(cita)
+
+    try:
+        confirmar_pago(
+            pago=pago,
+            importe_verificado=pago.importe_reportado,
+            verificado_por=request.user,
+        )
+    except ValidationError as error:
+        messages.error(request, '; '.join(error.messages))
+    else:
+        messages.success(
+            request,
+            'El pago pendiente fue confirmado correctamente.'
+        )
+
+    return _redirigir_a_bitacora_cita(cita)
 
 @login_required
 def reporte_general(request):
@@ -6629,36 +6908,241 @@ def rechazar_reagendo(request, solicitud_id):
     return redirect('home')
 
 
-@login_required
-def precios_servicios(request):
-    if not (request.user.is_superuser or request.user.is_staff):
-        return redirect('home')
+# ============================================================================
+# ===== INICIO RECUPERACIÓN PRECIOS: vista principal y detalle ==============
+# ============================================================================
 
-    from clinica.models import Servicio
-    servicios = Servicio.objects.all().order_by('nombre')
+def _preparar_servicios_catalogo(request, fecha):
+    """Construye la consulta visual del catálogo sin alterar datos tarifarios."""
+    estado = request.GET.get('estado', 'activos')
+    if estado not in {'activos', 'historicos', 'todos'}:
+        estado = 'activos'
+
+    busqueda = request.GET.get('q', '').strip()
+    categoria = request.GET.get('categoria', '').strip()
+    if categoria and not categoria.isdigit():
+        categoria = ''
+
+    servicios_qs = Servicio.objects.select_related(
+        'categoria',
+        'reemplazado_por',
+    )
+    if estado == 'activos':
+        servicios_qs = servicios_qs.filter(
+            activo=True,
+            reemplazado_por__isnull=True,
+        )
+    elif estado == 'historicos':
+        servicios_qs = servicios_qs.filter(
+            Q(activo=False) | Q(reemplazado_por__isnull=False)
+        )
+
+    if busqueda:
+        servicios_qs = servicios_qs.filter(
+            Q(nombre__icontains=busqueda) | Q(codigo__icontains=busqueda)
+        )
+    if categoria:
+        servicios_qs = servicios_qs.filter(categoria_id=categoria)
+
+    servicios = list(servicios_qs.order_by('orden', 'nombre', 'id'))
+    for servicio in servicios:
+        servicio.tarifa_vigente_visual = obtener_tarifa_vigente(
+            servicio,
+            fecha,
+        )
+        servicio.penalizacion_tarifa_visual = (
+            calcular_monto_penalizacion(
+                servicio.tarifa_vigente_visual.total
+            )
+            if servicio.tarifa_vigente_visual is not None
+            else None
+        )
+
+    return servicios, {
+        'busqueda': busqueda,
+        'categoria_seleccionada': categoria,
+        'estado_seleccionado': estado,
+    }
+
+
+def _contexto_propuestas_catalogo(usuario):
+    contexto = {
+        'mis_propuestas_catalogo': [],
+        'total_mis_propuestas_catalogo': 0,
+        'propuestas_pendientes_catalogo': [],
+        'total_propuestas_pendientes': 0,
+    }
+    if usuario.has_perm('clinica.propose_service_tariff'):
+        mis_propuestas = (
+            PropuestaTarifas.objects.filter(creada_por=usuario)
+            .annotate(total_servicios=Count('detalles'))
+            .order_by('-actualizada_en', '-id')[:3]
+        )
+        contexto['total_mis_propuestas_catalogo'] = (
+            PropuestaTarifas.objects.filter(creada_por=usuario).count()
+        )
+        contexto['mis_propuestas_catalogo'] = list(mis_propuestas)
+    if usuario.has_perm('clinica.review_service_tariff_proposal'):
+        pendientes = (
+            PropuestaTarifas.objects
+            .filter(estado=PropuestaTarifas.ESTADO_PENDIENTE)
+            .select_related('creada_por')
+            .annotate(total_servicios=Count('detalles'))
+            .order_by('enviada_en', 'id')
+        )
+        contexto['total_propuestas_pendientes'] = pendientes.count()
+        contexto['propuestas_pendientes_catalogo'] = list(pendientes[:3])
+    return contexto
+
+
+@login_required
+@permission_required('clinica.view_service_catalog', raise_exception=True)
+@require_GET
+def precios_servicios(request):
+    fecha = timezone.localdate()
+    servicios, filtros = _preparar_servicios_catalogo(request, fecha)
+    categorias = CategoriaServicio.objects.filter(activo=True).order_by(
+        'orden',
+        'nombre',
+    )
+    contexto = {
+        'servicios': servicios,
+        'categorias': categorias,
+        'fecha': fecha,
+        'total_servicios_catalogo': len(servicios),
+        'total_tarifas_pendientes': sum(
+            1 for servicio in servicios
+            if servicio.tarifa_vigente_visual is None
+        ),
+        **filtros,
+        **_contexto_propuestas_catalogo(request.user),
+    }
+    return render(request, 'clinica/precios_servicios.html', contexto)
+
+
+@login_required
+@permission_required(
+    'clinica.view_referral_benefit_rule',
+    raise_exception=True,
+)
+def beneficios_referidos(request):
+    puede_gestionar = request.user.has_perm(
+        'clinica.manage_referral_benefit_rule'
+    )
+    if request.method == 'POST' and not puede_gestionar:
+        raise PermissionDenied
 
     if request.method == 'POST':
-        errores = []
-        for servicio in servicios:
-            key = f'precio_{servicio.id}'
-            valor = request.POST.get(key, '').strip()
-            if valor == '':
-                servicio.precio = None
-                servicio.save(update_fields=['precio'])
+        form = ReglaBeneficioReferidoForm(request.POST)
+        if form.is_valid():
+            datos = form.cleaned_data
+            accion = request.POST.get('accion')
+            try:
+                if accion == 'programar':
+                    programar_regla_beneficio(
+                        categoria=datos['categoria_servicio'],
+                        porcentaje_descuento=datos['porcentaje_descuento'],
+                        vigente_desde=datos['vigente_desde'],
+                        vigente_hasta=datos['vigente_hasta'],
+                        actor=request.user,
+                    )
+                else:
+                    crear_regla_beneficio(
+                        categoria=datos['categoria_servicio'],
+                        porcentaje_descuento=datos['porcentaje_descuento'],
+                        vigente_desde=datos['vigente_desde'],
+                        vigente_hasta=datos['vigente_hasta'],
+                        activo=datos['activo'],
+                        actor=request.user,
+                    )
+            except ValidationError as error:
+                form.add_error(None, error)
             else:
-                try:
-                    servicio.precio = Decimal(valor)
-                    servicio.save(update_fields=['precio'])
-                except Exception:
-                    errores.append(f'Precio inválido para "{servicio.nombre}": {valor}')
-        if errores:
-            for e in errores:
-                messages.error(request, e)
-        else:
-            messages.success(request, 'Precios actualizados correctamente.')
-        return redirect('precios_servicios')
+                messages.success(request, 'Regla de beneficio registrada.')
+                return redirect('beneficios_referidos')
+    else:
+        form = ReglaBeneficioReferidoForm(initial={'activo': True})
 
-    return render(request, 'clinica/precios_servicios.html', {'servicios': servicios})
+    hoy = timezone.localdate()
+    reglas = ReglaBeneficioReferido.objects.select_related(
+        'categoria_servicio',
+        'creado_por',
+        'aprobado_por',
+    )
+    reglas_actuales = reglas.filter(
+        activo=True,
+        vigente_desde__lte=hoy,
+    ).filter(
+        Q(vigente_hasta__isnull=True) | Q(vigente_hasta__gte=hoy)
+    )
+    reglas_proximas = reglas.filter(
+        activo=True,
+        vigente_desde__gt=hoy,
+    )
+    reglas_historicas = reglas.filter(
+        Q(activo=False) | Q(vigente_hasta__lt=hoy)
+    )
+    return render(request, 'clinica/beneficios_referidos.html', {
+        'form': form,
+        'puede_gestionar': puede_gestionar,
+        'reglas_actuales': reglas_actuales,
+        'reglas_proximas': reglas_proximas,
+        'reglas_historicas': reglas_historicas,
+    })
+
+
+@login_required
+@permission_required('clinica.view_service_catalog', raise_exception=True)
+@require_GET
+def servicio_catalogo_detalle(request, servicio_id):
+    servicio = get_object_or_404(
+        Servicio.objects.select_related('categoria', 'reemplazado_por'),
+        pk=servicio_id,
+    )
+    fecha = timezone.localdate()
+    tarifa_vigente = obtener_tarifa_vigente(servicio, fecha)
+    proxima_tarifa = obtener_proxima_tarifa(servicio, fecha)
+    tarifas = list(
+        servicio.tarifas.select_related(
+            'publicada_por',
+            'cancelada_por',
+        ).order_by('-vigente_desde', '-id')
+    )
+    propuestas_qs = servicio.propuestas_tarifa.select_related(
+        'propuesta',
+        'propuesta__creada_por',
+    )
+    if not request.user.has_perm('clinica.review_service_tariff_proposal'):
+        propuestas_qs = propuestas_qs.filter(
+            propuesta__creada_por=request.user,
+        )
+    propuestas = list(
+        propuestas_qs.order_by('-propuesta__creada_en', '-id')[:10]
+    )
+    penalizacion_tarifa = (
+        calcular_monto_penalizacion(tarifa_vigente.total)
+        if tarifa_vigente is not None
+        else None
+    )
+    penalizacion_compatibilidad = (
+        calcular_monto_penalizacion(servicio.precio)
+        if servicio.precio is not None
+        else None
+    )
+    return render(request, 'clinica/servicio_catalogo_detalle.html', {
+        'servicio': servicio,
+        'fecha': fecha,
+        'tarifa_vigente': tarifa_vigente,
+        'proxima_tarifa': proxima_tarifa,
+        'tarifas': tarifas,
+        'propuestas': propuestas,
+        'penalizacion_tarifa': penalizacion_tarifa,
+        'penalizacion_compatibilidad': penalizacion_compatibilidad,
+    })
+
+# ============================================================================
+# ===== FIN RECUPERACIÓN PRECIOS: vista principal y detalle =================
+# ============================================================================
 
 
 @login_required
@@ -8318,7 +8802,7 @@ def demo_pago_dorothea(request):
         'monto': request.GET.get('monto', '850'),
         'referencia': request.GET.get('referencia', 'DEMO-12345'),
     })
-# Vista para dar de alta a un paciente 
+# Vista para dar de alta a un paciente
 @login_required
 def toggle_alta_paciente(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)
@@ -8412,3 +8896,482 @@ def suspender_paciente(request, id):
         "pacientes/suspender_paciente.html",
         {"paciente": paciente}
     )
+
+
+# ============================================================================
+# ===== INICIO RECUPERACIÓN PRECIOS: propuestas, tarifas y notificaciones ===
+# ============================================================================
+
+@login_required
+@permission_required('clinica.view_service_catalog', raise_exception=True)
+def catalogo_servicios_tarifas(request):
+    return redirect('precios_servicios')
+
+
+@login_required
+@permission_required('clinica.propose_service_tariff', raise_exception=True)
+def propuestas_tarifas_lista(request):
+    propuestas = (
+        PropuestaTarifas.objects.filter(creada_por=request.user)
+        .annotate(total_servicios=Count('detalles'))
+    )
+    return render(request, 'clinica/propuestas_tarifas_lista.html', {
+        'propuestas': propuestas,
+    })
+
+
+@login_required
+@permission_required('clinica.propose_service_tariff', raise_exception=True)
+def propuesta_tarifas_nueva(request):
+    propuesta = PropuestaTarifas(creada_por=request.user)
+    resultado = _procesar_formulario_propuesta(
+        request,
+        propuesta=propuesta,
+        es_nueva=True,
+    )
+    if resultado is not None:
+        return resultado
+    return _render_formulario_propuesta(
+        request,
+        propuesta=propuesta,
+        form=PropuestaTarifasForm(request.POST or None, instance=propuesta),
+        formset=PropuestaTarifaDetalleFormSet(
+            request.POST or None,
+            instance=propuesta,
+            prefix='detalles',
+        ),
+        editable=True,
+    )
+
+
+@login_required
+def propuesta_tarifas_detalle(request, propuesta_id):
+    propuesta = get_object_or_404(PropuestaTarifas, pk=propuesta_id)
+    puede_revisar = request.user.has_perm('clinica.review_service_tariff_proposal')
+    if propuesta.creada_por_id != request.user.id and not puede_revisar:
+        raise PermissionDenied
+    editable = (
+        propuesta.creada_por_id == request.user.id
+        and propuesta.estado == PropuestaTarifas.ESTADO_BORRADOR
+        and request.user.has_perm('clinica.propose_service_tariff')
+    )
+    if editable:
+        resultado = _procesar_formulario_propuesta(
+            request,
+            propuesta=propuesta,
+            es_nueva=False,
+        )
+        if resultado is not None:
+            return resultado
+        form = PropuestaTarifasForm(request.POST or None, instance=propuesta)
+        formset = PropuestaTarifaDetalleFormSet(
+            request.POST or None,
+            instance=propuesta,
+            prefix='detalles',
+            queryset=propuesta.detalles.select_related('servicio'),
+        )
+    else:
+        if request.method == 'POST':
+            raise PermissionDenied
+        form = None
+        formset = None
+    return _render_formulario_propuesta(
+        request,
+        propuesta=propuesta,
+        form=form,
+        formset=formset,
+        editable=editable,
+        puede_revisar=puede_revisar,
+    )
+
+
+def _procesar_formulario_propuesta(request, *, propuesta, es_nueva):
+    if request.method != 'POST':
+        return None
+
+    accion = request.POST.get('accion', 'guardar')
+    if accion not in {'guardar', 'enviar'}:
+        accion = 'guardar'
+    if (
+        accion == 'enviar'
+        and not request.user.has_perm('clinica.submit_service_tariff_proposal')
+    ):
+        raise PermissionDenied
+
+    form = PropuestaTarifasForm(request.POST, instance=propuesta)
+    formset = PropuestaTarifaDetalleFormSet(
+        request.POST,
+        instance=propuesta,
+        prefix='detalles',
+        queryset=(
+            propuesta.detalles.select_related('servicio')
+            if propuesta.pk
+            else PropuestaTarifaDetalle.objects.none()
+        ),
+    )
+    form_valido = form.is_valid()
+    detalles_validos = formset.is_valid()
+    if form_valido and detalles_validos:
+        try:
+            with transaction.atomic():
+                if es_nueva:
+                    guardada = form.save(commit=False)
+                    guardada.creada_por = request.user
+                    guardada.save()
+                else:
+                    guardada = PropuestaTarifas.objects.select_for_update().get(
+                        pk=propuesta.pk,
+                        creada_por=request.user,
+                        estado=PropuestaTarifas.ESTADO_BORRADOR,
+                    )
+                    guardada.vigencia_propuesta = form.cleaned_data[
+                        'vigencia_propuesta'
+                    ]
+                    guardada.observaciones = form.cleaned_data['observaciones']
+                    guardada.save(
+                        update_fields=[
+                            'vigencia_propuesta',
+                            'observaciones',
+                            'actualizada_en',
+                        ]
+                    )
+                    list(
+                        PropuestaTarifaDetalle.objects.select_for_update()
+                        .filter(propuesta=guardada)
+                        .order_by('pk')
+                    )
+
+                formset.instance = guardada
+                formset.save()
+                if accion == 'enviar':
+                    guardada = enviar_propuesta_tarifas(
+                        propuesta=guardada,
+                        actor=request.user,
+                    )
+            if accion == 'enviar':
+                messages.success(request, 'Propuesta enviada a Dirección.')
+            else:
+                messages.success(request, 'Propuesta guardada como borrador.')
+            return redirect(
+                'propuesta_tarifas_detalle',
+                propuesta_id=guardada.pk,
+            )
+        except PropuestaTarifas.DoesNotExist as error:
+            raise PermissionDenied from error
+        except ValidationError as error:
+            form.add_error(None, '; '.join(error.messages))
+        except IntegrityError:
+            formset._non_form_errors = formset.error_class([
+                'Cada servicio puede aparecer una sola vez en la propuesta.'
+            ])
+
+    return _render_formulario_propuesta(
+        request,
+        propuesta=propuesta,
+        form=form,
+        formset=formset,
+        editable=True,
+    )
+
+
+def _render_formulario_propuesta(
+    request,
+    *,
+    propuesta,
+    form,
+    formset,
+    editable,
+    puede_revisar=False,
+):
+    fecha = timezone.localdate()
+    detalles = list(
+        propuesta.detalles.select_related(
+            'servicio',
+            'tarifa_actual',
+            'tarifa_publicada',
+        )
+        if propuesta.pk
+        else []
+    )
+    for detalle in detalles:
+        detalle.tarifa_vigente_visual = obtener_tarifa_vigente(
+            detalle.servicio,
+            fecha,
+        )
+
+    tarifas_actuales = {}
+    if editable:
+        servicios_ids = {detalle.servicio_id for detalle in detalles}
+        servicios = Servicio.objects.filter(
+            Q(activo=True, reemplazado_por__isnull=True)
+            | Q(pk__in=servicios_ids)
+        ).order_by('nombre', 'id')
+        for servicio in servicios:
+            tarifa = obtener_tarifa_vigente(servicio, fecha)
+            tarifas_actuales[str(servicio.pk)] = (
+                f'{tarifa.total:.2f}' if tarifa is not None else None
+            )
+        for detalle_form in formset.forms:
+            if detalle_form.is_bound:
+                servicio_id = detalle_form.data.get(
+                    detalle_form.add_prefix('servicio')
+                )
+            else:
+                servicio_id = detalle_form.instance.servicio_id
+            detalle_form.tarifa_actual_visual = tarifas_actuales.get(
+                str(servicio_id)
+            )
+
+    return render(request, 'clinica/propuesta_tarifas_form.html', {
+        'propuesta': propuesta,
+        'detalles': detalles,
+        'form': form,
+        'formset': formset,
+        'tarifas_actuales': tarifas_actuales,
+        'editable': editable,
+        'puede_enviar': request.user.has_perm(
+            'clinica.submit_service_tariff_proposal'
+        ),
+        'puede_revisar': puede_revisar,
+        'motivo_form': MotivoTarifaForm(),
+    })
+
+
+@require_POST
+@login_required
+@permission_required('clinica.propose_service_tariff', raise_exception=True)
+def propuesta_tarifa_agregar_detalle(request, propuesta_id):
+    propuesta = get_object_or_404(
+        PropuestaTarifas,
+        pk=propuesta_id,
+        creada_por=request.user,
+        estado=PropuestaTarifas.ESTADO_BORRADOR,
+    )
+    form = PropuestaTarifaDetalleForm(request.POST)
+    if form.is_valid():
+        detalle = form.save(commit=False)
+        detalle.propuesta = propuesta
+        try:
+            detalle.save()
+            messages.success(request, 'Servicio agregado a la propuesta.')
+        except IntegrityError:
+            messages.error(request, 'Ese servicio ya forma parte de la propuesta.')
+    else:
+        messages.error(request, 'Revisa el servicio, precio y gratuidad capturados.')
+    return redirect('propuesta_tarifas_detalle', propuesta_id=propuesta.pk)
+
+
+@require_POST
+@login_required
+@permission_required('clinica.propose_service_tariff', raise_exception=True)
+def propuesta_tarifa_eliminar_detalle(request, detalle_id):
+    detalle = get_object_or_404(
+        PropuestaTarifaDetalle,
+        pk=detalle_id,
+        propuesta__creada_por=request.user,
+        propuesta__estado=PropuestaTarifas.ESTADO_BORRADOR,
+    )
+    propuesta_id = detalle.propuesta_id
+    detalle.delete()
+    messages.success(request, 'Servicio retirado del borrador.')
+    return redirect('propuesta_tarifas_detalle', propuesta_id=propuesta_id)
+
+
+@login_required
+@permission_required('clinica.propose_service_tariff', raise_exception=True)
+def propuesta_tarifa_editar_detalle(request, detalle_id):
+    detalle = get_object_or_404(
+        PropuestaTarifaDetalle,
+        pk=detalle_id,
+        propuesta__creada_por=request.user,
+        propuesta__estado=PropuestaTarifas.ESTADO_BORRADOR,
+    )
+    form = PropuestaTarifaDetalleForm(request.POST or None, instance=detalle)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            form.save()
+            messages.success(request, 'Servicio actualizado en el borrador.')
+            return redirect(
+                'propuesta_tarifas_detalle',
+                propuesta_id=detalle.propuesta_id,
+            )
+        except IntegrityError:
+            form.add_error('servicio', 'Ese servicio ya forma parte de la propuesta.')
+    return render(request, 'clinica/propuesta_tarifa_detalle_form.html', {
+        'form': form,
+        'detalle': detalle,
+    })
+
+
+@require_POST
+@login_required
+@permission_required('clinica.submit_service_tariff_proposal', raise_exception=True)
+def propuesta_tarifas_enviar(request, propuesta_id):
+    propuesta = get_object_or_404(
+        PropuestaTarifas,
+        pk=propuesta_id,
+        creada_por=request.user,
+    )
+    try:
+        enviar_propuesta_tarifas(propuesta=propuesta, actor=request.user)
+        messages.success(request, 'Propuesta enviada a Dirección.')
+    except ValidationError as error:
+        messages.error(request, '; '.join(error.messages))
+    return redirect('propuesta_tarifas_detalle', propuesta_id=propuesta.pk)
+
+
+@require_POST
+@login_required
+@permission_required('clinica.propose_service_tariff', raise_exception=True)
+def propuesta_tarifas_duplicar(request, propuesta_id):
+    propuesta = get_object_or_404(
+        PropuestaTarifas,
+        pk=propuesta_id,
+        creada_por=request.user,
+    )
+    try:
+        nueva = duplicar_propuesta_rechazada(propuesta=propuesta, actor=request.user)
+        messages.success(request, 'Se creó un nuevo borrador desde la propuesta rechazada.')
+        return redirect('propuesta_tarifas_detalle', propuesta_id=nueva.pk)
+    except ValidationError as error:
+        messages.error(request, '; '.join(error.messages))
+        return redirect('propuesta_tarifas_detalle', propuesta_id=propuesta.pk)
+
+
+@login_required
+@permission_required('clinica.review_service_tariff_proposal', raise_exception=True)
+def propuestas_tarifas_pendientes(request):
+    propuestas = (
+        PropuestaTarifas.objects.filter(estado=PropuestaTarifas.ESTADO_PENDIENTE)
+        .select_related('creada_por')
+        .annotate(total_servicios=Count('detalles'))
+    )
+    return render(request, 'clinica/propuestas_tarifas_pendientes.html', {
+        'propuestas': propuestas,
+    })
+
+
+@require_POST
+@login_required
+@permission_required('clinica.review_service_tariff_proposal', raise_exception=True)
+@permission_required('clinica.publish_service_tariff', raise_exception=True)
+def propuesta_tarifas_aprobar(request, propuesta_id):
+    propuesta = get_object_or_404(PropuestaTarifas, pk=propuesta_id)
+    try:
+        aprobada = aprobar_propuesta_tarifas(propuesta=propuesta, actor=request.user)
+        messages.success(
+            request,
+            f'Propuesta aprobada. Se publicaron {aprobada.detalles.count()} tarifas.',
+        )
+    except ValidationError as error:
+        messages.error(request, '; '.join(error.messages))
+    return redirect('propuesta_tarifas_detalle', propuesta_id=propuesta.pk)
+
+
+@require_POST
+@login_required
+@permission_required('clinica.review_service_tariff_proposal', raise_exception=True)
+def propuesta_tarifas_rechazar(request, propuesta_id):
+    propuesta = get_object_or_404(PropuestaTarifas, pk=propuesta_id)
+    form = MotivoTarifaForm(request.POST)
+    if form.is_valid():
+        try:
+            rechazar_propuesta_tarifas(
+                propuesta=propuesta,
+                actor=request.user,
+                motivo=form.cleaned_data['motivo'],
+            )
+            messages.success(request, 'Propuesta rechazada.')
+        except ValidationError as error:
+            messages.error(request, '; '.join(error.messages))
+    else:
+        messages.error(request, 'El motivo de rechazo es obligatorio.')
+    return redirect('propuesta_tarifas_detalle', propuesta_id=propuesta.pk)
+
+
+@login_required
+@permission_required('clinica.publish_service_tariff', raise_exception=True)
+def tarifa_servicio_directa(request):
+    form = TarifaDirectaForm(request.POST or None)
+    servicio_seleccionado = None
+    if request.method == 'POST' and form.is_valid():
+        servicio_seleccionado = form.cleaned_data['servicio']
+        try:
+            publicar_tarifa_servicio(
+                servicio=servicio_seleccionado,
+                precio_final=form.cleaned_data['precio_final'],
+                gratuita=form.cleaned_data['gratuita'],
+                vigente_desde=form.cleaned_data['vigente_desde'],
+                actor=request.user,
+                origen=TarifaServicio.ORIGEN_DIRECCION,
+                motivo=form.cleaned_data['motivo'],
+            )
+            messages.success(request, 'Tarifa registrada correctamente.')
+            return redirect('precios_servicios')
+        except ValidationError as error:
+            form.add_error(None, '; '.join(error.messages))
+    elif request.GET.get('servicio'):
+        servicio_seleccionado = Servicio.objects.filter(pk=request.GET['servicio']).first()
+        if servicio_seleccionado is not None:
+            form.fields['servicio'].initial = servicio_seleccionado
+    tarifa_actual = (
+        obtener_tarifa_vigente(servicio_seleccionado, timezone.localdate())
+        if servicio_seleccionado else None
+    )
+    proxima = (
+        obtener_proxima_tarifa(servicio_seleccionado, timezone.localdate())
+        if servicio_seleccionado else None
+    )
+    return render(request, 'clinica/tarifa_servicio_directa.html', {
+        'form': form,
+        'servicio_seleccionado': servicio_seleccionado,
+        'tarifa_actual': tarifa_actual,
+        'proxima_tarifa': proxima,
+    })
+
+
+@require_POST
+@login_required
+@permission_required('clinica.cancel_future_service_tariff', raise_exception=True)
+def tarifa_servicio_cancelar_futura(request, tarifa_id):
+    tarifa = get_object_or_404(TarifaServicio, pk=tarifa_id)
+    form = MotivoTarifaForm(request.POST)
+    if form.is_valid():
+        try:
+            cancelar_tarifa_futura(
+                tarifa=tarifa,
+                actor=request.user,
+                motivo=form.cleaned_data['motivo'],
+            )
+            messages.success(request, 'Tarifa futura cancelada.')
+        except ValidationError as error:
+            messages.error(request, '; '.join(error.messages))
+    else:
+        messages.error(request, 'El motivo de cancelación es obligatorio.')
+    return redirect('precios_servicios')
+
+
+@login_required
+def notificaciones_tarifas_lista(request):
+    notificaciones = request.user.notificaciones_tarifas.select_related('propuesta')
+    return render(request, 'clinica/notificaciones_tarifas.html', {
+        'notificaciones': notificaciones,
+    })
+
+
+@require_POST
+@login_required
+def notificacion_tarifa_marcar_leida(request, notificacion_id):
+    notificacion = get_object_or_404(
+        NotificacionTarifa,
+        pk=notificacion_id,
+        destinatario=request.user,
+    )
+    if notificacion.leida_en is None:
+        notificacion.leida_en = timezone.now()
+        notificacion.save(update_fields=['leida_en'])
+    return redirect('propuesta_tarifas_detalle', propuesta_id=notificacion.propuesta_id)
+
+# ============================================================================
+# ===== FIN RECUPERACIÓN PRECIOS: propuestas, tarifas y notificaciones ======
+# ============================================================================

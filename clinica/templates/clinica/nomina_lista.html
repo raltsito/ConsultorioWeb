@@ -15,6 +15,12 @@
                class="btn btn-primary btn-sm rounded-pill px-3 mt-1">
                 <i class="bi bi-list-ul me-1"></i>Ver todos los detalles
             </a>
+            {% if perms.ventas.view_liquidaciones %}
+            <a href="{% url 'ventas:liquidaciones_panel' %}"
+               class="btn btn-outline-primary btn-sm rounded-pill px-3 mt-1">
+                <i class="bi bi-receipt-cutoff me-1"></i>Pago Comisiones
+            </a>
+            {% endif %}
             {% if user.is_superuser %}
             <a href="{% url 'tabuladores_config' %}" class="btn btn-outline-primary btn-sm rounded-pill px-3 mt-1">
                 <i class="bi bi-sliders me-1"></i>Configurar Tabuladores

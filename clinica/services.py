@@ -27,7 +27,6 @@ from .models import (
     MovimientoEconomicoCita,
     ReglaTerapeuta,
 )
-from .pricing import calcular_importe_servicio_con_captacion
 
 
 def movimientos_confirmados_cita(cita):
@@ -81,32 +80,6 @@ def total_movimientos_confirmados_en_rango(
         )
     resultado = movimientos.aggregate(total=Sum("importe"))
     return resultado["total"] or Decimal("0.00")
-
-
-def _guardar_snapshots_servicio(cita):
-    if cita.importe_servicio_snapshot is not None:
-        return cita
-
-    calculo = calcular_importe_servicio_con_captacion(
-        paciente=cita.paciente,
-        servicio=cita.servicio,
-    )
-    if calculo.importe_final is None:
-        return cita
-
-    cita.precio_servicio_base_snapshot = calculo.precio_general
-    cita.descuento_captacion_porcentaje_snapshot = (
-        calculo.porcentaje_descuento
-    )
-    cita.importe_servicio_snapshot = calculo.importe_final
-    cita.save(
-        update_fields=[
-            "precio_servicio_base_snapshot",
-            "descuento_captacion_porcentaje_snapshot",
-            "importe_servicio_snapshot",
-        ]
-    )
-    return cita
 
 
 @transaction.atomic
@@ -174,8 +147,6 @@ def registrar_movimiento_recepcion_desde_cita(*, cita, usuario):
     )
     if movimiento_existente is not None:
         return movimiento_existente, False
-
-    _guardar_snapshots_servicio(cita_bloqueada)
 
     movimiento = MovimientoEconomicoCita(
         cita=cita_bloqueada,

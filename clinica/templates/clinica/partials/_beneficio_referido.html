@@ -1,0 +1,92 @@
+<section id="beneficio-referido" class="benefit-card" aria-labelledby="benefit-title">
+  <div class="benefit-heading">
+    <div>
+      <span class="benefit-eyebrow">Beneficio de referido</span>
+      <h2 id="benefit-title">Beneficio por captación</h2>
+    </div>
+    {% if resultado_beneficio_referido.captacion %}
+      <span class="benefit-referred-badge">
+        <i class="bi bi-person-check-fill"></i>
+        Paciente con captación registrada
+      </span>
+    {% endif %}
+  </div>
+
+  {% if resultado_beneficio_referido.captacion %}
+    <p class="benefit-captor">
+      Captador:
+      <strong>{{ resultado_beneficio_referido.captacion.captador_nombre_snapshot }}</strong>
+    </p>
+  {% endif %}
+
+  <form
+    method="get"
+    action="{% url 'detalle_paciente' paciente.id %}#beneficio-referido"
+    class="benefit-form"
+  >
+    <div>
+      <label for="beneficio-servicio">Servicio</label>
+      <select
+        id="beneficio-servicio"
+        name="beneficio_servicio"
+        class="form-select"
+        required
+      >
+        {% for servicio in servicios_beneficio_referido %}
+          <option
+            value="{{ servicio.id }}"
+            {% if servicio_beneficio_referido.id == servicio.id %}selected{% endif %}
+          >
+            {{ servicio.nombre }}
+          </option>
+        {% empty %}
+          <option value="">Sin servicios activos</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="beneficio-fecha">Fecha</label>
+      <input
+        id="beneficio-fecha"
+        name="beneficio_fecha"
+        type="date"
+        class="form-control"
+        value="{{ fecha_beneficio_referido|date:'Y-m-d' }}"
+        required
+      >
+    </div>
+    <button type="submit" class="benefit-submit">
+      <i class="bi bi-calculator"></i>
+      Consultar
+    </button>
+  </form>
+
+  {% if resultado_beneficio_referido.aplica %}
+    <div class="benefit-service-name">
+      {{ resultado_beneficio_referido.servicio.nombre }}
+    </div>
+    <div class="benefit-summary">
+      <div class="benefit-amount">
+        <span>Tarifa oficial</span>
+        <strong>${{ resultado_beneficio_referido.tarifa_oficial|floatformat:"2u" }}</strong>
+      </div>
+      <div class="benefit-amount">
+        <span>Beneficio</span>
+        <strong>{{ resultado_beneficio_referido.porcentaje_beneficio|floatformat:"-2u" }}%</strong>
+      </div>
+      <div class="benefit-amount benefit-discount">
+        <span>Descuento</span>
+        <strong>-${{ resultado_beneficio_referido.importe_descuento|floatformat:"2u" }}</strong>
+      </div>
+      <div class="benefit-amount benefit-total">
+        <span>Total con beneficio</span>
+        <strong>${{ resultado_beneficio_referido.total_despues_beneficio|floatformat:"2u" }}</strong>
+      </div>
+    </div>
+  {% elif mensaje_beneficio_referido %}
+    <div class="benefit-message" role="status">
+      <i class="bi bi-info-circle-fill"></i>
+      <span>{{ mensaje_beneficio_referido }}</span>
+    </div>
+  {% endif %}
+</section>

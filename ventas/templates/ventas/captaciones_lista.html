@@ -174,8 +174,8 @@
                 {% endif %}
               </td>
               <td>
-                {% if captacion.porcentaje_comision %}
-                  {{ captacion.porcentaje_comision }}%
+                {% if captacion.porcentaje_comision is not None %}
+                  {{ captacion.porcentaje_comision }} %
                 {% else %}
                   —
                 {% endif %}

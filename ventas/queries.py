@@ -3,11 +3,6 @@ from decimal import Decimal
 
 from django.db.models import Count, Exists, OuterRef, Q, Subquery, Sum
 
-from clinica.services import (
-    cita_tiene_movimiento_confirmado,
-    total_recibido_cita,
-)
-
 from .models import (
     Captador,
     ComisionCaptacion,
@@ -93,22 +88,34 @@ def estado_derivado_comision(comision):
 
 
 def obtener_resumen_comisiones():
-    agregado = ComisionCaptacion.objects.aggregate(
+    agregado = queryset_comisiones_panel().aggregate(
         cantidad_pendiente=Count(
             "id",
-            filter=Q(estado=ComisionCaptacion.ESTADO_PENDIENTE_PAGO),
+            filter=Q(
+                estado=ComisionCaptacion.ESTADO_PENDIENTE_PAGO,
+                esta_pagada=False,
+            ),
         ),
         monto_pendiente=Sum(
             "monto_calculado",
-            filter=Q(estado=ComisionCaptacion.ESTADO_PENDIENTE_PAGO),
+            filter=Q(
+                estado=ComisionCaptacion.ESTADO_PENDIENTE_PAGO,
+                esta_pagada=False,
+            ),
         ),
         cantidad_suspendida=Count(
             "id",
-            filter=Q(estado=ComisionCaptacion.ESTADO_SUSPENDIDA),
+            filter=Q(
+                estado=ComisionCaptacion.ESTADO_SUSPENDIDA,
+                esta_pagada=False,
+            ),
         ),
         monto_suspendido=Sum(
             "monto_calculado",
-            filter=Q(estado=ComisionCaptacion.ESTADO_SUSPENDIDA),
+            filter=Q(
+                estado=ComisionCaptacion.ESTADO_SUSPENDIDA,
+                esta_pagada=False,
+            ),
         ),
         cantidad_total=Count("id"),
         monto_total=Sum("monto_calculado"),
@@ -139,11 +146,18 @@ def listar_comisiones(
     estados_validos = {
         ComisionCaptacion.ESTADO_PENDIENTE_PAGO,
         ComisionCaptacion.ESTADO_SUSPENDIDA,
+        ComisionCaptacion.ESTADO_PAGADA,
     }
     tipos_validos = {valor for valor, _ in Captador.TIPO_CHOICES}
 
     if estado in estados_validos:
-        comisiones = comisiones.filter(estado=estado)
+        if estado == ComisionCaptacion.ESTADO_PAGADA:
+            comisiones = comisiones.filter(esta_pagada=True)
+        else:
+            comisiones = comisiones.filter(
+                estado=estado,
+                esta_pagada=False,
+            )
     if fecha_desde:
         comisiones = comisiones.filter(generada_en__date__gte=fecha_desde)
     if fecha_hasta:
@@ -173,7 +187,13 @@ def listar_comisiones(
 def obtener_detalle_comision(comision_id):
     comision = queryset_comisiones_panel().get(pk=comision_id)
     cita = comision.cita_generadora
-    total_recibido = total_recibido_cita(cita)
+    cobro = getattr(cita, "cobro", None)
+    total_recibido = (
+        cobro.total_confirmado
+        if cobro is not None
+        else Decimal("0.00")
+    )
+    tiene_pago_vigente = total_recibido > Decimal("0.00")
     adeudo = Decimal("0.00")
     saldo_favor = Decimal("0.00")
 
@@ -191,7 +211,7 @@ def obtener_detalle_comision(comision_id):
     )
     return DetalleObligacionComision(
         comision=comision,
-        tiene_pago_vigente=cita_tiene_movimiento_confirmado(cita),
+        tiene_pago_vigente=tiene_pago_vigente,
         total_recibido=total_recibido,
         adeudo=adeudo,
         saldo_favor=saldo_favor,

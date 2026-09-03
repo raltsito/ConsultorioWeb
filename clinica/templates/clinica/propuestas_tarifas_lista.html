@@ -1,0 +1,8 @@
+{% extends 'clinica/base.html' %}
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-4"><div><h1>Propuestas de tarifas</h1><p class="text-muted">Tus solicitudes de actualización.</p></div><div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="{% url 'precios_servicios' %}">Volver a Precios</a><a class="btn btn-primary" href="{% url 'propuesta_tarifas_nueva' %}">+ Nueva propuesta</a></div></div>
+<div class="card"><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>#</th><th>Creación</th><th>Vigencia</th><th>Servicios</th><th>Estado</th><th>Actualización</th><th></th></tr></thead><tbody>
+{% for propuesta in propuestas %}<tr><td>#{{ propuesta.id }}</td><td>{{ propuesta.creada_en|date:'d/m/Y' }}</td><td>{{ propuesta.vigencia_propuesta|date:'d/m/Y' }}</td><td>{{ propuesta.total_servicios }}</td><td><span class="badge {% if propuesta.estado == 'aprobada' %}text-bg-success{% elif propuesta.estado == 'rechazada' %}text-bg-danger{% elif propuesta.estado == 'pendiente' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">{{ propuesta.get_estado_display }}</span></td><td>{{ propuesta.actualizada_en|date:'d/m/Y H:i' }}</td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'propuesta_tarifas_detalle' propuesta.id %}">Ver</a></td></tr>
+{% empty %}<tr><td colspan="7" class="text-center py-4">No hay propuestas.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

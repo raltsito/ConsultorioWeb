@@ -102,7 +102,7 @@ class GeneracionComisionMixin(ClinicaTestDataMixin):
 
 
 class ElegibilidadYGeneracionTests(GeneracionComisionMixin, TestCase):
-    def test_captacion_congela_descuento_25_sin_inferir_dinero(self):
+    def test_captacion_no_genera_snapshots_financieros_y_conserva_importe_manual(self):
         self.servicio.precio = Decimal("800.00")
         self.servicio.save(update_fields=["precio"])
         self.crear_captacion(porcentaje=7)
@@ -119,18 +119,9 @@ class ElegibilidadYGeneracionTests(GeneracionComisionMixin, TestCase):
         self.assertTrue(creado)
         self.assertEqual(movimiento.importe, Decimal("600.00"))
         cita.refresh_from_db()
-        self.assertEqual(
-            cita.precio_servicio_base_snapshot,
-            Decimal("800.00"),
-        )
-        self.assertEqual(
-            cita.descuento_captacion_porcentaje_snapshot,
-            Decimal("25.00"),
-        )
-        self.assertEqual(
-            cita.importe_servicio_snapshot,
-            Decimal("600.00"),
-        )
+        self.assertIsNone(cita.precio_servicio_base_snapshot)
+        self.assertIsNone(cita.descuento_captacion_porcentaje_snapshot)
+        self.assertIsNone(cita.importe_servicio_snapshot)
 
     def test_captacion_aprobada_completa_genera_comision(self):
         captacion = self.crear_captacion(porcentaje=7)

@@ -14,7 +14,7 @@
         src="{% url 'ventas:captador_qr' captador.id %}"
         alt="Mi QR"
       >
-      <p><code>{{ codigo.token }}</code></p>
+      <p><code>{{ codigo.codigo_publico }}</code></p>
 
       {% if captador.activo %}
         <span class="badge text-bg-success">Activo</span>

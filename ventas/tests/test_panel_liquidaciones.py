@@ -29,6 +29,72 @@ class PanelLiquidacionesTests(LiquidacionesOperativasMixin, TestCase):
             usuario=self.staff,
         )
 
+    def usuario_finanzas(self, *, puede_pagar):
+        usuario = User.objects.create_user(
+            f"finanzas_panel_{'paga' if puede_pagar else 'consulta'}"
+        )
+        permisos = Permission.objects.filter(
+            content_type__app_label="ventas",
+            codename__in=(
+                ["view_liquidaciones", "pay_liquidacion"]
+                if puede_pagar
+                else ["view_liquidaciones"]
+            ),
+        )
+        usuario.user_permissions.add(*permisos)
+        return usuario
+
+    def test_panel_muestra_registrar_pago_para_borrador_con_permiso(self):
+        liquidacion = self.crear_borrador([self.crear_comision(1)])
+        self.client.force_login(self.usuario_finanzas(puede_pagar=True))
+
+        respuesta = self.client.get(reverse("ventas:liquidaciones_panel"))
+
+        self.assertContains(
+            respuesta,
+            reverse("ventas:liquidacion_registrar_pago", args=[liquidacion.pk]),
+        )
+        self.assertContains(respuesta, "Registrar pago")
+
+    def test_panel_oculta_registrar_pago_sin_permiso(self):
+        liquidacion = self.crear_borrador([self.crear_comision(1)])
+        self.client.force_login(self.usuario_finanzas(puede_pagar=False))
+
+        respuesta = self.client.get(reverse("ventas:liquidaciones_panel"))
+
+        self.assertNotContains(
+            respuesta,
+            reverse("ventas:liquidacion_registrar_pago", args=[liquidacion.pk]),
+        )
+
+    def test_panel_oculta_registrar_pago_para_pagada(self):
+        liquidacion = self.crear_borrador([self.crear_comision(1)])
+        self.pagar(liquidacion)
+        self.client.force_login(self.usuario_finanzas(puede_pagar=True))
+
+        respuesta = self.client.get(reverse("ventas:liquidaciones_panel"))
+
+        self.assertNotContains(
+            respuesta,
+            reverse("ventas:liquidacion_registrar_pago", args=[liquidacion.pk]),
+        )
+
+    def test_panel_oculta_registrar_pago_para_cancelada(self):
+        liquidacion = self.crear_borrador([self.crear_comision(1)])
+        cancelar_borrador_liquidacion(
+            liquidacion=liquidacion,
+            motivo="No debe pagarse",
+            usuario=self.staff,
+        )
+        self.client.force_login(self.usuario_finanzas(puede_pagar=True))
+
+        respuesta = self.client.get(reverse("ventas:liquidaciones_panel"))
+
+        self.assertNotContains(
+            respuesta,
+            reverse("ventas:liquidacion_registrar_pago", args=[liquidacion.pk]),
+        )
+
     def test_panel_lista_estados_y_totales_con_semantica_correcta(self):
         borrador = self.crear_borrador([self.crear_comision(1, monto="40.00")])
         pagada = self.crear_borrador([self.crear_comision(2, monto="28.00")])

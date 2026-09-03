@@ -1,0 +1,106 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <p class="text-uppercase text-primary fw-bold small mb-1">Ventas</p>
+      <h2 class="mb-1">
+        {% if convenio %}Editar{% else %}Configurar{% endif %} convenio empresarial
+      </h2>
+      <p class="text-muted mb-0">{{ empresa }}</p>
+    </div>
+    <a
+      class="btn btn-outline-secondary"
+      href="{% url 'ventas:captador_detalle' captador.id %}"
+    >
+      Cancelar
+    </a>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="form-check form-switch mb-4">
+          {{ form.activo }}
+          <label class="form-check-label" for="{{ form.activo.id_for_label }}">
+            Convenio activo
+          </label>
+          {{ form.activo.errors }}
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            {{ form.modalidad.label_tag }}
+            {{ form.modalidad }}
+            {{ form.modalidad.errors }}
+          </div>
+          <div class="col-md-6">
+            {{ form.quien_paga.label_tag }}
+            {{ form.quien_paga }}
+            {{ form.quien_paga.errors }}
+          </div>
+          <div class="col-md-6">
+            {{ form.vigencia_desde.label_tag }}
+            {{ form.vigencia_desde }}
+            {{ form.vigencia_desde.errors }}
+          </div>
+          <div class="col-md-6">
+            {{ form.vigencia_hasta.label_tag }}
+            {{ form.vigencia_hasta }}
+            {{ form.vigencia_hasta.errors }}
+          </div>
+          <div class="col-md-6">
+            {{ form.limite_consultas_mensual.label_tag }}
+            {{ form.limite_consultas_mensual }}
+            {{ form.limite_consultas_mensual.errors }}
+          </div>
+          <div class="col-md-6">
+            {{ form.monto_mensual.label_tag }}
+            {{ form.monto_mensual }}
+            {{ form.monto_mensual.errors }}
+          </div>
+          <div class="col-md-6">
+            {{ form.consultas_por_pase.label_tag }}
+            {{ form.consultas_por_pase }}
+            {{ form.consultas_por_pase.errors }}
+          </div>
+          <div class="col-md-6 d-flex align-items-end pb-2">
+            <div class="form-check">
+              {{ form.pase_requiere_identificador }}
+              <label
+                class="form-check-label"
+                for="{{ form.pase_requiere_identificador.id_for_label }}"
+              >
+                {{ form.pase_requiere_identificador.label }}
+              </label>
+              {{ form.pase_requiere_identificador.errors }}
+            </div>
+          </div>
+          <div class="col-12">
+            {{ form.observaciones.label_tag }}
+            {{ form.observaciones }}
+            {{ form.observaciones.errors }}
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a
+            class="btn btn-outline-secondary"
+            href="{% url 'ventas:captador_detalle' captador.id %}"
+          >
+            Cancelar
+          </a>
+          <button class="btn btn-primary" type="submit">Guardar convenio</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

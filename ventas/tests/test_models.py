@@ -83,3 +83,18 @@ class CodigoCaptacionTests(TestCase):
         nuevo = CodigoCaptacion.objects.create(captador=self.captador)
         self.assertNotEqual(codigo.token, nuevo.token)
         self.assertEqual(self.captador.codigos.count(), 2)
+
+    def test_porcentaje_comision_admite_none_y_rango_0_a_10(self):
+        codigo = self.captador.codigo_activo
+        for porcentaje in (None, 0, 1, 10):
+            with self.subTest(porcentaje=porcentaje):
+                codigo.porcentaje_comision = porcentaje
+                codigo.full_clean()
+
+    def test_porcentaje_comision_rechaza_fuera_de_0_a_10(self):
+        codigo = self.captador.codigo_activo
+        for porcentaje in (-1, 11):
+            with self.subTest(porcentaje=porcentaje):
+                codigo.porcentaje_comision = porcentaje
+                with self.assertRaises(ValidationError):
+                    codigo.full_clean()

@@ -1,0 +1,221 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<div class="d-flex flex-column flex-lg-row align-items-lg-start justify-content-between gap-3 mb-4">
+    <div>
+        <div class="text-primary fw-bold small text-uppercase mb-1">Precios de Servicios</div>
+        <h1 class="fw-bold mb-1">{{ servicio.nombre }}</h1>
+        <p class="text-muted mb-0">{{ servicio.codigo|default:'Sin código' }} · Información general y trazabilidad tarifaria.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        {% if perms.clinica.publish_service_tariff and servicio.activo and not servicio.reemplazado_por %}
+        <a class="btn btn-primary rounded-pill px-4" href="{% url 'tarifa_servicio_directa' %}?servicio={{ servicio.id }}">
+            <i class="bi bi-plus-circle me-1"></i>
+            Registrar tarifa
+        </a>
+        {% endif %}
+        <a class="btn btn-outline-secondary rounded-pill px-4" href="{% url 'precios_servicios' %}">
+            <i class="bi bi-arrow-left me-1"></i>
+            Volver a Precios
+        </a>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-4" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#general" type="button" role="tab">General</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tarifas" type="button" role="tab">Tarifas</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link disabled" type="button" aria-disabled="true">Empresas <i class="bi bi-lock-fill ms-1"></i></button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <section class="tab-pane fade show active" id="general" role="tabpanel">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-6 col-xl-4">
+                        <div class="text-muted small">Código</div>
+                        <strong>{{ servicio.codigo|default:'Sin código' }}</strong>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="text-muted small">Nombre</div>
+                        <strong>{{ servicio.nombre }}</strong>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="text-muted small">Categoría</div>
+                        <strong>{% if servicio.categoria %}{{ servicio.categoria.nombre }}{% else %}Sin categoría{% endif %}</strong>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="text-muted small">Modalidad</div>
+                        <strong>{{ servicio.get_modalidad_display|default:'Pendiente' }}</strong>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="text-muted small">Duración</div>
+                        <strong>{% if servicio.duracion_minutos %}{{ servicio.duracion_minutos }} minutos{% else %}Pendiente{% endif %}</strong>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="text-muted small">Estado</div>
+                        {% if servicio.activo and not servicio.reemplazado_por %}
+                            <span class="badge text-bg-success">Activo</span>
+                        {% else %}
+                            <span class="badge text-bg-secondary">Histórico</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="text-muted small">Reemplazado por</div>
+                        <strong>{{ servicio.reemplazado_por.nombre|default:'No aplica' }}</strong>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="text-muted small">Tratamiento fiscal</div>
+                        <strong>{{ servicio.get_tratamiento_iva_display|default:'Tratamiento fiscal pendiente' }}</strong>
+                    </div>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="text-muted small">Empresas</div>
+                        <span class="text-muted"><i class="bi bi-lock-fill me-1"></i>Próximamente</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="tab-pane fade" id="tarifas" role="tabpanel">
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-body p-4">
+                        <div class="text-muted small text-uppercase fw-bold mb-2">Tarifa vigente</div>
+                        {% if tarifa_vigente %}
+                            <div class="display-6 fw-bold text-success mb-3">
+                                {% if tarifa_vigente.gratuita %}Gratuito{% else %}${{ tarifa_vigente.precio_final|floatformat:2 }}{% endif %}
+                            </div>
+                            <dl class="row mb-0">
+                                <dt class="col-5">Subtotal</dt>
+                                <dd class="col-7">${{ tarifa_vigente.subtotal|floatformat:2 }}</dd>
+                                <dt class="col-5">IVA</dt>
+                                <dd class="col-7">
+                                    {% if tarifa_vigente.tratamiento_iva_snapshot == 'exento' %}
+                                        Exento
+                                    {% else %}
+                                        ${{ tarifa_vigente.importe_iva|floatformat:2 }} ({{ tarifa_vigente.tasa_iva_snapshot|floatformat:0 }}%)
+                                    {% endif %}
+                                </dd>
+                                <dt class="col-5">Precio final</dt>
+                                <dd class="col-7 fw-bold">${{ tarifa_vigente.total|floatformat:2 }}</dd>
+                                <dt class="col-5">Penalización (50%)</dt>
+                                <dd class="col-7">${{ penalizacion_tarifa|floatformat:2 }}</dd>
+                                <dt class="col-5">Desde</dt>
+                                <dd class="col-7">{{ tarifa_vigente.vigente_desde|date:'d/m/Y' }}</dd>
+                            </dl>
+                        {% else %}
+                            <span class="badge text-bg-warning fs-6">Tarifa pendiente</span>
+                            <p class="text-muted mt-3 mb-0">Este servicio todavía no tiene una tarifa oficial vigente.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-body p-4">
+                        <div class="text-muted small text-uppercase fw-bold mb-2">Próxima tarifa</div>
+                        {% if proxima_tarifa %}
+                            <div class="h2 fw-bold mb-1">
+                                {% if proxima_tarifa.gratuita %}Gratuito{% else %}${{ proxima_tarifa.precio_final|floatformat:2 }}{% endif %}
+                            </div>
+                            <p class="text-muted">Programada desde {{ proxima_tarifa.vigente_desde|date:'d/m/Y' }}</p>
+                            {% if perms.clinica.cancel_future_service_tariff %}
+                            <form method="post" action="{% url 'tarifa_servicio_cancelar_futura' proxima_tarifa.id %}" class="mt-3">
+                                {% csrf_token %}
+                                <label for="motivo-cancelacion" class="form-label small fw-semibold">Motivo de cancelación</label>
+                                <textarea id="motivo-cancelacion" class="form-control mb-2" name="motivo" rows="2" required></textarea>
+                                <button class="btn btn-sm btn-outline-danger" type="submit">Cancelar tarifa programada</button>
+                            </form>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted mb-0">No existe una tarifa futura programada.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-secondary border-0 rounded-4">
+            <strong>Compatibilidad temporal</strong>
+            {% if servicio.precio is not None %}
+                <span class="d-block mt-1">Precio anterior del sistema: ${{ servicio.precio|floatformat:2 }}.</span>
+                <span class="d-block">Penalización de respaldo (50%): ${{ penalizacion_compatibilidad|floatformat:2 }}.</span>
+            {% else %}
+                <span class="d-block mt-1">Sin precio anterior registrado.</span>
+            {% endif %}
+            <span class="d-block small mt-1">No es la tarifa oficial y no se sincroniza automáticamente.</span>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white border-0 p-4 pb-2">
+                <h2 class="h5 fw-bold mb-1">Histórico de tarifas</h2>
+                <p class="text-muted small mb-0">Fuente: TarifaServicio. No se reconstruye desde citas.</p>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr><th class="ps-4">Precio final</th><th>Vigencia</th><th>Fiscal</th><th>Origen</th><th>Estado</th><th class="pe-4">Publicada por</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for tarifa in tarifas %}
+                        <tr>
+                            <td class="ps-4 fw-bold">{% if tarifa.gratuita %}Gratuito{% else %}${{ tarifa.precio_final|floatformat:2 }}{% endif %}</td>
+                            <td>{{ tarifa.vigente_desde|date:'d/m/Y' }} – {% if tarifa.vigente_hasta %}{{ tarifa.vigente_hasta|date:'d/m/Y' }}{% else %}abierta{% endif %}</td>
+                            <td>{% if tarifa.tratamiento_iva_snapshot == 'exento' %}Exento{% else %}IVA {{ tarifa.tasa_iva_snapshot|floatformat:0 }}%{% endif %}</td>
+                            <td>{{ tarifa.get_origen_display }}</td>
+                            <td>
+                                {% if tarifa.estado == 'cancelada' %}
+                                    <span class="badge text-bg-danger">Cancelada</span>
+                                {% elif tarifa_vigente and tarifa.id == tarifa_vigente.id %}
+                                    <span class="badge text-bg-success">Vigente</span>
+                                {% elif proxima_tarifa and tarifa.id == proxima_tarifa.id %}
+                                    <span class="badge text-bg-info">Próxima tarifa</span>
+                                {% else %}
+                                    <span class="badge text-bg-secondary">Histórica</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4">{{ tarifa.publicada_por.username }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted py-4">No existe historial tarifario.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-0 p-4 pb-2">
+                <h2 class="h5 fw-bold mb-1">Propuestas relacionadas</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th class="ps-4">Propuesta</th><th>Actual</th><th>Propuesto</th><th>Vigencia</th><th>Estado</th><th class="pe-4"></th></tr></thead>
+                    <tbody>
+                        {% for detalle in propuestas %}
+                        <tr>
+                            <td class="ps-4">#{{ detalle.propuesta.id }} · {{ detalle.propuesta.creada_por.username }}</td>
+                            <td>{% if detalle.precio_actual_snapshot is not None %}${{ detalle.precio_actual_snapshot|floatformat:2 }}{% else %}Primera tarifa{% endif %}</td>
+                            <td>{% if detalle.gratuita_propuesta %}Gratuito{% else %}${{ detalle.precio_propuesto|floatformat:2 }}{% endif %}</td>
+                            <td>{{ detalle.propuesta.vigencia_propuesta|date:'d/m/Y' }}</td>
+                            <td>{{ detalle.propuesta.get_estado_display }}</td>
+                            <td class="pe-4"><a class="btn btn-sm btn-outline-primary" href="{% url 'propuesta_tarifas_detalle' detalle.propuesta.id %}">Ver</a></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted py-4">No hay propuestas relacionadas.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

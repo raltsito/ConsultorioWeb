@@ -61,6 +61,15 @@ class RevisionCaptacionMixin(ClinicaTestDataMixin):
 
 
 class ServiciosRevisionCaptacionTests(RevisionCaptacionMixin, TestCase):
+    def test_pendiente_puede_aprobarse_sin_comision_con_porcentaje_0(self):
+        captacion = aprobar_captacion(
+            captacion=self.crear_captacion(),
+            porcentaje=0,
+            usuario=self.direccion,
+        )
+        self.assertEqual(captacion.estado, Captacion.ESTADO_APROBADA)
+        self.assertEqual(captacion.porcentaje_comision, 0)
+
     def test_pendiente_puede_aprobarse_con_porcentaje_1(self):
         captacion = aprobar_captacion(
             captacion=self.crear_captacion(),
@@ -82,7 +91,7 @@ class ServiciosRevisionCaptacionTests(RevisionCaptacionMixin, TestCase):
 
     def test_porcentajes_fuera_del_rango_son_rechazados(self):
         captacion = self.crear_captacion()
-        for porcentaje in (0, 11):
+        for porcentaje in (-1, 11):
             with self.subTest(porcentaje=porcentaje):
                 with self.assertRaises(PorcentajeComisionInvalidoError):
                     aprobar_captacion(
@@ -209,8 +218,8 @@ class VistasRevisionCaptacionTests(RevisionCaptacionMixin, TestCase):
         self.assertEqual(captacion.estado, Captacion.ESTADO_APROBADA)
         self.assertEqual(captacion.porcentaje_comision, 7)
 
-    def test_porcentaje_vacio_cero_y_once_no_aprueban(self):
-        for valor in ("", "0", "11"):
+    def test_porcentaje_vacio_menos_uno_y_once_no_aprueban(self):
+        for valor in ("", "-1", "11"):
             with self.subTest(valor=valor):
                 captacion = self.crear_captacion()
                 self.client.force_login(self.direccion)
@@ -221,6 +230,19 @@ class VistasRevisionCaptacionTests(RevisionCaptacionMixin, TestCase):
                 captacion.refresh_from_db()
                 self.assertEqual(captacion.estado, Captacion.ESTADO_PENDIENTE)
                 captacion.delete()
+
+    def test_direccion_puede_aprobar_sin_comision_con_cero(self):
+        captacion = self.crear_captacion()
+        self.client.force_login(self.direccion)
+
+        self.client.post(
+            reverse("ventas:captacion_aprobar", args=[captacion.pk]),
+            {"porcentaje_comision": 0},
+        )
+
+        captacion.refresh_from_db()
+        self.assertEqual(captacion.estado, Captacion.ESTADO_APROBADA)
+        self.assertEqual(captacion.porcentaje_comision, 0)
 
     def test_direccion_puede_rechazar(self):
         captacion = self.crear_captacion()

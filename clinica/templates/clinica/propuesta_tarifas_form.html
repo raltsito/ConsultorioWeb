@@ -1,0 +1,173 @@
+{% extends 'clinica/base.html' %}
+
+{% block content %}
+<style>
+    .proposal-shell { max-width: 1120px; margin: 0 auto; }
+    .proposal-card { border: 0; border-radius: 1.25rem; box-shadow: 0 10px 28px rgba(15, 42, 57, .07); }
+    .proposal-table thead th { background: #f8fafc; color: #526475; font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+    .proposal-current { color: #0f766e; font-weight: 700; white-space: nowrap; }
+    .proposal-remove { border: 0; color: #dc3545; background: transparent; font-size: 1.2rem; line-height: 1; }
+</style>
+
+<div class="proposal-shell">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+        <div>
+            <h1 class="h2 fw-bold mb-1">
+                {% if propuesta.pk %}Propuesta #{{ propuesta.id }}{% else %}Nueva propuesta de tarifas{% endif %}
+            </h1>
+            {% if propuesta.pk %}
+                <p class="text-muted mb-0">{{ propuesta.get_estado_display }} · Creada por {{ propuesta.creada_por.username }}</p>
+            {% else %}
+                <p class="text-muted mb-0">Prepara los cambios de tarifas que serán enviados a Dirección.</p>
+            {% endif %}
+        </div>
+        <a class="btn btn-outline-secondary rounded-pill" href="{% if puede_revisar %}{% url 'propuestas_tarifas_pendientes' %}{% else %}{% url 'propuestas_tarifas_lista' %}{% endif %}">Volver</a>
+    </div>
+
+    {% if propuesta.motivo_rechazo %}
+        <div class="alert alert-danger"><strong>Motivo de rechazo:</strong> {{ propuesta.motivo_rechazo }}</div>
+    {% endif %}
+
+    {% if editable %}
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <section class="card proposal-card mb-4">
+            <div class="card-body p-4">
+                {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                <div class="row g-3 align-items-start">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold" for="{{ form.vigencia_propuesta.id_for_label }}">Vigente desde</label>
+                        {{ form.vigencia_propuesta }}
+                        {% for error in form.vigencia_propuesta.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold" for="{{ form.observaciones.id_for_label }}">Observaciones</label>
+                        {{ form.observaciones }}
+                        {% for error in form.observaciones.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card proposal-card mb-4 overflow-hidden">
+            <div class="card-header bg-white border-0 px-4 pt-4 pb-3">
+                <h2 class="h5 fw-bold mb-1">Servicios</h2>
+                <p class="text-muted small mb-0">La tarifa actual proviene de TarifaServicio vigente.</p>
+            </div>
+            {{ formset.management_form }}
+            {% if formset.non_form_errors %}<div class="alert alert-danger mx-4">{{ formset.non_form_errors }}</div>{% endif %}
+            <div class="table-responsive">
+                <table class="table proposal-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Servicio</th>
+                            <th>Tarifa actual</th>
+                            <th>Nueva tarifa</th>
+                            <th>Tipo</th>
+                            <th class="pe-4 text-end">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="proposal-lines">
+                        {% for detalle_form in formset.forms %}
+                            {% include 'clinica/partials/_propuesta_tarifa_fila.html' with detalle_form=detalle_form %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer bg-white border-0 p-4">
+                <button class="btn btn-outline-primary rounded-pill" id="add-service" type="button"><i class="bi bi-plus-circle me-1"></i>Agregar servicio</button>
+            </div>
+        </section>
+
+        <div class="d-flex flex-wrap justify-content-end align-items-center gap-2">
+            {% if puede_enviar %}<button class="btn btn-primary rounded-pill px-4" type="submit" name="accion" value="enviar">Enviar a Dirección</button>{% endif %}
+            <button class="btn btn-outline-primary rounded-pill px-4" type="submit" name="accion" value="guardar">Guardar borrador</button>
+            <a class="btn btn-link text-muted" href="{% url 'propuestas_tarifas_lista' %}">Cancelar</a>
+        </div>
+    </form>
+
+    <template id="empty-service-row">{% include 'clinica/partials/_propuesta_tarifa_fila.html' with detalle_form=formset.empty_form %}</template>
+    {{ tarifas_actuales|json_script:'current-service-rates' }}
+    {% else %}
+        <section class="card proposal-card mb-4">
+            <div class="card-body p-4"><div class="row g-3">
+                <div class="col-md-4"><div class="text-muted small">Vigente desde</div><strong>{{ propuesta.vigencia_propuesta|date:'d/m/Y' }}</strong></div>
+                <div class="col-md-8"><div class="text-muted small">Observaciones</div><span>{{ propuesta.observaciones|default:'Sin observaciones' }}</span></div>
+            </div></div>
+        </section>
+        <section class="card proposal-card mb-4 overflow-hidden">
+            <div class="table-responsive"><table class="table proposal-table align-middle mb-0">
+                <thead><tr><th class="ps-4">Servicio</th><th>Tarifa al enviar</th><th>Nueva tarifa</th><th>Tipo</th></tr></thead>
+                <tbody>
+                    {% for detalle in detalles %}<tr>
+                        <td class="ps-4 fw-semibold">{{ detalle.servicio.nombre }}</td>
+                        <td>{% if detalle.precio_actual_snapshot is not None %}${{ detalle.precio_actual_snapshot|floatformat:2 }}{% else %}Tarifa pendiente{% endif %}</td>
+                        <td>{% if detalle.gratuita_propuesta %}$0.00{% else %}${{ detalle.precio_propuesto|floatformat:2 }}{% endif %}</td>
+                        <td>{% if detalle.gratuita_propuesta %}Gratuito{% else %}Con cobro{% endif %}</td>
+                    </tr>{% empty %}<tr><td class="text-center text-muted py-4" colspan="4">No hay servicios registrados.</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+        </section>
+    {% endif %}
+
+    {% if puede_revisar and propuesta.estado == 'pendiente' %}
+    <section class="card proposal-card p-4 mt-4">
+        <div class="d-flex gap-2 mb-3"><form method="post" action="{% url 'propuesta_tarifas_aprobar' propuesta.id %}">{% csrf_token %}<button class="btn btn-success">Aprobar propuesta</button></form></div>
+        <form method="post" action="{% url 'propuesta_tarifas_rechazar' propuesta.id %}">{% csrf_token %}{{ motivo_form.as_p }}<button class="btn btn-danger">Rechazar</button></form>
+    </section>
+    {% endif %}
+
+    {% if propuesta.estado == 'rechazada' and propuesta.creada_por_id == user.id %}
+    <form class="mt-3" method="post" action="{% url 'propuesta_tarifas_duplicar' propuesta.id %}">{% csrf_token %}<button class="btn btn-outline-primary">Duplicar como nuevo borrador</button></form>
+    {% endif %}
+</div>
+
+{% if editable %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const rates = JSON.parse(document.getElementById('current-service-rates').textContent);
+    const body = document.getElementById('proposal-lines');
+    const totalForms = document.getElementById('id_detalles-TOTAL_FORMS');
+    const emptyRow = document.getElementById('empty-service-row');
+    const addButton = document.getElementById('add-service');
+
+    function updateRate(row) {
+        const select = row.querySelector('select[name$="-servicio"]');
+        const output = row.querySelector('[data-current-rate]');
+        const rate = select ? rates[select.value] : null;
+        output.textContent = rate === null || rate === undefined ? 'Tarifa pendiente' : '$' + rate;
+        output.classList.toggle('text-muted', rate === null || rate === undefined);
+    }
+    function updateType(row) {
+        const type = row.querySelector('select[name$="-gratuita_propuesta"]');
+        const price = row.querySelector('input[name$="-precio_propuesto"]');
+        if (!type || !price) return;
+        const free = type.value === 'True' || type.value === '1';
+        price.readOnly = free;
+        if (free) price.value = '0.00';
+    }
+    function wireRow(row) {
+        const select = row.querySelector('select[name$="-servicio"]');
+        const type = row.querySelector('select[name$="-gratuita_propuesta"]');
+        const remove = row.querySelector('[data-remove-row]');
+        const deleted = row.querySelector('input[name$="-DELETE"]');
+        if (select) select.addEventListener('change', function () { updateRate(row); });
+        if (type) type.addEventListener('change', function () { updateType(row); });
+        if (remove) remove.addEventListener('click', function () { if (deleted) deleted.value = 'on'; row.hidden = true; });
+        if (deleted && deleted.value) row.hidden = true;
+        updateRate(row);
+        updateType(row);
+    }
+    function addRow() {
+        const index = Number(totalForms.value);
+        body.insertAdjacentHTML('beforeend', emptyRow.innerHTML.replaceAll('__prefix__', index));
+        totalForms.value = index + 1;
+        wireRow(body.lastElementChild);
+    }
+    body.querySelectorAll('[data-proposal-row]').forEach(wireRow);
+    addButton.addEventListener('click', addRow);
+    if (Number(totalForms.value) === 0) addRow();
+});
+</script>
+{% endif %}
+{% endblock %}

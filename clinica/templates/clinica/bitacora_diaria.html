@@ -201,27 +201,49 @@
                     </td>
 
                     <td>
-                        {% if cita.total_movimiento_confirmado > 0 %}
-                            <span class="ep ep--green">
-                                ${{ cita.total_movimiento_confirmado|floatformat:2 }} recibido
-                            </span>
+                        {% if cita.pago_bitacora %}
+                            <div class="bita-pago-formal">
+                                {% if cita.pago_bitacora.estado == 'pendiente_verificacion' %}
+                                    <span class="ep ep--amber">Pendiente de verificación</span>
+                                {% elif cita.pago_bitacora.estado == 'confirmado' %}
+                                    <span class="ep ep--green">Confirmado</span>
+                                {% elif cita.pago_bitacora.estado == 'con_diferencia' %}
+                                    <span class="ep ep--red">Con diferencia</span>
+                                {% endif %}
+                                <strong>${{ cita.importe_pago_bitacora|floatformat:2 }}</strong>
+                                {% if cita.pago_bitacora.estado == 'pendiente_verificacion' %}
+                                    <form method="post"
+                                          action="{% url 'confirmar_pago_recepcion' cita.pago_bitacora.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="bita-payment-action">
+                                            <i class="bi bi-check2-circle"></i> Confirmar pago
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
                         {% else %}
-                            <span class="ep ep--gray">Sin movimiento registrado</span>
+                            <div class="bita-pago-formal">
+                                {% if cita.total_movimiento_confirmado > 0 %}
+                                    <span class="ep ep--green">
+                                        ${{ cita.total_movimiento_confirmado|floatformat:2 }} recibido
+                                    </span>
+                                {% else %}
+                                    <span class="ep ep--gray">Sin movimiento registrado</span>
+                                {% endif %}
+                                {% if cita.estatus == 'si_asistio' %}
+                                    <button type="button"
+                                            class="bita-payment-action"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#registrarPagoCita{{ cita.id }}">
+                                        <i class="bi bi-cash-coin"></i> Registrar pago
+                                    </button>
+                                {% endif %}
+                            </div>
                         {% endif %}
                     </td>
 
                     <td class="text-end">
-                        {% if cita.descuento_captacion_mostrado == 25 and cita.importe_servicio_mostrado is not None %}
-                            <span class="bita-costo">
-                                ${{ cita.importe_servicio_mostrado|floatformat:2 }}
-                            </span>
-                            <small class="d-block text-success">Captación -25%</small>
-                            {% if cita.precio_base_mostrado is not None %}
-                                <small class="d-block text-muted">
-                                    General ${{ cita.precio_base_mostrado|floatformat:2 }}
-                                </small>
-                            {% endif %}
-                        {% elif cita.costo is not None %}
+                        {% if cita.costo is not None %}
                             <span class="bita-costo">${{ cita.costo|floatformat:0 }}</span>
                         {% else %}
                             <span class="text-muted">—</span>
@@ -251,6 +273,66 @@
         </table>
     </div>
 </div>
+
+{% for cita in citas %}
+    {% if cita.estatus == 'si_asistio' and not cita.pago_bitacora %}
+    <div class="modal fade" id="registrarPagoCita{{ cita.id }}" tabindex="-1"
+         aria-labelledby="registrarPagoCitaLabel{{ cita.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bita-payment-modal">
+                <form method="post" action="{% url 'registrar_pago_recepcion' cita.id %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <div>
+                            <h5 class="modal-title" id="registrarPagoCitaLabel{{ cita.id }}">
+                                Registrar pago
+                            </h5>
+                            <small class="text-muted">{{ cita.titulo_cita }}</small>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="metodoPagoCita{{ cita.id }}" class="form-label">
+                                Método de pago
+                            </label>
+                            <select id="metodoPagoCita{{ cita.id }}" name="metodo_pago"
+                                    class="form-select" required>
+                                <option value="">Selecciona un método</option>
+                                {% for valor, etiqueta in metodos_pago_recepcion %}
+                                    <option value="{{ valor }}">{{ etiqueta }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="importePagoCita{{ cita.id }}" class="form-label">
+                                Importe recibido
+                            </label>
+                            <input id="importePagoCita{{ cita.id }}"
+                                 name="importe_recibido"
+                                 type="number"
+                                 class="form-control"
+                                 min="0.01"
+                                 step="0.01"
+                                 placeholder="0.00"
+                                 required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Registrar pago
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
 
 
 <!-- ═══════════════════════════════════════════════════
@@ -654,6 +736,39 @@
     font-family: 'Outfit', sans-serif;
     font-size: 0.82rem;
     color: var(--muted);
+}
+.bita-pago-formal {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .35rem;
+}
+.bita-pago-formal strong {
+    color: var(--navy);
+    font-family: 'Syne', sans-serif;
+    font-size: .88rem;
+}
+.bita-payment-action {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    border: 1px solid #B2EBF2;
+    border-radius: 7px;
+    background: #E0F7FA;
+    color: var(--teal-d);
+    padding: .28rem .55rem;
+    font-family: 'Outfit', sans-serif;
+    font-size: .75rem;
+    font-weight: 700;
+}
+.bita-payment-action:hover {
+    background: #B2EBF2;
+}
+.bita-payment-modal {
+    border: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    font-family: 'Outfit', sans-serif;
 }
 .bita-costo {
     font-family: 'Syne', sans-serif;
