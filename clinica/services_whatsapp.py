@@ -135,6 +135,22 @@ TEMPLATE_BODIES = {
         '📚 MENSUALIDAD: $450\n'
         '✨ ¡TODO TU DIPLOMADO CON ESTA PROMOCIÓN!\n'
         'Si te interesa, manda mensaje al: 844 236 9864',
+    'contextuales':
+        '🔥 ¡ÚLTIMA SEMANA DE INSCRIPCIÓN! 🔥\n'
+        'Da el siguiente paso en tu formación con nuestro Diplomado en Terapias '
+        'Contextuales. 🧠✨\n\n'
+        '🎓 Promoción especial:\n'
+        '• Inscripción: $600\n'
+        '• Mensualidad: $600\n'
+        '⏳ ¡Últimos lugares disponibles!\n\n'
+        '📚 Modalidad híbrida: puedes tomar tus clases presencialmente o de manera '
+        'virtual.\n'
+        '🎥 Además, las clases quedan grabadas para que puedas consultarlas '
+        'posteriormente.\n'
+        '📅 Clases: miércoles 17:00 a 21:00 horas\n\n'
+        'Si te interesa aprovechar esta promoción y asegurar tu lugar, responde '
+        '"SÍ" a este mensaje y te compartimos toda la información.\n'
+        '¡No dejes pasar esta última semana de inscripción! 🚨',
 }
 
 # Plantillas ofrecidas en el panel de Mensajes Masivos (Dirección Comercial).
@@ -157,6 +173,12 @@ CAMPANAS_MASIVAS = {
     'ddh2': {
         'titulo': 'Promoción — Diplomado en Desarrollo Humano (últimos 2 lugares)',
         'descripcion': 'Últimos 2 lugares, inicia este sábado. Inscripción y mensualidad a $450.',
+        'campos': [],
+        'idioma': 'es_MX',
+    },
+    'contextuales': {
+        'titulo': 'Promoción — Diplomado en Terapias Contextuales',
+        'descripcion': 'Última semana de inscripción. Inscripción y mensualidad a $600. Modalidad híbrida, miércoles 17:00-21:00.',
         'campos': [],
         'idioma': 'es_MX',
     },
