@@ -135,7 +135,7 @@ TEMPLATE_BODIES = {
         '📚 MENSUALIDAD: $450\n'
         '✨ ¡TODO TU DIPLOMADO CON ESTA PROMOCIÓN!\n'
         'Si te interesa, manda mensaje al: 844 236 9864',
-    'contextuales':
+    'contextual':
         '🔥 ¡ÚLTIMA SEMANA DE INSCRIPCIÓN! 🔥\n'
         'Da el siguiente paso en tu formación con nuestro Diplomado en Terapias '
         'Contextuales. 🧠✨\n\n'
@@ -176,7 +176,7 @@ CAMPANAS_MASIVAS = {
         'campos': [],
         'idioma': 'es_MX',
     },
-    'contextuales': {
+    'contextual': {
         'titulo': 'Promoción — Diplomado en Terapias Contextuales',
         'descripcion': 'Última semana de inscripción. Inscripción y mensualidad a $600. Modalidad híbrida, miércoles 17:00-21:00.',
         'campos': [],
